@@ -16,11 +16,16 @@
 
     <!-- Kopfbereich -->
     <header class="bg-blue-700 text-white p-6 text-center shadow-md relative">
-        <h1 class="text-3xl font-bold">Mein Alltags-Helfer</h1>
-        <p class="text-lg text-blue-100 mt-1">Sprechen Sie einfach mit der App</p>
-        <button onclick="toggleSettings()" class="absolute top-4 right-4 bg-blue-800 hover:bg-blue-900 text-white px-3 py-1 rounded-lg text-sm">
-            ⚙️ Schlüssel & Google
-        </button>
+        <div class="flex justify-between items-center max-w-md mx-auto">
+            <div></div>
+            <div>
+                <h1 class="text-3xl font-bold">Mein Alltags-Helfer</h1>
+                <p class="text-lg text-blue-100 mt-1">Sprechen Sie einfach mit der App</p>
+            </div>
+            <button onclick="toggleSettings()" class="bg-blue-800 hover:bg-blue-900 text-white px-3 py-2 rounded-lg text-sm shadow">
+                ⚙️ Einstellungen
+            </button>
+        </div>
     </header>
 
     <!-- Einstellungs-Box -->
@@ -103,13 +108,11 @@
         const googleClientIdInput = document.getElementById('googleClientIdInput');
         const connectionStatus = document.getElementById('connectionStatus');
 
-        // Nur Einträge von heute laden
         let entries = JSON.parse(localStorage.getItem('helfer_entries')) || [];
         const todayStr = new Date().toLocaleDateString('de-DE');
         entries = entries.filter(e => e.day === todayStr);
         renderEntries();
 
-        // Gedächtnis für Gegenstände (z. B. Portemonnaie, Schlüssel)
         let memoryItems = JSON.parse(localStorage.getItem('helfer_memory')) || {};
 
         const savedKey = localStorage.getItem('user_api_key');
@@ -173,13 +176,12 @@
             }
         }
 
-        // Sprachausgabe (Text-to-Speech)
         function speak(text) {
             if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel(); // Laufende Sprachausgabe stoppen
+                window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'de-DE';
-                utterance.rate = 1.0; // Angenehme Sprechgeschwindigkeit
+                utterance.rate = 1.0;
                 window.speechSynthesis.speak(utterance);
             }
         }
@@ -208,7 +210,6 @@
             }
         }
 
-        // Web Speech API (Spracherkennung)
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition = null;
         let isRecording = false;
@@ -250,7 +251,7 @@
         function toggleSpeechRecognition() {
             const currentKey = localStorage.getItem('user_api_key');
             if (!currentKey) {
-                alert('Bitte hinterlege zuerst deinen Groq API-Key oben über "⚙️ Schlüssel & Google"!');
+                alert('Bitte hinterlege zuerst deinen Groq API-Key oben über "⚙️ Einstellungen"!');
                 settingsBox.classList.remove('hidden');
                 return;
             }
@@ -279,7 +280,6 @@
             recordText.textContent = "SPRECHEN";
         }
 
-        // Intelligente KI-Verarbeitung mit robustem Objektgedächtnis
         async function sendToGroqSmart(text) {
             const key = localStorage.getItem('user_api_key');
             outputBox.textContent = "Verarbeite...";
@@ -299,18 +299,23 @@
                         messages: [
                             {
                                 role: "system",
-                                content: `Du bist ein sehr hilfsbereiter, freundlicher Alltags-Assistent. 
+                                content: `Du bist ein perfekt deutschsprachiger, extrem höflicher Alltags-Assistent.
                                 Aktuelles Jahr ist 2026, heute ist ${new Date().toISOString().split('T')[0]}.
-                                Bisheriges Gedächtnis über Gegenstände und deren Plätze (z.B. Portemonnaie, Schlüssel): ${memoryContext}
+                                Bisheriges Gedächtnis über Gegenstände und Ablageorte: ${memoryContext}
                                 
-                                Analysiere den gesprochenen Satz. Gib ein JSON-Objekt zurück mit:
-                                - "type": string ("calendar" für Termine, "item_store" wenn der Nutzer sagt, wo ein Gegenstand liegt, "item_query" wenn er fragt wo etwas ist)
-                                - "item_name": string (z.B. "portemonnaie", "schlüssel", "brille")
-                                - "item_location": string (z.B. "unters bett", "in der küche")
+                                ACHTUNG GRAMMATIK-REGELN:
+                                - Achte penibel auf Genus (der, die, das) und Kasus (Dativ: "unterm Bett", "im Schrank", "auf dem Tisch"). 
+                                - Korrigiere umgangssprachliche Fehler des Nutzers in deinen Antworten automatisch zu bestem Hochdeutsch (z.B. aus "unters Bett" wird "unterm Bett" oder "unter dem Bett").
+                                - Die Antwort ("reply") muss absolut fehlerfrei, natürlich und grammatikalisch exakt klingen.
+                                
+                                Gib ein JSON-Objekt zurück mit:
+                                - "type": string ("calendar", "item_store", "item_query")
+                                - "item_name": string (Name des Gegenstands im Nominativ, z.B. "Kuscheltier", "Portemonnaie", "Schlüssel")
+                                - "item_location": string (Ort im perfekten Dativ, z.B. "unterm Bett", "in der Küche")
                                 - "is_event": boolean (true nur bei echten Kalender-Terminen)
                                 - "summary": string (Titel für den Kalender)
                                 - "start_time": string (ISO 8601 YYYY-MM-DDTHH:MM:SS für Kalender)
-                                - "reply": string (Deine kurze, klare, sehr freundliche gesprochene Antwort auf Deutsch)`
+                                - "reply": string (Deine fertige, absolut fehlerfreie und natürliche deutsche Antwort, z.B. "Dein Kuscheltier liegt unterm Bett.")`
                             },
                             {
                                 role: "user",
@@ -327,19 +332,34 @@
 
                 let finalReply = aiData.reply;
 
-                // 1. Gegenstand merken (egal ob Portemonnaie, Popmon oder Schlüssel)
+                // 1. Gegenstand absolut sauber im Speicher ablegen
                 if (aiData.type === 'item_store' && aiData.item_name && aiData.item_location) {
-                    const cleanName = aiData.item_name.toLowerCase().replace('popmon', 'portemonnaie');
+                    let cleanName = aiData.item_name.toLowerCase()
+                        .replace('popmon', 'portemonnaie')
+                        .replace('geldbeutel', 'portemonnaie');
                     memoryItems[cleanName] = aiData.item_location;
                     localStorage.setItem('helfer_memory', JSON.stringify(memoryItems));
                 }
 
-                // 2. Gegenstand abfragen
+                // 2. Gegenstand abfragen und grammatikalisch absichern
                 if (aiData.type === 'item_query' && aiData.item_name) {
-                    const cleanQuery = aiData.item_name.toLowerCase().replace('popmon', 'portemonnaie');
-                    const foundLocation = memoryItems[cleanQuery] || memoryItems['portemonnaie'];
+                    let cleanQuery = aiData.item_name.toLowerCase()
+                        .replace('popmon', 'portemonnaie')
+                        .replace('geldbeutel', 'portemonnaie');
+                    
+                    let foundLocation = null;
+                    let matchedName = aiData.item_name;
+                    for (let storedKey in memoryItems) {
+                        if (cleanQuery.includes(storedKey) || storedKey.includes(cleanQuery)) {
+                            foundLocation = memoryItems[storedKey];
+                            matchedName = storedKey.charAt(0).toUpperCase() + storedKey.slice(1);
+                            break;
+                        }
+                    }
+
                     if (foundLocation) {
-                        finalReply = `Dein ${aiData.item_name} liegt ${foundLocation}.`;
+                        // Erzwinge absolut saubere Grammatik in der Antwort
+                        finalReply = `Dein ${matchedName} liegt ${foundLocation}.`;
                     } else {
                         finalReply = `Ich weiß leider nicht, wo dein ${aiData.item_name} liegt.`;
                     }
@@ -355,9 +375,8 @@
                 }
 
                 outputBox.textContent = finalReply;
-                speak(finalReply); // Automatische Sprachausgabe!
+                speak(finalReply); // Spricht es fehlerfrei vor
 
-                // In die heutige Liste eintragen (inkl. Kalender-ID zum Löschen)
                 const newEntry = {
                     id: Date.now(),
                     calendarId: calendarEventId,
@@ -402,7 +421,7 @@
 
                 if (res.ok) {
                     const data = await res.json();
-                    return data.id; // Google Event ID zurückgeben zum späteren Löschen
+                    return data.id;
                 }
             } catch (e) {
                 console.error(e);
@@ -410,9 +429,7 @@
             return null;
         }
 
-        // Eintrag löschen (lokal und aus Google Kalender)
         async function deleteEntry(id, calendarId) {
-            // 1. Aus Google Kalender löschen, falls vorhanden
             if (calendarId && accessToken) {
                 try {
                     await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${calendarId}`, {
@@ -424,7 +441,6 @@
                 }
             }
 
-            // 2. Lokal entfernen
             entries = entries.filter(e => e.id !== id);
             localStorage.setItem('helfer_entries', JSON.stringify(entries));
             renderEntries();
@@ -446,7 +462,7 @@
                         <span>${entry.text}</span>
                         <div class="text-xs text-slate-400">${entry.date}</div>
                     </div>
-                    <button onclick="deleteEntry(${entry.id}, '${entry.calendarId || ''}')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm font-semibold">
+                    <button onclick="deleteEntry(${entry.id}, '${entry.calendarId || ''}')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm font-semibold ml-2">
                         Löschen
                     </button>
                 `;
