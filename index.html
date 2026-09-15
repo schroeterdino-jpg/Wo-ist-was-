@@ -20,7 +20,7 @@
             <div></div>
             <div>
                 <h1 class="text-3xl font-bold">Mein Alltags-Helfer</h1>
-                <p class="text-lg text-blue-100 mt-1">Sprechen Sie einfach mit der App</p>
+                <p id="userNameDisplay" class="text-lg text-blue-100 mt-1">Hallo, Dino!</p>
             </div>
             <button onclick="toggleSettings()" class="bg-blue-800 hover:bg-blue-900 text-white px-3 py-2 rounded-lg text-sm shadow">
                 ⚙️ Einstellungen
@@ -31,6 +31,15 @@
     <!-- Einstellungs-Box -->
     <div id="settingsBox" class="hidden bg-amber-50 border-b border-amber-200 p-4 shadow-inner">
         <div class="container mx-auto max-w-md space-y-4">
+            <!-- Wie soll ich dich nennen? -->
+            <div>
+                <label class="block text-sm font-bold text-amber-900 mb-1">Wie soll ich dich nennen?:</label>
+                <div class="flex gap-2">
+                    <input type="text" id="userNameInput" placeholder="Dein Name..." class="flex-grow p-2 border border-amber-300 rounded-lg text-base">
+                    <button onclick="saveUserNameSetting()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-base font-semibold">Speichern</button>
+                </div>
+            </div>
+
             <!-- Groq API Key -->
             <div>
                 <label class="block text-sm font-bold text-amber-900 mb-1">Groq API-Key (gsk_...):</label>
@@ -77,15 +86,15 @@
 
         <!-- Ergebnis-Box -->
         <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200">
-            <h2 class="text-xl font-bold text-blue-800 mb-2">Erkannter Befehl / KI-Antwort:</h2>
+            <h2 class="text-xl font-bold text-blue-800 mb-2">Antwort des Assistenten:</h2>
             <p id="outputBox" class="text-slate-600 italic">Noch nichts eingegeben...</p>
         </div>
 
-        <!-- Gespeicherte Einträge für heute mit Löschbutton -->
+        <!-- Echte Notizen & Termine (Nur für Notizen und Kalender!) -->
         <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200">
-            <h2 class="text-xl font-bold text-blue-800 mb-3">Heutige Notizen & Termine:</h2>
+            <h2 class="text-xl font-bold text-blue-800 mb-3">Notizen & Termine:</h2>
             <ul id="entryList" class="space-y-2 text-lg">
-                <li class="text-slate-500">Keine Einträge für heute.</li>
+                <li class="text-slate-500">Keine aktiven Notizen.</li>
             </ul>
         </div>
 
@@ -106,13 +115,36 @@
         const settingsBox = document.getElementById('settingsBox');
         const apiKeyInput = document.getElementById('apiKeyInput');
         const googleClientIdInput = document.getElementById('googleClientIdInput');
+        const userNameInput = document.getElementById('userNameInput');
+        const userNameDisplay = document.getElementById('userNameDisplay');
         const connectionStatus = document.getElementById('connectionStatus');
 
+        // Benutzername verwalten
+        let currentUserName = localStorage.getItem('user_custom_name') || "Dino";
+        userNameInput.value = currentUserName;
+        updateUserGreeting();
+
+        function updateUserGreeting() {
+            userNameDisplay.textContent = `Hallo, ${currentUserName}!`;
+        }
+
+        function saveUserNameSetting() {
+            const newName = userNameInput.value.trim();
+            if (newName) {
+                currentUserName = newName;
+                localStorage.setItem('user_custom_name', currentUserName);
+                updateUserGreeting();
+                connectionStatus.textContent = `Name auf "${currentUserName}" geändert.`;
+            } else {
+                alert('Bitte gib einen Namen ein.');
+            }
+        }
+
+        // Echte Notizen & Kalender-Einträge
         let entries = JSON.parse(localStorage.getItem('helfer_entries')) || [];
-        const todayStr = new Date().toLocaleDateString('de-DE');
-        entries = entries.filter(e => e.day === todayStr);
         renderEntries();
 
+        // Unsichtbares Gedächtnis für Gegenstände & Orte
         let memoryItems = JSON.parse(localStorage.getItem('helfer_memory')) || {};
 
         const savedKey = localStorage.getItem('user_api_key');
@@ -299,23 +331,32 @@
                         messages: [
                             {
                                 role: "system",
-                                content: `Du bist ein perfekt deutschsprachiger, extrem höflicher Alltags-Assistent.
+                                content: `Du bist ein sehr freundlicher, herzlicher und hilfsbereiter deutscher Alltags-Assistent. 
+                                Der Benutzer wird von dir aktuell mit "${currentUserName}" angesprochen.
                                 Aktuelles Jahr ist 2026, heute ist ${new Date().toISOString().split('T')[0]}.
-                                Bisheriges Gedächtnis über Gegenstände und Ablageorte: ${memoryContext}
+                                Bisheriges unsichtbares Gedächtnis über Gegenstände: ${memoryContext}
                                 
-                                ACHTUNG GRAMMATIK-REGELN:
-                                - Achte penibel auf Genus (der, die, das) und Kasus (Dativ: "unterm Bett", "im Schrank", "auf dem Tisch"). 
-                                - Korrigiere umgangssprachliche Fehler des Nutzers in deinen Antworten automatisch zu bestem Hochdeutsch (z.B. aus "unters Bett" wird "unterm Bett" oder "unter dem Bett").
-                                - Die Antwort ("reply") muss absolut fehlerfrei, natürlich und grammatikalisch exakt klingen.
+                                AUFGABEN & TYPEN:
+                                1. "name_change": Wenn der Benutzer möchte, dass du ihn anders nennst (z.B. "Nenne mich Chef", "Ab jetzt heiße ich Meister"). Extrahiere den neuen Namen in "new_name".
+                                2. "item_store": Wenn der Benutzer sagt, er legt einen Gegenstand irgendwo hin (z.B. "Schlüssel liegt auf dem Tisch", "Kuscheltier unters Bett gepackt").
+                                3. "item_query": Wenn der Benutzer fragt, wo ein Gegenstand ist (z.B. "Wo ist mein Schlüssel?").
+                                4. "note": Echte Notizen oder Erinnerungen für den Alltag (z.B. "Vergiss nicht einkaufen zu gehen").
+                                5. "calendar": Echte Kalendertermine mit Datum/Uhrzeit.
+
+                                GRAMMATIK-REGELN:
+                                - Antworte immer absolut fehlerfrei auf Deutsch im besten Hochdeutsch.
+                                - Verwende in der Antwort ("reply") immer den Namen "${currentUserName}" (oder den neuen Namen, wenn er geändert wird) und sei sehr freundlich.
                                 
                                 Gib ein JSON-Objekt zurück mit:
-                                - "type": string ("calendar", "item_store", "item_query")
-                                - "item_name": string (Name des Gegenstands im Nominativ, z.B. "Kuscheltier", "Portemonnaie", "Schlüssel")
-                                - "item_location": string (Ort im perfekten Dativ, z.B. "unterm Bett", "in der Küche")
-                                - "is_event": boolean (true nur bei echten Kalender-Terminen)
-                                - "summary": string (Titel für den Kalender)
-                                - "start_time": string (ISO 8601 YYYY-MM-DDTHH:MM:SS für Kalender)
-                                - "reply": string (Deine fertige, absolut fehlerfreie und natürliche deutsche Antwort, z.B. "Dein Kuscheltier liegt unterm Bett.")`
+                                - "type": string ("name_change", "item_store", "item_query", "note", "calendar")
+                                - "new_name": string (nur bei name_change, ansonsten leer)
+                                - "item_name": string (bei item_store/item_query im Nominativ, z.B. "Schlüssel")
+                                - "item_location": string (bei item_store im Dativ, z.B. "auf dem Küchentisch")
+                                - "note_text": string (nur bei type "note", der saubere Text für die Notizen-Liste)
+                                - "is_event": boolean (true nur bei Kalender)
+                                - "summary": string (Titel für Kalender)
+                                - "start_time": string (ISO Datum für Kalender)
+                                - "reply": string (Deine herzliche, freundliche Antwort mit Namen "${currentUserName}")`
                             },
                             {
                                 role: "user",
@@ -332,23 +373,29 @@
 
                 let finalReply = aiData.reply;
 
-                // 1. Gegenstand absolut sauber im Speicher ablegen
-                if (aiData.type === 'item_store' && aiData.item_name && aiData.item_location) {
-                    let cleanName = aiData.item_name.toLowerCase()
-                        .replace('popmon', 'portemonnaie')
-                        .replace('geldbeutel', 'portemonnaie');
-                    memoryItems[cleanName] = aiData.item_location;
-                    localStorage.setItem('helfer_memory', JSON.stringify(memoryItems));
+                // 1. Namensänderung verarbeiten
+                if (aiData.type === 'name_change' && aiData.new_name) {
+                    currentUserName = aiData.new_name;
+                    localStorage.setItem('user_custom_name', currentUserName);
+                    userNameInput.value = currentUserName;
+                    updateUserGreeting();
+                    finalReply = `Alles klar, ab jetzt nenne ich dich ${currentUserName}!`;
                 }
 
-                // 2. Gegenstand abfragen und grammatikalisch absichern
+                // 2. Gegenstand unsichtbar im Hintergrund speichern
+                if (aiData.type === 'item_store' && aiData.item_name && aiData.item_location) {
+                    let cleanName = aiData.item_name.toLowerCase();
+                    memoryItems[cleanName] = aiData.item_location;
+                    localStorage.setItem('helfer_memory', JSON.stringify(memoryItems));
+                    // WICHTIG: KEIN Eintrag in die sichtbare Notizen-Liste!
+                }
+
+                // 3. Gegenstand im Hintergrund abfragen
                 if (aiData.type === 'item_query' && aiData.item_name) {
-                    let cleanQuery = aiData.item_name.toLowerCase()
-                        .replace('popmon', 'portemonnaie')
-                        .replace('geldbeutel', 'portemonnaie');
-                    
+                    let cleanQuery = aiData.item_name.toLowerCase();
                     let foundLocation = null;
                     let matchedName = aiData.item_name;
+
                     for (let storedKey in memoryItems) {
                         if (cleanQuery.includes(storedKey) || storedKey.includes(cleanQuery)) {
                             foundLocation = memoryItems[storedKey];
@@ -358,41 +405,42 @@
                     }
 
                     if (foundLocation) {
-                        // Erzwinge absolut saubere Grammatik in der Antwort
-                        finalReply = `Dein ${matchedName} liegt ${foundLocation}.`;
+                        finalReply = `Kein Problem, ${currentUserName}! Dein ${matchedName} liegt ${foundLocation}.`;
                     } else {
-                        finalReply = `Ich weiß leider nicht, wo dein ${aiData.item_name} liegt.`;
-                    }
-                }
-
-                // 3. Kalender-Termin eintragen
-                let calendarEventId = null;
-                if (aiData.is_event) {
-                    calendarEventId = await createGoogleCalendarEvent(aiData.summary, aiData.start_time);
-                    if (calendarEventId) {
-                        finalReply += " In Kalender eingetragen.";
+                        finalReply = `Tut mir leid, ${currentUserName}, ich weiß leider nicht, wo dein ${aiData.item_name} liegt.`;
                     }
                 }
 
                 outputBox.textContent = finalReply;
-                speak(finalReply); // Spricht es fehlerfrei vor
+                speak(finalReply);
 
-                const newEntry = {
-                    id: Date.now(),
-                    calendarId: calendarEventId,
-                    text: finalReply,
-                    day: todayStr,
-                    date: new Date().toLocaleDateString('de-DE', { hour: '2-digit', minute: '2-digit' })
-                };
+                // 4. Nur echte Notizen oder Kalender kommen in die sichtbare Liste!
+                if (aiData.type === 'note' || aiData.type === 'calendar') {
+                    let calendarEventId = null;
+                    if (aiData.is_event) {
+                        calendarEventId = await createGoogleCalendarEvent(aiData.summary, aiData.start_time);
+                        if (calendarEventId) {
+                            finalReply += " In Kalender eingetragen.";
+                        }
+                    }
 
-                entries.unshift(newEntry);
-                if (entries.length > 5) entries.pop();
-                localStorage.setItem('helfer_entries', JSON.stringify(entries));
-                renderEntries();
+                    const newEntry = {
+                        id: Date.now(),
+                        calendarId: calendarEventId,
+                        text: aiData.note_text || finalReply,
+                        day: new Date().toLocaleDateString('de-DE'),
+                        date: new Date().toLocaleDateString('de-DE', { hour: '2-digit', minute: '2-digit' })
+                    };
+
+                    entries.unshift(newEntry);
+                    if (entries.length > 10) entries.pop();
+                    localStorage.setItem('helfer_entries', JSON.stringify(entries));
+                    renderEntries();
+                }
 
             } catch (error) {
                 outputBox.textContent = `❌ Fehler bei der Verarbeitung.`;
-                speak("Es gab leider einen Fehler bei der Verarbeitung.");
+                speak(`Es gab leider einen Fehler, ${currentUserName}.`);
                 console.error(error);
             }
         }
@@ -410,7 +458,7 @@
             };
 
             try {
-                const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+                const res = aimport('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${accessToken}`,
@@ -449,7 +497,7 @@
 
         function renderEntries() {
             if (entries.length === 0) {
-                entryList.innerHTML = '<li class="text-slate-500">Keine Einträge für heute.</li>';
+                entryList.innerHTML = '<li class="text-slate-500">Keine aktiven Notizen.</li>';
                 return;
             }
 
