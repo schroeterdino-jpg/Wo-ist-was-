@@ -35,7 +35,7 @@
         </div>
     </header>
 
-    <!-- Einstellungs-Box -->
+    <!-- Einstellungs-Box (Inklusive des ausgelagerten Gedächtnisses) -->
     <div id="settingsBox" class="hidden bg-amber-50 border-b border-amber-200 p-4 shadow-inner">
         <div class="container mx-auto max-w-md space-y-4">
             <div>
@@ -73,6 +73,17 @@
                 <div id="contactListDisplay" class="mt-2 text-xs text-amber-900 space-y-1"></div>
             </div>
 
+            <!-- Gedächtnis (hierher verschoben) -->
+            <div class="border-t border-amber-200 pt-3 space-y-2">
+                <div class="flex justify-between items-center">
+                    <label class="block text-sm font-bold text-amber-900">🔍 Gespeicherte Gegenstände:</label>
+                    <button onclick="clearAllMemory()" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded-lg text-xs font-semibold shadow">🗑️ Alles löschen</button>
+                </div>
+                <div id="categoryContainer" class="space-y-3 text-sm bg-white p-3 rounded-lg border border-amber-200">
+                    <!-- Kategorien werden hier dynamisch eingefügt -->
+                </div>
+            </div>
+
             <div class="flex flex-col gap-2 border-t border-amber-200 pt-3">
                 <button onclick="loginWithGoogle()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
                     📅 Mit Google Kalender verbinden
@@ -100,11 +111,10 @@
             </button>
         </div>
 
-        <!-- Reiter-Navigation -->
+        <!-- Reiter-Navigation (nur noch Termine & To-Dos) -->
         <div class="flex bg-slate-200 p-1 rounded-xl">
             <button id="tabCalendarBtn" onclick="switchTab('calendar')" class="flex-1 py-2 rounded-lg font-bold text-sm bg-white text-blue-800 shadow-sm transition">📅 Termine</button>
             <button id="tabTodoBtn" onclick="switchTab('todo')" class="flex-1 py-2 rounded-lg font-bold text-sm text-slate-600 transition">📝 To-Dos</button>
-            <button id="tabMemoryBtn" onclick="switchTab('memory')" class="py-2 px-3 rounded-lg font-bold text-xs text-slate-400 hover:text-slate-600 transition" title="Gedächtnis">⚙️</button>
         </div>
 
         <!-- Ansicht: Kalender-Termine -->
@@ -123,23 +133,12 @@
             </ul>
         </div>
 
-        <!-- Ansicht: Gegenstände (versteckter Reiter) -->
-        <div id="memoryView" class="hidden bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-4">
-            <div class="flex justify-between items-center">
-                <h2 class="text-xl font-bold text-blue-800">🔍 Gedächtnis (Gegenstände):</h2>
-                <button onclick="clearAllMemory()" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded-lg text-xs font-semibold shadow">🗑️ Alles löschen</button>
-            </div>
-            <div id="categoryContainer" class="space-y-3 text-base">
-                <!-- Kategorien werden hier dynamisch eingefügt -->
-            </div>
-        </div>
-
     </main>
 
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.8</span>
+        <span>Version 4.9</span>
     </footer>
 
     <!-- JavaScript -->
@@ -163,10 +162,8 @@
 
         const calendarView = document.getElementById('calendarView');
         const todoView = document.getElementById('todoView');
-        const memoryView = document.getElementById('memoryView');
         const tabCalendarBtn = document.getElementById('tabCalendarBtn');
         const tabTodoBtn = document.getElementById('tabTodoBtn');
-        const tabMemoryBtn = document.getElementById('tabMemoryBtn');
 
         let currentUserName = localStorage.getItem('user_custom_name') || "Silvia";
         userNameInput.value = currentUserName;
@@ -233,10 +230,8 @@
         function switchTab(tab) {
             calendarView.classList.add('hidden');
             todoView.classList.add('hidden');
-            memoryView.classList.add('hidden');
             tabCalendarBtn.className = "flex-1 py-2 rounded-lg font-bold text-sm text-slate-600 transition";
             tabTodoBtn.className = "flex-1 py-2 rounded-lg font-bold text-sm text-slate-600 transition";
-            tabMemoryBtn.className = "py-2 px-3 rounded-lg font-bold text-xs text-slate-400 hover:text-slate-600 transition";
 
             if (tab === 'calendar') {
                 calendarView.classList.remove('hidden');
@@ -244,9 +239,6 @@
             } else if (tab === 'todo') {
                 todoView.classList.remove('hidden');
                 tabTodoBtn.className = "flex-1 py-2 rounded-lg font-bold text-sm bg-white text-blue-800 shadow-sm transition";
-            } else if (tab === 'memory') {
-                memoryView.classList.remove('hidden');
-                tabMemoryBtn.className = "py-2 px-3 rounded-lg font-bold text-xs bg-white text-blue-800 shadow-sm transition";
             }
         }
 
@@ -370,7 +362,22 @@
             recordBtn.disabled = true;
         }
 
- readTodoList
+        function readTodoList() {
+            if (todoEntries.length === 0) {
+                speak("Deine To-Do-Liste ist aktuell leer.");
+                statusMessage.textContent = "To-Do-Liste ist leer.";
+                return;
+            }
+
+            // HIER KORRIGIERT: Wir bauen einen natürlicheren Satz mit Aufzählungspunkten
+            let textToSpeak = "Auf deiner To-Do-Liste stehen folgende Einträge: ";
+            todoEntries.forEach((entry, index) => {
+                textToSpeak += `Punkt ${index + 1}: ${entry.text}. `;
+            });
+            
+            statusMessage.textContent = "Lese To-Do-Liste vor...";
+            speak(textToSpeak);
+        }
 
         function handleCallCommand(text) {
             let foundContact = null;
@@ -872,15 +879,15 @@
                 let itemsInCat = grouped[cat];
                 if (itemsInCat.length > 0) {
                     hasAnyItems = true;
-                    catHtml += `<div class="border border-slate-200 rounded-xl p-3 bg-slate-50">
-                        <h3 class="font-bold text-blue-700 mb-2">📌 ${cat}</h3>
+                    catHtml += `<div class="border border-slate-200 rounded-xl p-3 bg-slate-50 mb-2">
+                        <h3 class="font-bold text-amber-900 mb-2">📌 ${cat}</h3>
                         <ul class="space-y-1">`;
                     
                     itemsInCat.forEach(i => {
                         let capitalizedName = i.key.charAt(0).toUpperCase() + i.key.slice(1);
-                        catHtml += `<li class="flex justify-between items-center text-sm py-1 border-b border-slate-200 last:border-none">
+                        catHtml += `<li class="flex justify-between items-center text-xs py-1 border-b border-slate-200 last:border-none">
                             <span>• <b>${capitalizedName}</b>: ${i.location}</span>
-                            <button onclick="deleteMemoryItem('${i.key}')" class="text-red-600 font-bold text-xs ml-2">Löschen</button>
+                            <button onclick="deleteMemoryItem('${i.key}')" class="text-red-600 font-bold ml-2">Löschen</button>
                         </li>`;
                     });
 
@@ -889,7 +896,7 @@
             });
 
             if (!hasAnyItems) {
-                categoryContainer.innerHTML = '<p class="text-slate-500">Keine Gegenstände gespeichert.</p>';
+                categoryContainer.innerHTML = '<p class="text-slate-500 text-xs">Keine Gegenstände gespeichert.</p>';
             } else {
                 categoryContainer.innerHTML = catHtml;
             }
