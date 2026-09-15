@@ -139,7 +139,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.2</span>
+        <span>Version 4.3</span>
     </footer>
 
     <!-- JavaScript -->
@@ -569,18 +569,15 @@
                                 Aktuelle Kalender-Termine im System: ${calendarContext}
                                 Aktuelle To-Dos im System: ${todoContext}
                                 
-                                ABSOLUTE REGELN FÜR FRAGEN ZU TERMINEN:
-                                - Prüfe bei JEDER Frage nach Terminen ("heute", "morgen", "was habe ich vor", etc.) die Liste unter "Aktuelle Kalender-Termine im System".
-                                - Vergleiche das Datum in der Frage mit dem "isoDate"-Wert in der Liste (Format YYYY-MM-DD). Fragt der Nutzer nach morgen, suche nach Einträgen, die mit ${tomorrowStr} beginnen.
-                                - **ZWINGEND:** Wenn ein passender Termin in der Liste existiert, musst du ihn im Feld "reply" exakt nennen (Inhalt und Uhrzeit)! Sage NIEMALS, es sei kein Termin da, wenn einer in der Liste steht.
-                                
-                                ABSOLUTE REGELN FÜR TERMINE VS. TO-DOS:
-                                - Wähle "calendar" NUR DANN, wenn der Nutzer explizit einen neuen Termin anlegt. Für Fragen oder Unterhaltungen nutze immer "chat".
+                                ABSOLUTE REGELN FÜR TERMIN- UND TO-DO-ERSTELLUNG:
+                                1. KEINE RÜCKFRAGEN BEI TO-DOS: Wenn der Nutzer eine Aufgabe nennt (z.B. "ich muss Isabelle abholen", "kauf Milch", "Erinnerung an X"), bei der **KEINE EXAKTE UHRZEIT** genannt wird, wandle sie **SOFORT** in ein To-Do ("type": "note") um. Frage niemals nach, ob eine Erinnerung oder ein Termin gewollt ist. Lege es direkt an!
+                                2. TERMIN NUR BEI UHRZEIT: Wähle "calendar" NUR DANN, wenn der Nutzer explizit eine feste Uhrzeit nennt (z.B. "um 14 Uhr").
+                                3. FRAGEN ZU TERMINEN: Wenn der Nutzer fragt, ob er Termine hat (heute/morgen), prüfe die Kalender-Liste. Existiert ein Termin für diesen Tag, nenne ihn im Feld "reply" exakt mit Inhalt und Zeit.
                                 
                                 ABSOLUTE GRAMMATIK- UND FORMULIERUNGSGESETZE:
-                                1. KEINE DOPPELTEN PRÄPOSITIONEN: Nutze niemals Konstruktionen wie "im in", "in der im" oder "auf dem in". Verwende immer korrekte deutsche Ortsangaben.
-                                2. KORREKTE ARTIKEL FÜR GEGENSTÄNDE: Nutze zwingend immer das korrekte Geschlecht ("deine Brille", "dein Portemonnaie", "deine Tasche", "dein Handy", "dein Schlüssel").
-                                3. SCHREIBWEISE VON "PORTMONNAIE": Schreibe es immer exakt als "Portemonnaie".
+                                1. KEINE DOPPELTEN PRÄPOSITIONEN.
+                                2. KORREKTE ARTIKEL FÜR GEGENSTÄNDE ("deine Brille", "dein Portemonnaie", etc.).
+                                3. SCHREIBWEISE VON "PORTMONNAIE".
                                 4. SPRACHLICHER STIL: Antworte extrem natürlich, freundlich, warmherzig und auf den Punkt.
 
                                 Gib ein JSON-Objekt zurück mit:
