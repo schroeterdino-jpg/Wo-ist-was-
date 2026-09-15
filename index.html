@@ -55,7 +55,18 @@
                 </div>
             </div>
 
-            <div class="flex flex-col gap-2">
+            <!-- Kontakte für Schnell-Anruf -->
+            <div class="border-t border-amber-200 pt-3">
+                <label class="block text-sm font-bold text-amber-900 mb-1">📞 Schnell-Anruf Kontakte:</label>
+                <div class="flex gap-2 mb-2">
+                    <input type="text" id="contactNameInput" placeholder="Name (z.B. Simone)" class="w-1/2 p-2 border border-amber-300 rounded-lg text-base">
+                    <input type="text" id="contactPhoneInput" placeholder="Nummer..." class="w-1/2 p-2 border border-amber-300 rounded-lg text-base">
+                </div>
+                <button onclick="saveContact()" class="w-full bg-amber-600 hover:bg-amber-700 text-white py-2 rounded-lg text-base font-semibold">Kontakt hinzufügen</button>
+                <div id="contactListDisplay" class="mt-2 text-xs text-amber-900 space-y-1"></div>
+            </div>
+
+            <div class="flex flex-col gap-2 border-t border-amber-200 pt-3">
                 <button onclick="loginWithGoogle()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
                     📅 Mit Google Kalender verbinden
                 </button>
@@ -128,6 +139,10 @@
         const userNameDisplay = document.getElementById('userNameDisplay');
         const connectionStatus = document.getElementById('connectionStatus');
         
+        const contactNameInput = document.getElementById('contactNameInput');
+        const contactPhoneInput = document.getElementById('contactPhoneInput');
+        const contactListDisplay = document.getElementById('contactListDisplay');
+
         const calendarView = document.getElementById('calendarView');
         const todoView = document.getElementById('todoView');
         const tabCalendarBtn = document.getElementById('tabCalendarBtn');
@@ -156,7 +171,44 @@
         let calendarEntries = JSON.parse(localStorage.getItem('helfer_calendar_entries')) || [];
         let todoEntries = JSON.parse(localStorage.getItem('helfer_todo_entries')) || [];
         let memoryItems = JSON.parse(localStorage.getItem('helfer_memory')) || {};
+        let savedContacts = JSON.parse(localStorage.getItem('helfer_contacts')) || {};
+        
         renderAllLists();
+        renderContactList();
+
+        function saveContact() {
+            const name = contactNameInput.value.trim();
+            const phone = contactPhoneInput.value.trim();
+            if (name && phone) {
+                savedContacts[name.toLowerCase()] = { originalName: name, phone: phone };
+                localStorage.setItem('helfer_contacts', JSON.stringify(savedContacts));
+                contactNameInput.value = '';
+                contactPhoneInput.value = '';
+                renderContactList();
+                connectionStatus.textContent = `Kontakt "${name}" gespeichert.`;
+            } else {
+                alert('Bitte Name und Telefonnummer eingeben.');
+            }
+        }
+
+        function deleteContact(key) {
+            delete savedContacts[key];
+            localStorage.setItem('helfer_contacts', JSON.stringify(savedContacts));
+            renderContactList();
+        }
+
+        function renderContactList() {
+            const keys = Object.keys(savedContacts);
+            if (keys.length === 0) {
+                contactListDisplay.innerHTML = 'Keine Kontakte gespeichert.';
+            } else {
+                let html = '<b>Gespeicherte Kontakte:</b><br>';
+                keys.forEach(k => {
+                    html += `<div class="flex justify-between items-center my-1"><span>• ${savedContacts[k].originalName}: ${savedContacts[k].phone}</span> <button onclick="deleteContact('${k}')" class="text-red-600 font-bold ml-2">Löschen</button></div>`;
+                });
+                contactListDisplay.innerHTML = html;
+            }
+        }
 
         function switchTab(tab) {
             if (tab === 'calendar') {
@@ -266,7 +318,11 @@
                 statusMessage.textContent = `Erkannt: "${speechResult}"`;
                 
                 const lower = speechResult.toLowerCase();
-                if (lower.includes("was steht heute an") || lower.includes("was liegt heute an") || lower.includes("bevor ich das haus verlasse")) {
+                
+                // Direkte Sprachprüfung für Anrufe vorab abfangen
+                if ((lower.includes("ruf") || lower.includes("anrufen")) && lower.includes("an")) {
+                    handleCallCommand(lower);
+                } else if (lower.includes("was steht heute an") || lower.includes("was liegt heute an") || lower.includes("bevor ich das haus verlasse")) {
                     triggerDailyBriefing();
                 } else {
                     sendToGroqSmart(speechResult);
@@ -285,6 +341,23 @@
         } else {
             statusMessage.textContent = "Keine Spracherkennung im Browser.";
             recordBtn.disabled = true;
+        }
+
+        function handleCallCommand(text) {
+            let foundContact = null;
+            for (let key in savedContacts) {
+                if (text.includes(key)) {
+                    foundContact = savedContacts[key];
+                    break;
+                }
+            }
+
+            if (foundContact) {
+                speak(`Ich rufe ${foundContact.originalName} an.`);
+                window.location.href = `tel:${foundContact.phone}`;
+            } else {
+                speak("Diesen Kontakt habe ich leider nicht gefunden. Bitte füge ihn in den Einstellungen hinzu.");
+            }
         }
 
         function toggleSpeechRecognition() {
@@ -320,7 +393,7 @@
         }
 
         function triggerDailyBriefing() {
-            let briefingText = `Mensch ${currentUserName}, pass auf, hier ist dein kurzer Überblick für heute: `;
+            let briefingText = `Mensch ${currentUserName}, pass auf, hier ist dein kurzer Überblick bevor du das Haus verlässt: `;
 
             if (calendarEntries.length > 0) {
                 briefingText += "Deine Termine: ";
@@ -329,23 +402,33 @@
                 });
             }
 
-            if (todoEntries.length > 0) {
-                briefingText += "Deine To-Dos: ";
-                todoEntries.forEach(e => {
-                    briefingText += `${e.text}. `;
-                });
-            }
-
+            // STRENGES FILTERN: Kuscheltiere, Kuscheltier, Spielzeug etc. IMMER AUSSCHLIESSEN
+            const unimportantKeywords = ["kuscheltier", "spielzeug", "puppe", "teddy", "kuscheltiere"];
             const memKeys = Object.keys(memoryItems);
-            if (memKeys.length > 0) {
-                briefingText += "Und denk an deine wichtigsten Sachen: ";
-                memKeys.forEach(k => {
-                    briefingText += `dein ${k} liegt ${memoryItems[k]}, `;
+            let relevantItems = [];
+
+            memKeys.forEach(k => {
+                let isUnimportant = unimportantKeywords.some(badWord => k.toLowerCase().includes(badWord));
+                if (!isUnimportant) {
+                    relevantItems.push({ name: k, loc: memoryItems[k] });
+                }
+            });
+
+            if (relevantItems.length > 0) {
+                briefingText += "Und denk an deine wichtigen Sachen: ";
+                relevantItems.forEach(item => {
+                    // Artikel-Korrektur (z.B. "deine Brille" statt "dein Brille")
+                    let art = "dein";
+                    let lowerName = item.name.toLowerCase();
+                    if (lowerName.endsWith('e') || lowerName.includes('brille') || lowerName.includes('tasche') || lowerName.includes('uhr')) {
+                        art = "deine";
+                    }
+                    briefingText += `${art} ${item.name} liegt ${item.loc}, `;
                 });
             }
 
-            if (calendarEntries.length === 0 && todoEntries.length === 0 && memKeys.length === 0) {
-                briefingText += "Es gibt heute keine besonderen Termine oder gespeicherten Gegenstände. ";
+            if (calendarEntries.length === 0 && relevantItems.length === 0) {
+                briefingText += "Es gibt heute keine besonderen Termine oder wichtigen Gegenstände zu beachten. ";
             }
 
             briefingText += "Komm gut durch den Tag! ";
@@ -379,17 +462,17 @@
                                 1. DAS WORT "PORTMONNAIE" / "GELDBEUTEL":
                                    - Es heisst NIEMALS "Popmoney", "Popmannee", "Popmonnee" oder ähnlich falsches Zeug!
                                    - Es heisst IMMER und ausschliesslich korrekt geschrieben: "Portemonnaie" (bzw. gesprochen "Portmonnaie"). Du musst diesen Begriff absolut fehlerfrei verwenden.
-                                2. GRAMMATIK UND KASUS (FÄLLE):
-                                   - Verwende niemals falsche Artikel oder Endungen (Dativ/Akkusativ absolut sauber einhalten).
-                                   - Orte und Ablageorte müssen immer mit korrekter Präposition und Artikel stehen (Beispiele: "in der Vitrine", "auf dem Tisch", "im Küchenschrank", "unter der Bank", "neben dem Fernseher"). Niemals "in Vitrine" oder "auf Tisch" ohne Artikel!
+                                2. GRAMMATIK UND BESITZANZEIGENDE FÜRWÖRTER (ARTIKEL / KASUS):
+                                   - NIEMALS "dein Brille" oder ähnlicher Unfug! Bei weiblichen oder Plural-Gegenständen heisst es zwingend "deine Brille", "deine Schlüssel", "deine Papiere". Bei männlichen/sächlichen Dingen "dein Portemonnaie", "dein Handy". Achte penibel darauf!
+                                   - Orte und Ablageorte müssen immer mit korrekter Präposition und Artikel stehen (Beispiele: "in der Vitrine", "auf dem Tisch", "im Küchenschrank", "unter der Bank").
                                 3. SPRACHLICHER STIL:
                                    - Antworte immer auf natürlichstes, fehlerfreies Deutsch. Keine Roboter-Sprache, sondern locker, herzlich und direkt.
-                                   - Wenn ${currentUserName} nach einem Gegenstand fragst ("Wo isser?", "Wo ist mein..."), antworte präzise mit dem genauen Speicherort aus deinem Gedächtnis.
+                                   - Wenn ${currentUserName} nach einem Gegenstand fragt, antworte präzise mit dem genauen Speicherort aus deinem Gedächtnis.
                                 
                                 KLASSIFIZIERUNG DER TYPEN:
                                 1. "chat": Smalltalk, Unterhaltung, Fragen.
                                 2. "name_change": Namensänderung.
-                                3. "item_store": Gegenstand ablegen (z.B. "Portemonnaie liegt in der Vitrine").
+                                3. "item_store": Gegenstand ablegen (z.B. "Brille liegt auf dem Tisch").
                                 4. "item_query": Nach einem Gegenstand fragen.
                                 5. "note": To-Dos oder Notizen ohne feste Uhrzeit.
                                 6. "calendar": Termine mit fester Uhrzeit.
@@ -402,7 +485,7 @@
                                 - "note_text": string
                                 - "summary": string
                                 - "start_time": string (ISO-Format für Kalendertermine, z.B. 2026-09-15T14:30:00)
-                                - "reply": string (Deine sehr menschliche, herzliche Antwort auf Deutsch mit absolut fehlerfreier Grammatik und korrekter Portemonnaie-Schreibweise)`
+                                - "reply": string (Deine sehr menschliche, herzliche Antwort auf Deutsch mit absolut fehlerfreier Grammatik, korrekter Portemonnaie-Schreibweise und exakten Artikeln wie "deine Brille")`
                             },
                             {
                                 role: "user",
@@ -451,9 +534,19 @@
                     }
 
                     if (foundLocation) {
-                        finalReply = `Kein Problem, ${currentUserName}! Dein ${matchedName} liegt ${foundLocation}.`;
+                        let art = "Dein";
+                        let lowerStored = matchedName.toLowerCase();
+                        if (lowerStored.endsWith('e') || lowerStored.includes('brille') || lowerStored.includes('tasche')) {
+                            art = "Deine";
+                        }
+                        finalReply = `Kein Problem, ${currentUserName}! ${art} ${matchedName} liegt ${foundLocation}.`;
                     } else {
-                        finalReply = `Du, ${currentUserName}, ich habe leider keinen Schimmer, wo dein ${aiData.item_name} liegen soll.`;
+                        let art = "dein";
+                        let lowerAi = aiData.item_name.toLowerCase();
+                        if (lowerAi.endsWith('e') || lowerAi.includes('brille') || lowerAi.includes('tasche')) {
+                            art = "deine";
+                        }
+                        finalReply = `Du, ${currentUserName}, ich habe leider keinen Schimmer, wo ${art} ${aiData.item_name} liegen soll.`;
                     }
                 }
 
