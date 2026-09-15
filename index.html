@@ -138,7 +138,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.14</span>
+        <span>Version 4.15</span>
     </footer>
 
     <!-- JavaScript -->
@@ -511,7 +511,7 @@
                 }
             });
 
-            if (relevantItems.length > 0) {
+            if (relevantItems.length > *0*) {
                 relevantItems.forEach((item) => {
                     briefingText += `Denk dran: ${item.name} ${item.loc}. `;
                 });
@@ -526,11 +526,7 @@
             statusMessage.textContent = "Verarbeite...";
 
             const now = new Date();
-            const tomorrow = new Date(now);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            
             const todayStr = now.toLocaleDateString('en-CA');
-            const tomorrowStr = tomorrow.toLocaleDateString('en-CA');
             const currentClockTime = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
 
             const memoryWithDetails = {};
@@ -562,27 +558,27 @@
                             {
                                 role: "system",
                                 content: `Du bist ${currentUserName}s smarter, absolut natürlicher und menschlicher Alltags-Assistent in Schwarzenbek. 
-                                Aktuelles Jahr ist 2026, heute ist ${todayStr} (${now.toLocaleDateString('de-DE', {weekday: 'long'})}), Uhrzeit ist exakt ${currentClockTime} Uhr, morgen ist ${tomorrowStr}.
+                                Aktuelles exaktes Datum heute ist ${todayStr} (${now.toLocaleDateString('de-DE', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'})}), Uhrzeit ist exakt ${currentClockTime} Uhr.
                                 Bisheriges Gedächtnis über Gegenstände: ${memoryContext}
                                 Kalender: ${calendarContext}
                                 To-Dos: ${todoContext}
 
-                                ABSOLUT STRENGE SPRACH-REGELN (WICHTIGSTE PRIORITÄT!):
-                                1. VERBOTEN: Sag NIEMALS roboterhaft oder grammatikalisch falsch "Ich habe gemerkt..." oder "Ich habe gemerkt, [Gegenstand]". Das ist absolutes Frack-Deutsch und klingt furchtbar.
-                                2. RICHTIG SPRECHEN: Verwende immer astreines, natürliches Deutsch, z.B. "Alles klar, hab's mir aufgeschrieben...", "Mach ich, ist gespeichert...", "Alles klar, ...".
-                                3. VERBEN EXAKT BEIBEHALTEN: Wenn der Nutzer sagt "Ich lege meinen Schlüssel auf die Küchenablage", dann speichere dir den Ort exakt mit diesem Verb ab (z.B. "liegt auf der Küchenablage" oder "steckt in der Tür"). Erfinde niemals falsche Verben. Wenn danach gefragt wird, antworte genau damit (z.B. "Dein Schlüssel liegt auf der Küchenablage").
+                                ABSOLUT STRENGE DATUMS- & KALENDER-REGELN (WICHTIGSTE PRIORITÄT!):
+                                1. EXAKTES DATUM BEACHTEN: Achte penibel auf das genaue Datum, das der Nutzer nennt (z.B. "am 17."). Verwechsle ein genanntes Datum NIEMALS mit "morgen" oder "heute", es sei denn, der Nutzer sagt explizit "morgen". Wenn heute der 15. ist und der Nutzer einen Termin auf den 17. legt, liegt der Termin am 17. und NICHT am nächsten Tag!
+                                2. TERMINE & FRAGEN ABGLEICHEN: Wenn der Nutzer fragt, was für Termine anstehen, schaue in die Kalender-Daten und beantworte das tagesgenau. Wenn ein Termin für den 17. hinterlegt ist und der Nutzer fragt allgemein nach Terminen oder für heute, darfst du den Termin vom 17. NICHT als "morgen" oder "heute" ankündigen!
+                                3. SPRACH-STIL: Sag NIEMALS "Ich habe gemerkt...". Antworte immer natürlich und flüssig (z.B. "Alles klar, hab's mir aufgeschrieben...", "Der Termin am 17. ist eingetragen...").
                                 4. FREIHEIT: Du kannst dem Nutzer absolut jede Frage beantworten (zu Kochen, Geschichte, Alltag, Technik etc.) – wähle dann den Typ "chat".
 
                                 Gib ein JSON-Objekt zurück mit folgenden Feldern:
                                 - "type": string (Wähle aus: "chat", "name_change", "item_store", "item_query", "note", "calendar")
                                 - "new_name": string (Falls der Nutzer seinen Namen ändern will)
                                 - "item_name": string (Name des Gegenstands bei store/query)
-                                - "item_location": string (Der genaue Ort mit exaktem Verb, z.B. "liegt auf der Küchenablage" oder "steckt in der Tür")
+                                - "item_location": string (Der genaue Ort mit exaktem Verb)
                                 - "item_category": string (Kategorie: "Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer", "Sonstiges")
                                 - "note_text": string (Bei To-Dos)
                                 - "summary": string (Titel für Kalender)
-                                - "start_time": string (ISO-Datum für Kalender)
-                                - "reply": string (Deine komplette, natürliche, astreine Antwort auf Deutsch, die per Sprachausgabe vorgelesen wird!)`
+                                - "start_time": string (Exaktes ISO-Datum im Format YYYY-MM-DDTHH:mm:ss für Kalender – achte strikt auf das vom Nutzer genannte Datum!)
+                                - "reply": string (Deine komplette, natürliche, fehlerfreie Antwort auf Deutsch, die per Sprachausgabe vorgelesen wird!)`
                             },
                             {
                                 role: "user",
@@ -645,7 +641,6 @@
                     let cleanName = aiData.item_name.toLowerCase();
                     let cleanLoc = aiData.item_location;
                     
-                    // Saubere Verknüpfung ohne doppelte Präpositionen
                     cleanLoc = cleanLoc.replace(/\b(im|in der|in dem|auf dem|auf der|an der|am)\s+(in|im|in der|in dem|auf|an)\b/gi, '$1');
                     
                     let category = aiData.item_category || "Sonstiges";
@@ -679,7 +674,6 @@
                     }
 
                     if (foundItem) {
-                        // Automatischer Fallback falls die KI ein schlechtes reply baut
                         if (!aiData.reply || aiData.reply.includes("habe gemerkt")) {
                             finalReply = `Dein ${matchedName} ${foundItem.location}.`;
                         }
@@ -796,7 +790,7 @@
                 });
             }
 
-            if (todoEntries.length === 0) {
+            if (todoEntries.length ===, 0) {
                 todoList.innerHTML = '<li class="text-slate-500">Keine offenen To-Dos.</li>';
             } else {
                 todoList.innerHTML = '';
