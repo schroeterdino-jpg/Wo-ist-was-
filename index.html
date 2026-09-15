@@ -97,6 +97,7 @@
         <div class="flex bg-slate-200 p-1 rounded-xl">
             <button id="tabCalendarBtn" onclick="switchTab('calendar')" class="flex-1 py-2 rounded-lg font-bold text-base bg-white text-blue-800 shadow-sm transition">📅 Termine</button>
             <button id="tabTodoBtn" onclick="switchTab('todo')" class="flex-1 py-2 rounded-lg font-bold text-base text-slate-600 transition">📝 To-Dos</button>
+            <button id="tabMemoryBtn" onclick="switchTab('memory')" class="flex-1 py-2 rounded-lg font-bold text-base text-slate-600 transition">🔍 Gegenstände</button>
         </div>
 
         <!-- Ansicht: Kalender-Termine -->
@@ -115,14 +116,23 @@
             </ul>
         </div>
 
+        <!-- Ansicht: Gegenstände nach Kategorien -->
+        <div id="memoryView" class="hidden bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-bold text-blue-800">🔍 Gespeicherte Gegenstände:</h2>
+                <button onclick="clearAllMemory()" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded-lg text-xs font-semibold shadow">🗑️ Alles löschen</button>
+            </div>
+            <div id="categoryContainer" class="space-y-3 text-base">
+                <!-- Kategorien werden hier dynamisch eingefügt -->
+            </div>
+        </div>
+
     </main>
 
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <button onclick="clearAllMemory()" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-semibold shadow">
-            🗑️ Gedächtnis löschen
-        </button>
+        <span>Version 2.5</span>
     </footer>
 
     <!-- JavaScript -->
@@ -132,6 +142,7 @@
         const statusMessage = document.getElementById('statusMessage');
         const calendarList = document.getElementById('calendarList');
         const todoList = document.getElementById('todoList');
+        const categoryContainer = document.getElementById('categoryContainer');
         const settingsBox = document.getElementById('settingsBox');
         const apiKeyInput = document.getElementById('apiKeyInput');
         const googleClientIdInput = document.getElementById('googleClientIdInput');
@@ -145,8 +156,10 @@
 
         const calendarView = document.getElementById('calendarView');
         const todoView = document.getElementById('todoView');
+        const memoryView = document.getElementById('memoryView');
         const tabCalendarBtn = document.getElementById('tabCalendarBtn');
         const tabTodoBtn = document.getElementById('tabTodoBtn');
+        const tabMemoryBtn = document.getElementById('tabMemoryBtn');
 
         let currentUserName = localStorage.getItem('user_custom_name') || "Dino";
         userNameInput.value = currentUserName;
@@ -170,6 +183,7 @@
 
         let calendarEntries = JSON.parse(localStorage.getItem('helfer_calendar_entries')) || [];
         let todoEntries = JSON.parse(localStorage.getItem('helfer_todo_entries')) || [];
+        // memoryItems speichert jetzt Objekte: { location, timestamp, category }
         let memoryItems = JSON.parse(localStorage.getItem('helfer_memory')) || {};
         let savedContacts = JSON.parse(localStorage.getItem('helfer_contacts')) || {};
         
@@ -211,16 +225,22 @@
         }
 
         function switchTab(tab) {
+            calendarView.classList.add('hidden');
+            todoView.classList.add('hidden');
+            memoryView.classList.add('hidden');
+            tabCalendarBtn.className = "flex-1 py-2 rounded-lg font-bold text-base text-slate-600 transition";
+            tabTodoBtn.className = "flex-1 py-2 rounded-lg font-bold text-base text-slate-600 transition";
+            tabMemoryBtn.className = "flex-1 py-2 rounded-lg font-bold text-base text-slate-600 transition";
+
             if (tab === 'calendar') {
                 calendarView.classList.remove('hidden');
-                todoView.classList.add('hidden');
                 tabCalendarBtn.className = "flex-1 py-2 rounded-lg font-bold text-base bg-white text-blue-800 shadow-sm transition";
-                tabTodoBtn.className = "flex-1 py-2 rounded-lg font-bold text-base text-slate-600 transition";
-            } else {
+            } else if (tab === 'todo') {
                 todoView.classList.remove('hidden');
-                calendarView.classList.add('hidden');
                 tabTodoBtn.className = "flex-1 py-2 rounded-lg font-bold text-base bg-white text-blue-800 shadow-sm transition";
-                tabCalendarBtn.className = "flex-1 py-2 rounded-lg font-bold text-base text-slate-600 transition";
+            } else if (tab === 'memory') {
+                memoryView.classList.remove('hidden');
+                tabMemoryBtn.className = "flex-1 py-2 rounded-lg font-bold text-base bg-white text-blue-800 shadow-sm transition";
             }
         }
 
@@ -319,7 +339,6 @@
                 
                 const lower = speechResult.toLowerCase();
                 
-                // Direkte Sprachprüfung für Anrufe vorab abfangen
                 if ((lower.includes("ruf") || lower.includes("anrufen")) && lower.includes("an")) {
                     handleCallCommand(lower);
                 } else if (lower.includes("was steht heute an") || lower.includes("was liegt heute an") || lower.includes("bevor ich das haus verlasse")) {
@@ -402,22 +421,23 @@
                 });
             }
 
-            // STRENGES FILTERN: Kuscheltiere, Kuscheltier, Spielzeug etc. IMMER AUSSCHLIESSEN
             const unimportantKeywords = ["kuscheltier", "spielzeug", "puppe", "teddy", "kuscheltiere"];
             const memKeys = Object.keys(memoryItems);
             let relevantItems = [];
 
             memKeys.forEach(k => {
+                let itemObj = memoryItems[k];
+                // Falls noch altes Format als String gespeichert war
+                let loc = typeof itemObj === 'object' ? itemObj.location : itemObj;
                 let isUnimportant = unimportantKeywords.some(badWord => k.toLowerCase().includes(badWord));
                 if (!isUnimportant) {
-                    relevantItems.push({ name: k, loc: memoryItems[k] });
+                    relevantItems.push({ name: k, loc: loc });
                 }
             });
 
             if (relevantItems.length > 0) {
                 briefingText += "Und denk an deine wichtigen Sachen: ";
                 relevantItems.forEach(item => {
-                    // Artikel-Korrektur (z.B. "deine Brille" statt "dein Brille")
                     let art = "dein";
                     let lowerName = item.name.toLowerCase();
                     if (lowerName.endsWith('e') || lowerName.includes('brille') || lowerName.includes('tasche') || lowerName.includes('uhr')) {
@@ -439,7 +459,20 @@
             const key = localStorage.getItem('user_api_key');
             statusMessage.textContent = "Verarbeite...";
 
-            const memoryContext = JSON.stringify(memoryItems);
+            // Bereite Gedächtnis mit Zeitangaben für die KI vor
+            const now = new Date();
+            const memoryWithDetails = {};
+            for (let k in memoryItems) {
+                let item = memoryItems[k];
+                let loc = typeof item === 'object' ? item.location : item;
+                let ts = typeof item === 'object' ? item.timestamp : now.getTime();
+                
+                let diffDays = Math.floor((now.getTime() - ts) / (1000 * 60 * 60 * 24));
+                let timeDesc = diffDays === 0 ? "heute" : (diffDays === 1 ? "vor 1 Tag" : `vor ${diffDays} Tagen`);
+                
+                memoryWithDetails[k] = { location: loc, abgelegt: timeDesc };
+            }
+            const memoryContext = JSON.stringify(memoryWithDetails);
 
             try {
                 const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -455,37 +488,37 @@
                             {
                                 role: "system",
                                 content: `Du bist ein absolut fehlerfreier, hochpräziser, menschlicher und herzlicher deutscher Alltags-Assistent für ${currentUserName}.
-                                Aktuelles Jahr ist 2026, heute ist ${new Date().toISOString().split('T')[0]}.
-                                Bisheriges Gedächtnis über Gegenstände: ${memoryContext}
+                                Aktuelles Jahr ist 2026, heute ist ${now.toISOString().split('T')[0]}.
+                                Bisheriges Gedächtnis über Gegenstände mit Ablagezeit: ${memoryContext}
                                 
-                                ABSOLUTE GRAMMATIK- UND RECHTSCHREIBGESETZE (STRICT GUIDELINES):
+                                ABSOLUTE GRAMMATIK- UND RECHTSCHREIBGESETZE:
                                 1. DAS WORT "PORTMONNAIE" / "GELDBEUTEL":
-                                   - Es heisst NIEMALS "Popmoney", "Popmannee", "Popmonnee" oder ähnlich falsches Zeug!
-                                   - Es heisst IMMER und ausschliesslich korrekt geschrieben: "Portemonnaie" (bzw. gesprochen "Portmonnaie"). Du musst diesen Begriff absolut fehlerfrei verwenden.
-                                2. GRAMMATIK UND BESITZANZEIGENDE FÜRWÖRTER (ARTIKEL / KASUS):
-                                   - NIEMALS "dein Brille" oder ähnlicher Unfug! Bei weiblichen oder Plural-Gegenständen heisst es zwingend "deine Brille", "deine Schlüssel", "deine Papiere". Bei männlichen/sächlichen Dingen "dein Portemonnaie", "dein Handy". Achte penibel darauf!
-                                   - Orte und Ablageorte müssen immer mit korrekter Präposition und Artikel stehen (Beispiele: "in der Vitrine", "auf dem Tisch", "im Küchenschrank", "unter der Bank").
-                                3. SPRACHLICHER STIL:
-                                   - Antworte immer auf natürlichstes, fehlerfreies Deutsch. Keine Roboter-Sprache, sondern locker, herzlich und direkt.
-                                   - Wenn ${currentUserName} nach einem Gegenstand fragt, antworte präzise mit dem genauen Speicherort aus deinem Gedächtnis.
+                                   - Es heisst NIEMALS "Popmoney", "Popmannee", "Popmonnee"! Immer exakt "Portemonnaie".
+                                2. BESITZANZEIGENDE FÜRWÖRTER (ARTIKEL):
+                                   - NIEMALS "dein Brille"! Zwingend "deine Brille", "deine Schlüssel", "deine Papiere". Sächlich/männlich: "dein Portemonnaie", "dein Handy".
+                                3. KATEGORIEN FÜR GEGENSTÄNDE:
+                                   - Ordne jeden Gegenstand einer dieser 4 Kategorien zu: "Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer" (oder "Sonstiges", falls es nirgends passt).
+                                4. ZEITANGABEN BEI ABRUFEN:
+                                   - Wenn ${currentUserName} nach einem Gegenstand fragt, nenne den Ort und beziehe den Zeitpunkt im passenden Deutsch mit ein (z.B. "...das hast du vor 3 Tagen dort abgelegt").
                                 
                                 KLASSIFIZIERUNG DER TYPEN:
                                 1. "chat": Smalltalk, Unterhaltung, Fragen.
                                 2. "name_change": Namensänderung.
-                                3. "item_store": Gegenstand ablegen (z.B. "Brille liegt auf dem Tisch").
+                                3. "item_store": Gegenstand ablegen.
                                 4. "item_query": Nach einem Gegenstand fragen.
-                                5. "note": To-Dos oder Notizen ohne feste Uhrzeit.
+                                5. "note": To-Dos oder Notizen.
                                 6. "calendar": Termine mit fester Uhrzeit.
 
                                 Gib ein JSON-Objekt zurück mit:
                                 - "type": string ("chat", "name_change", "item_store", "item_query", "note", "calendar")
                                 - "new_name": string
                                 - "item_name": string
-                                - "item_location": string (vollständiger Satz mit Präposition und Artikel, z.B. "in der Vitrine")
+                                - "item_location": string (z.B. "in der Vitrine")
+                                - "item_category": string ("Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer" oder "Sonstiges")
                                 - "note_text": string
                                 - "summary": string
-                                - "start_time": string (ISO-Format für Kalendertermine, z.B. 2026-09-15T14:30:00)
-                                - "reply": string (Deine sehr menschliche, herzliche Antwort auf Deutsch mit absolut fehlerfreier Grammatik, korrekter Portemonnaie-Schreibweise und exakten Artikeln wie "deine Brille")`
+                                - "start_time": string (ISO-Format für Termine)
+                                - "reply": string (Deine sehr menschliche Antwort auf Deutsch mit korrekter Grammatik, Portemonnaie-Schreibweise, Artikeln wie "deine Brille" und der Information, vor wie vielen Tagen es abgelegt wurde)`
                             },
                             {
                                 role: "user",
@@ -516,30 +549,40 @@
                     if (!cleanLoc.startsWith("in") && !cleanLoc.startsWith("auf") && !cleanLoc.startsWith("unter") && !cleanLoc.startsWith("neben")) {
                         cleanLoc = "in der " + cleanLoc;
                     }
-                    memoryItems[cleanName] = cleanLoc;
+                    let category = aiData.item_category || "Sonstiges";
+                    
+                    memoryItems[cleanName] = {
+                        location: cleanLoc,
+                        timestamp: Date.now(),
+                        category: category
+                    };
                     localStorage.setItem('helfer_memory', JSON.stringify(memoryItems));
                 }
 
                 if (aiData.type === 'item_query' && aiData.item_name) {
                     let cleanQuery = aiData.item_name.toLowerCase();
-                    let foundLocation = null;
+                    let foundItem = null;
                     let matchedName = aiData.item_name;
 
                     for (let storedKey in memoryItems) {
                         if (cleanQuery.includes(storedKey) || storedKey.includes(cleanQuery)) {
-                            foundLocation = memoryItems[storedKey];
+                            foundItem = memoryItems[storedKey];
                             matchedName = storedKey.charAt(0).toUpperCase() + storedKey.slice(1);
                             break;
                         }
                     }
 
-                    if (foundLocation) {
+                    if (foundItem) {
                         let art = "Dein";
                         let lowerStored = matchedName.toLowerCase();
                         if (lowerStored.endsWith('e') || lowerStored.includes('brille') || lowerStored.includes('tasche')) {
                             art = "Deine";
                         }
-                        finalReply = `Kein Problem, ${currentUserName}! ${art} ${matchedName} liegt ${foundLocation}.`;
+                        
+                        let diffDays = Math.floor((Date.now() - foundItem.timestamp) / (1000 * 60 * 60 * 24));
+                        let timeString = diffDays === 0 ? "heute" : (diffDays === 1 ? "vor 1 Tag" : `vor ${diffDays} Tagen`);
+                        
+                        finalReply = `Kein Problem, ${currentUserName}! ${art} ${matchedName} liegt ${foundItem.location} (das hast du ${timeString} dort abgelegt).`;
                     } else {
                         let art = "dein";
                         let lowerAi = aiData.item_name.toLowerCase();
@@ -649,9 +692,17 @@
             speak("To-Do erledigt.");
         }
 
+        function deleteMemoryItem(key) {
+            delete memoryItems[key];
+            localStorage.setItem('helfer_memory', JSON.stringify(memoryItems));
+            renderAllLists();
+            speak("Gegenstand gelöscht.");
+        }
+
         function clearAllMemory() {
             memoryItems = {};
             localStorage.removeItem('helfer_memory');
+            renderAllLists();
             speak("Gedächtnis komplett gelöscht.");
         }
 
@@ -696,6 +747,50 @@
                     `;
                     todoList.appendChild(li);
                 });
+            }
+
+            // Gegenstände nach Kategorien (Flur, Schlafzimmer, Wohnzimmer, Badezimmer, Sonstiges)
+            const categories = ["Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer", "Sonstiges"];
+            const grouped = {};
+            categories.forEach(c => grouped[c] = []);
+
+            for (let key in memoryItems) {
+                let item = memoryItems[key];
+                // Abwärtskompatibilität falls noch alte Strings im Speicher sind
+                let loc = typeof item === 'object' ? item.location : item;
+                let cat = (typeof item === 'object' && item.category) ? item.category : "Sonstiges";
+                if (!grouped[cat]) cat = "Sonstiges";
+                
+                grouped[cat].push({ key: key, location: loc });
+            }
+
+            let catHtml = '';
+            let hasAnyItems = false;
+
+            categories.forEach(cat => {
+                let itemsInCat = grouped[cat];
+                if (itemsInCat.length > 0) {
+                    hasAnyItems = true;
+                    catHtml += `<div class="border border-slate-200 rounded-xl p-3 bg-slate-50">
+                        <h3 class="font-bold text-blue-700 mb-2">📌 ${cat}</h3>
+                        <ul class="space-y-1">`;
+                    
+                    itemsInCat.forEach(i => {
+                        let capitalizedName = i.key.charAt(0).toUpperCase() + i.key.slice(1);
+                        catHtml += `<li class="flex justify-between items-center text-sm py-1 border-b border-slate-200 last:border-none">
+                            <span>• <b>${capitalizedName}</b>: ${i.location}</span>
+                            <button onclick="deleteMemoryItem('${i.key}')" class="text-red-600 font-bold text-xs ml-2">Löschen</button>
+                        </li>`;
+                    });
+
+                    catHtml += `</ul></div>`;
+                }
+            });
+
+            if (!hasAnyItems) {
+                categoryContainer.innerHTML = '<p class="text-slate-500">Keine Gegenstände gespeichert.</p>';
+            } else {
+                categoryContainer.innerHTML = catHtml;
             }
         }
     </script>
