@@ -76,9 +76,9 @@
             <p id="outputBox" class="text-slate-600 italic">Noch nichts eingegeben...</p>
         </div>
 
-        <!-- Gespeicherte Einträge & Gegenstände für heute -->
+        <!-- Gespeicherte Einträge für heute mit Löschbutton -->
         <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200">
-            <h2 class="text-xl font-bold text-blue-800 mb-3">Heutige Notizen & Ablagen:</h2>
+            <h2 class="text-xl font-bold text-blue-800 mb-3">Heutige Notizen & Termine:</h2>
             <ul id="entryList" class="space-y-2 text-lg">
                 <li class="text-slate-500">Keine Einträge für heute.</li>
             </ul>
@@ -109,7 +109,7 @@
         entries = entries.filter(e => e.day === todayStr);
         renderEntries();
 
-        // Gespeicherte Gegenstände (Gedächtnis für "Wo ist mein Schlüssel?")
+        // Gedächtnis für Gegenstände (z. B. Portemonnaie, Schlüssel)
         let memoryItems = JSON.parse(localStorage.getItem('helfer_memory')) || {};
 
         const savedKey = localStorage.getItem('user_api_key');
@@ -131,9 +131,8 @@
             if (key) {
                 localStorage.setItem('user_api_key', key);
                 connectionStatus.textContent = "Groq-Schlüssel gespeichert.";
-                checkGroqConnection();
             } else {
-                alert('Bitte gib einen gültigen Groq-Schlüssel ein.');
+                alert('Bitte gib einen gültigen Schlüssel ein.');
             }
         }
 
@@ -160,12 +159,12 @@
                     scope: 'https://www.googleapis.com/auth/calendar.events',
                     callback: (response) => {
                         if (response.error) {
-                            connectionStatus.textContent = `❌ Google Login Fehler: ${response.error}`;
+                            connectionStatus.textContent = `❌ Fehler: ${response.error}`;
                             return;
                         }
                         accessToken = response.access_token;
                         localStorage.setItem('google_access_token', accessToken);
-                        connectionStatus.textContent = "✅ Erfolgreich mit Google Kalender verbunden!";
+                        connectionStatus.textContent = "✅ Mit Google Kalender verbunden!";
                     },
                 });
                 tokenClient.requestAccessToken();
@@ -174,14 +173,25 @@
             }
         }
 
+        // Sprachausgabe (Text-to-Speech)
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Laufende Sprachausgabe stoppen
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'de-DE';
+                utterance.rate = 1.0; // Angenehme Sprechgeschwindigkeit
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
         async function checkGroqConnection() {
             const key = localStorage.getItem('user_api_key');
             if (!key) {
-                connectionStatus.textContent = "⚠️ Kein Groq-Schlüssel hinterlegt.";
+                connectionStatus.textContent = "⚠️ Kein Schlüssel hinterlegt.";
                 return;
             }
 
-            connectionStatus.textContent = "Prüfe Verbindung zu Groq...";
+            connectionStatus.textContent = "Prüfe Verbindung...";
             try {
                 const response = await fetch('https://api.groq.com/openai/v1/models', {
                     method: 'GET',
@@ -198,7 +208,7 @@
             }
         }
 
-        // Web Speech API
+        // Web Speech API (Spracherkennung)
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition = null;
         let isRecording = false;
@@ -269,12 +279,11 @@
             recordText.textContent = "SPRECHEN";
         }
 
-        // Intelligente KI-Verarbeitung mit Objekterkennung und Kalender-Check
+        // Intelligente KI-Verarbeitung mit robustem Objektgedächtnis
         async function sendToGroqSmart(text) {
             const key = localStorage.getItem('user_api_key');
             outputBox.textContent = "Verarbeite...";
 
-            // Aktuelles Gedächtnis an die KI übergeben, damit sie weiß, wo Gegenstände liegen
             const memoryContext = JSON.stringify(memoryItems);
 
             try {
@@ -290,17 +299,17 @@
                         messages: [
                             {
                                 role: "system",
-                                content: `Du bist ein sehr hilfsbereiter, freundlicher Alltags-Assistent für einen älteren Menschen. 
-                                Analysiere den gesprochenen Satz. Aktuelles Jahr ist 2026, heute ist ${new Date().toISOString().split('T')[0]}.
-                                Bekanntes Gedächtnis über abgelegte Gegenstände: ${memoryContext}
+                                content: `Du bist ein sehr hilfsbereiter, freundlicher Alltags-Assistent. 
+                                Aktuelles Jahr ist 2026, heute ist ${new Date().toISOString().split('T')[0]}.
+                                Bisheriges Gedächtnis über Gegenstände und deren Plätze (z.B. Portemonnaie, Schlüssel): ${memoryContext}
                                 
-                                Gib ein JSON-Objekt zurück mit:
-                                - "type": string ("calendar" wenn es ein neuer Termin ist, "item_store" wenn der Nutzer sagt, wo ein Gegenstand liegt, "item_query" wenn der Nutzer fragt wo etwas ist, "note" für normale Alltagsdinge)
-                                - "item_name": string (Name des Gegenstands bei store/query, sonst leer)
-                                - "item_location": string (Ort des Gegenstands bei store, sonst leer)
+                                Analysiere den gesprochenen Satz. Gib ein JSON-Objekt zurück mit:
+                                - "type": string ("calendar" für Termine, "item_store" wenn der Nutzer sagt, wo ein Gegenstand liegt, "item_query" wenn er fragt wo etwas ist)
+                                - "item_name": string (z.B. "portemonnaie", "schlüssel", "brille")
+                                - "item_location": string (z.B. "unters bett", "in der küche")
                                 - "is_event": boolean (true nur bei echten Kalender-Terminen)
-                                - "summary": string (Titel für den Kalender, falls is_event true)
-                                - "start_time": string (ISO 8601 YYYY-MM-DDTHH:MM:SS für Kalender, sonst leer)
+                                - "summary": string (Titel für den Kalender)
+                                - "start_time": string (ISO 8601 YYYY-MM-DDTHH:MM:SS für Kalender)
                                 - "reply": string (Deine kurze, klare, sehr freundliche gesprochene Antwort auf Deutsch)`
                             },
                             {
@@ -316,30 +325,43 @@
                 const data = await response.json();
                 const aiData = JSON.parse(data.choices[0].message.content);
 
-                outputBox.textContent = aiData.reply;
+                let finalReply = aiData.reply;
 
-                // 1. Gegenstand speichern
+                // 1. Gegenstand merken (egal ob Portemonnaie, Popmon oder Schlüssel)
                 if (aiData.type === 'item_store' && aiData.item_name && aiData.item_location) {
-                    memoryItems[aiData.item_name.toLowerCase()] = aiData.item_location;
+                    const cleanName = aiData.item_name.toLowerCase().replace('popmon', 'portemonnaie');
+                    memoryItems[cleanName] = aiData.item_location;
                     localStorage.setItem('helfer_memory', JSON.stringify(memoryItems));
                 }
 
-                // 2. Gegenstand abfragen (falls im Gedächtnis)
+                // 2. Gegenstand abfragen
                 if (aiData.type === 'item_query' && aiData.item_name) {
-                    const foundLocation = memoryItems[aiData.item_name.toLowerCase()];
+                    const cleanQuery = aiData.item_name.toLowerCase().replace('popmon', 'portemonnaie');
+                    const foundLocation = memoryItems[cleanQuery] || memoryItems['portemonnaie'];
                     if (foundLocation) {
-                        outputBox.textContent = `Dein ${aiData.item_name} liegt ${foundLocation}.`;
+                        finalReply = `Dein ${aiData.item_name} liegt ${foundLocation}.`;
+                    } else {
+                        finalReply = `Ich weiß leider nicht, wo dein ${aiData.item_name} liegt.`;
                     }
                 }
 
                 // 3. Kalender-Termin eintragen
+                let calendarEventId = null;
                 if (aiData.is_event) {
-                    await createGoogleCalendarEvent(aiData.summary, aiData.start_time);
+                    calendarEventId = await createGoogleCalendarEvent(aiData.summary, aiData.start_time);
+                    if (calendarEventId) {
+                        finalReply += " In Kalender eingetragen.";
+                    }
                 }
 
-                // Nur in die heutige Liste eintragen
+                outputBox.textContent = finalReply;
+                speak(finalReply); // Automatische Sprachausgabe!
+
+                // In die heutige Liste eintragen (inkl. Kalender-ID zum Löschen)
                 const newEntry = {
-                    text: aiData.reply,
+                    id: Date.now(),
+                    calendarId: calendarEventId,
+                    text: finalReply,
                     day: todayStr,
                     date: new Date().toLocaleDateString('de-DE', { hour: '2-digit', minute: '2-digit' })
                 };
@@ -351,15 +373,13 @@
 
             } catch (error) {
                 outputBox.textContent = `❌ Fehler bei der Verarbeitung.`;
+                speak("Es gab leider einen Fehler bei der Verarbeitung.");
                 console.error(error);
             }
         }
 
         async function createGoogleCalendarEvent(summary, startTimeStr) {
-            if (!accessToken) {
-                outputBox.textContent += " (⚠️ Nicht mit Google Kalender verbunden)";
-                return;
-            }
+            if (!accessToken) return null;
 
             const startDate = new Date(startTimeStr);
             const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
@@ -381,13 +401,34 @@
                 });
 
                 if (res.ok) {
-                    outputBox.textContent += " ✅ In Google Kalender eingetragen!";
-                } else {
-                    outputBox.textContent += " ❌ Kalender-Fehler.";
+                    const data = await res.json();
+                    return data.id; // Google Event ID zurückgeben zum späteren Löschen
                 }
             } catch (e) {
                 console.error(e);
             }
+            return null;
+        }
+
+        // Eintrag löschen (lokal und aus Google Kalender)
+        async function deleteEntry(id, calendarId) {
+            // 1. Aus Google Kalender löschen, falls vorhanden
+            if (calendarId && accessToken) {
+                try {
+                    await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${calendarId}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+                } catch (e) {
+                    console.error("Fehler beim Löschen im Kalender:", e);
+                }
+            }
+
+            // 2. Lokal entfernen
+            entries = entries.filter(e => e.id !== id);
+            localStorage.setItem('helfer_entries', JSON.stringify(entries));
+            renderEntries();
+            speak("Eintrag gelöscht.");
         }
 
         function renderEntries() {
@@ -400,7 +441,15 @@
             entries.forEach(entry => {
                 const li = document.createElement('li');
                 li.className = "bg-slate-50 p-3 rounded-xl border border-slate-100 flex justify-between items-center text-base";
-                li.innerHTML = `<span>${entry.text}</span> <span class="text-xs text-slate-400">${entry.date}</span>`;
+                li.innerHTML = `
+                    <div>
+                        <span>${entry.text}</span>
+                        <div class="text-xs text-slate-400">${entry.date}</div>
+                    </div>
+                    <button onclick="deleteEntry(${entry.id}, '${entry.calendarId || ''}')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm font-semibold">
+                        Löschen
+                    </button>
+                `;
                 entryList.appendChild(li);
             });
         }
