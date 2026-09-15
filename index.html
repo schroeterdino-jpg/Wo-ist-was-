@@ -82,10 +82,11 @@
         const apiKeyInput = document.getElementById('apiKeyInput');
         const connectionStatus = document.getElementById('connectionStatus');
 
-        let entries = JSON.parse(localStorage.getItem('groq_helfer_entries')) || [];
+        let entries = JSON.parse(localStorage.getItem('helfer_entries')) || [];
         renderEntries();
 
-        const savedKey = localStorage.getItem('groq_user_api_key');
+        // Einheitlicher Key-Name für den Speicher
+        const savedKey = localStorage.getItem('user_api_key');
         if (savedKey) {
             apiKeyInput.value = savedKey;
         }
@@ -97,7 +98,8 @@
         function saveApiKey() {
             const key = apiKeyInput.value.trim();
             if (key) {
-                localStorage.setItem('groq_user_api_key', key);
+                // Hier wird jetzt einheitlich 'user_api_key' genutzt
+                localStorage.setItem('user_api_key', key);
                 connectionStatus.textContent = "Schlüssel gespeichert. Teste Verbindung...";
                 checkGroqConnection();
             } else {
@@ -107,7 +109,7 @@
 
         // Verbindung zu Groq prüfen
         async function checkGroqConnection() {
-            const key = localStorage.getItem('groq_user_api_key');
+            const key = localStorage.getItem('user_api_key');
             if (!key) {
                 connectionStatus.textContent = "⚠️ Kein Schlüssel hinterlegt.";
                 return;
@@ -173,7 +175,7 @@
         }
 
         function toggleSpeechRecognition() {
-            const currentKey = localStorage.getItem('groq_user_api_key');
+            const currentKey = localStorage.getItem('user_api_key');
             if (!currentKey) {
                 alert('Bitte hinterlege zuerst deinen Groq API-Key oben über "⚙️ Schlüssel & Test"!');
                 settingsBox.classList.remove('hidden');
@@ -206,7 +208,7 @@
 
         // Anfrage an Groq senden
         async function sendToGroq(text) {
-            const key = localStorage.getItem('groq_user_api_key');
+            const key = localStorage.getItem('user_api_key');
             outputBox.textContent = "Verarbeite mit Groq...";
 
             try {
@@ -248,7 +250,7 @@
 
                 entries.unshift(newEntry);
                 if (entries.length > 5) entries.pop();
-                localStorage.setItem('groq_helfer_entries', JSON.stringify(entries));
+                localStorage.setItem('helfer_entries', JSON.stringify(entries));
                 renderEntries();
 
             } catch (error) {
