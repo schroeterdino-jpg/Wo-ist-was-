@@ -129,7 +129,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.21</span>
+        <span>Version 4.22</span>
     </footer>
 
     <!-- JavaScript -->
@@ -306,13 +306,24 @@
             }
         }
 
-        function speak(text) {
+        function speak(text, onComplete) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'de-DE';
                 utterance.rate = 0.95;
+                
+                utterance.onend = function() {
+                    if (onComplete) onComplete();
+                };
+
+                utterance.onerror = function() {
+                    if (onComplete) onComplete();
+                };
+
                 window.speechSynthesis.speak(utterance);
+            } else {
+                if (onComplete) onComplete();
             }
         }
 
@@ -365,9 +376,23 @@
             recordBtn.disabled = true;
         }
 
+        function startListeningAuto() {
+            const currentKey = getPersistentData('user_api_key', '');
+            if (!currentKey || !recognition) return;
+            if (isRecording) return;
+            try {
+                recognition.start();
+            } catch (e) {
+                try {
+                    recognition.stop();
+                    setTimeout(() => recognition.start(), 200);
+                } catch (err) {}
+            }
+        }
+
         function readTodoList() {
             if (todoEntries.length === 0) {
-                speak("Deine To-Do-Liste ist aktuell leer.");
+                speak("Deine To-Do-Liste ist aktuell leer.", () => startListeningAuto());
                 statusMessage.textContent = "To-Do-Liste ist leer.";
                 return;
             }
@@ -378,7 +403,7 @@
             });
             
             statusMessage.textContent = "Lese To-Do-Liste vor...";
-            speak(textToSpeak);
+            speak(textToSpeak, () => startListeningAuto());
         }
 
         function handleCallCommand(text) {
@@ -391,10 +416,11 @@
             }
 
             if (foundContact) {
-                speak(`Ich rufe ${foundContact.originalName} für dich an.`);
-                window.location.href = `tel:${foundContact.phone}`;
+                speak(`Ich rufe ${foundContact.originalName} für dich an.`, () => {
+                    window.location.href = `tel:${foundContact.phone}`;
+                });
             } else {
-                speak("Diesen Kontakt habe ich leider nicht gefunden. Du kannst ihn ganz einfach in den Einstellungen hinzufügen.");
+                speak("Diesen Kontakt habe ich leider nicht gefunden. Du kannst ihn ganz einfach in den Einstellungen hinzufügen.", () => startListeningAuto());
             }
         }
 
@@ -414,12 +440,7 @@
             if (isRecording) {
                 recognition.stop();
             } else {
-                try {
-                    recognition.start();
-                } catch (e) {
-                    recognition.stop();
-                    setTimeout(() => recognition.start(), 200);
-                }
+                startListeningAuto();
             }
         }
 
@@ -524,7 +545,7 @@
             }
 
             statusMessage.textContent = "Fertig.";
-            speak(briefingText);
+            speak(briefingText, () => startListeningAuto());
         }
 
         async function sendToGroqSmart(text) {
@@ -696,7 +717,7 @@
                 }
 
                 statusMessage.textContent = "Fertig.";
-                speak(finalReply);
+                speak(finalReply, () => startListeningAuto());
                 renderAllLists();
 
             } catch (error) {
@@ -712,7 +733,7 @@
                 }
 
                 statusMessage.textContent = errorMessage;
-                speak("Entschuldigung, das Limit ist kurzzeitig erreicht oder es gab ein Verbindungsproblem.");
+                speak("Entschuldigung, das Limit ist kurzzeitig erreicht oder es gab ein Verbindungsproblem.", () => startListeningAuto());
             }
         }
 
