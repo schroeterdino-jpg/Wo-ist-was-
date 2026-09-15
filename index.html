@@ -6,6 +6,8 @@
     <title>Mein Helfer – Sprachassistent</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Identity Services (OAuth / Login) -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         body { font-size: 1.25rem; }
     </style>
@@ -17,21 +19,39 @@
         <h1 class="text-3xl font-bold">Mein Alltags-Helfer</h1>
         <p class="text-lg text-blue-100 mt-1">Sprechen Sie einfach mit der App</p>
         <button onclick="toggleSettings()" class="absolute top-4 right-4 bg-blue-800 hover:bg-blue-900 text-white px-3 py-1 rounded-lg text-sm">
-            ⚙️ Schlüssel & Test
+            ⚙️ Schlüssel & Google
         </button>
     </header>
 
     <!-- Einstellungs-Box -->
     <div id="settingsBox" class="hidden bg-amber-50 border-b border-amber-200 p-4 shadow-inner">
-        <div class="container mx-auto max-w-md">
-            <label class="block text-sm font-bold text-amber-900 mb-1">Groq API-Key (gsk_...):</label>
-            <div class="flex gap-2 mb-2">
-                <input type="password" id="apiKeyInput" placeholder="gsk_..." class="flex-grow p-2 border border-amber-300 rounded-lg text-base">
-                <button onclick="saveApiKey()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-base font-semibold">Speichern</button>
+        <div class="container mx-auto max-w-md space-y-4">
+            <!-- Groq API Key -->
+            <div>
+                <label class="block text-sm font-bold text-amber-900 mb-1">Groq API-Key (gsk_...):</label>
+                <div class="flex gap-2">
+                    <input type="password" id="apiKeyInput" placeholder="gsk_..." class="flex-grow p-2 border border-amber-300 rounded-lg text-base">
+                    <button onclick="saveApiKey()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-base font-semibold">Speichern</button>
+                </div>
             </div>
-            <button onclick="checkGroqConnection()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium">
-                🔍 Verbindung prüfen
-            </button>
+
+            <!-- Google Client ID -->
+            <div>
+                <label class="block text-sm font-bold text-amber-900 mb-1">Google Client-ID:</label>
+                <div class="flex gap-2">
+                    <input type="text" id="googleClientIdInput" placeholder="399573320370-..." class="flex-grow p-2 border border-amber-300 rounded-lg text-base">
+                    <button onclick="saveGoogleClientId()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-base font-semibold">Speichern</button>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <button onclick="checkGroqConnection()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium">
+                    🔍 Groq-Verbindung prüfen
+                </button>
+                <button onclick="loginWithGoogle()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
+                    📅 Mit Google Kalender verbinden
+                </button>
+            </div>
             <p id="connectionStatus" class="text-xs text-amber-800 mt-2 font-medium break-all"></p>
         </div>
     </div>
@@ -80,15 +100,22 @@
         const entryList = document.getElementById('entryList');
         const settingsBox = document.getElementById('settingsBox');
         const apiKeyInput = document.getElementById('apiKeyInput');
+        const googleClientIdInput = document.getElementById('googleClientIdInput');
         const connectionStatus = document.getElementById('connectionStatus');
 
         let entries = JSON.parse(localStorage.getItem('helfer_entries')) || [];
         renderEntries();
 
+        // Gespeicherte Werte laden
         const savedKey = localStorage.getItem('user_api_key');
-        if (savedKey) {
-            apiKeyInput.value = savedKey;
-        }
+        if (savedKey) apiKeyInput.value = savedKey;
+
+        const savedClientId = localStorage.getItem('google_client_id') || "399573320370-qka01ghj0s88eoair7lla665cbj10o4g.apps.googleusercontent.com";
+        googleClientIdInput.value = savedClientId;
+        localStorage.setItem('google_client_id', savedClientId);
+
+        let tokenClient;
+        let accessToken = localStorage.getItem('google_access_token');
 
         function toggleSettings() {
             settingsBox.classList.toggle('hidden');
@@ -98,18 +125,56 @@
             const key = apiKeyInput.value.trim();
             if (key) {
                 localStorage.setItem('user_api_key', key);
-                connectionStatus.textContent = "Schlüssel gespeichert. Teste Verbindung...";
+                connectionStatus.textContent = "Groq-Schlüssel gespeichert.";
                 checkGroqConnection();
             } else {
-                alert('Bitte gib einen gültigen Schlüssel ein.');
+                alert('Bitte gib einen gültigen Groq-Schlüssel ein.');
             }
         }
 
-        // Erweiterte Verbindungsprüfung mit Fehlerdetails
+        function saveGoogleClientId() {
+            const clientId = googleClientIdInput.value.trim();
+            if (clientId) {
+                localStorage.setItem('google_client_id', clientId);
+                connectionStatus.textContent = "Google Client-ID gespeichert.";
+            } else {
+                alert('Bitte gib eine Client-ID ein.');
+            }
+        }
+
+        // Google OAuth Token initialisieren und anfordern
+        function loginWithGoogle() {
+            const clientId = localStorage.getItem('google_client_id');
+            if (!clientId) {
+                alert('Bitte zuerst die Google Client-ID eintragen!');
+                return;
+            }
+
+            try {
+                tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: clientId,
+                    scope: 'https://www.googleapis.com/auth/calendar.events',
+                    callback: (response) => {
+                        if (response.error) {
+                            connectionStatus.textContent = `❌ Google Login Fehler: ${response.error}`;
+                            return;
+                        }
+                        accessToken = response.access_token;
+                        localStorage.setItem('google_access_token', accessToken);
+                        connectionStatus.textContent = "✅ Erfolgreich mit Google Kalender verbunden!";
+                    },
+                });
+                tokenClient.requestAccessToken();
+            } catch (error) {
+                connectionStatus.textContent = `❌ Fehler beim Initialisieren von Google Auth: ${error.message}`;
+            }
+        }
+
+        // Verbindung zu Groq prüfen
         async function checkGroqConnection() {
             const key = localStorage.getItem('user_api_key');
             if (!key) {
-                connectionStatus.textContent = "⚠️ Kein Schlüssel hinterlegt.";
+                connectionStatus.textContent = "⚠️ Kein Groq-Schlüssel hinterlegt.";
                 return;
             }
 
@@ -117,20 +182,17 @@
             try {
                 const response = await fetch('https://api.groq.com/openai/v1/models', {
                     method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${key}`
-                    }
+                    headers: { 'Authorization': `Bearer ${key}` }
                 });
 
                 if (response.ok) {
-                    connectionStatus.textContent = `✅ Verbindung erfolgreich! (Modell: llama-3.1-8b-instant)`;
+                    connectionStatus.textContent = `✅ Groq verbunden! (Modell: openai/gpt-oss-120b)`;
                 } else {
                     const errorDetails = await response.text();
                     connectionStatus.textContent = `❌ Fehler ${response.status}: ${errorDetails}`;
                 }
             } catch (error) {
-                connectionStatus.textContent = `❌ Netzwerk-/CORS-Fehler: ${error.message}`;
-                console.error(error);
+                connectionStatus.textContent = `❌ Netzwerkfehler: ${error.message}`;
             }
         }
 
@@ -156,7 +218,7 @@
             recognition.onresult = function(event) {
                 const speechResult = event.results[0][0].transcript;
                 outputBox.textContent = `"${speechResult}"`;
-                sendToGroq(speechResult);
+                sendToGroqAndCalendar(speechResult);
             };
 
             recognition.onerror = function(event) {
@@ -176,7 +238,7 @@
         function toggleSpeechRecognition() {
             const currentKey = localStorage.getItem('user_api_key');
             if (!currentKey) {
-                alert('Bitte hinterlege zuerst deinen Groq API-Key oben über "⚙️ Schlüssel & Test"!');
+                alert('Bitte hinterlege zuerst deinen Groq API-Key oben über "⚙️ Schlüssel & Google"!');
                 settingsBox.classList.remove('hidden');
                 return;
             }
@@ -205,10 +267,10 @@
             recordText.textContent = "SPRECHEN";
         }
 
-        // Anfrage an Groq senden mit genauer Fehlererfassung
-        async function sendToGroq(text) {
+        // KI-Anfrage über Groq mit JSON-Extraktion für den Kalender
+        async function sendToGroqAndCalendar(text) {
             const key = localStorage.getItem('user_api_key');
-            outputBox.textContent = "Verarbeite mit Groq...";
+            outputBox.textContent = "Verarbeite Termin mit KI...";
 
             try {
                 const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -219,10 +281,16 @@
                     },
                     body: JSON.stringify({
                         model: "openai/gpt-oss-120b",
+                        response_format: { type: "json_object" },
                         messages: [
                             {
                                 role: "system",
-                                content: "Du bist ein hilfreicher Assistent für den Alltag. Analysiere den gesprochenen Satz, fasse das Wichtigste zusammen und antworte kurz, freundlich und klar auf Deutsch."
+                                content: `Du bist ein Assistent für ältere Menschen. Analysiere den gesprochenen Satz. 
+                                Gib ein JSON-Objekt zurück mit folgenden Feldern:
+                                - "is_event": boolean (true, wenn es ein Termin oder eine Erinnerung ist)
+                                - "summary": string (Titel des Termins)
+                                - "start_time": string (ISO 8601 Format YYYY-MM-DDTHH:MM:SS, aktives Jahr ist 2026. Wenn keine Uhrzeit genannt wird, nimm 10:00:00. Heute ist der ${new Date().toISOString().split('T')[0]})
+                                - "reply": string (eine kurze, freundliche Bestätigung auf Deutsch für den Nutzer)`
                             },
                             {
                                 role: "user",
@@ -238,12 +306,17 @@
                 }
 
                 const data = await response.json();
-                const aiReply = data.choices[0].message.content;
+                const aiData = JSON.parse(data.choices[0].message.content);
 
-                outputBox.textContent = aiReply;
+                outputBox.textContent = aiData.reply;
+
+                // Wenn es ein Kalendereintrag ist und ein Google Token da ist -> direkt in Google Kalender eintragen
+                if (aiData.is_event) {
+                    await createGoogleCalendarEvent(aiData.summary, aiData.start_time);
+                }
 
                 const newEntry = {
-                    text: aiReply,
+                    text: aiData.reply,
                     date: new Date().toLocaleDateString('de-DE', { hour: '2-digit', minute: '2-digit' })
                 };
 
@@ -255,6 +328,43 @@
             } catch (error) {
                 outputBox.textContent = `❌ Fehlerdetails: ${error.message}`;
                 console.error(error);
+            }
+        }
+
+        // Termin direkt in den Google Kalender eintragen
+        async function createGoogleCalendarEvent(summary, startTimeStr) {
+            if (!accessToken) {
+                outputBox.textContent += " (⚠️ Nicht mit Google Kalender verbunden - Termin nur lokal gespeichert)";
+                return;
+            }
+
+            const startDate = new Date(startTimeStr);
+            const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // 1 Stunde Dauer standardmäßig
+
+            const event = {
+                summary: summary,
+                start: { dateTime: startDate.toISOString() },
+                end: { dateTime: endDate.toISOString() }
+            };
+
+            try {
+                const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(event)
+                });
+
+                if (res.ok) {
+                    outputBox.textContent += " ✅ Erfolgreich in Google Kalender eingetragen!";
+                } else {
+                    const errText = await res.text();
+                    outputBox.textContent += ` ❌ Kalender-Fehler: ${errText}`;
+                }
+            } catch (e) {
+                console.error(e);
             }
         }
 
