@@ -139,7 +139,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.5</span>
+        <span>Version 4.6</span>
     </footer>
 
     <!-- JavaScript -->
@@ -347,7 +347,7 @@
                 
                 if ((lower.includes("ruf") || lower.includes("anrufen")) && lower.includes("an")) {
                     handleCallCommand(lower);
-                } else if (lower.includes("wie spät ist es") || lower.includes("wieviel uhr") || lower.includes("wie viel uhr")) {
+                } else if (lower.includes("wie spät") || lower.includes("wieviel uhr") || lower.includes("wie viel uhr") || (lower.includes("uhrzeit") && !lower.includes("termin"))) {
                     const now = new Date();
                     const timeStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
                     const replyText = `Es ist jetzt ${timeStr} Uhr.`;
@@ -540,9 +540,8 @@
             const tomorrow = new Date(now);
             tomorrow.setDate(tomorrow.getDate() + 1);
             
-            const todayStr = now.toLocaleDateString('en-CA'); // YYYY-MM-DD format based on local time
-            const tomorrowTomorrow = new Date(tomorrow);
-            const tomorrowStr = tomorrowTomorrow.toLocaleDateString('en-CA');
+            const todayStr = now.toLocaleDateString('en-CA');
+            const tomorrowStr = tomorrow.toLocaleDateString('en-CA');
             const currentClockTime = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
 
             const memoryWithDetails = {};
@@ -616,13 +615,11 @@
 
                 let finalReply = aiData.reply;
 
-                // Zusätzliche Sicherheitsschleife: Falls keine Startzeit vorhanden ist, niemals als Kalender eintragen
                 if (aiData.type === 'calendar' && (!aiData.start_time || aiData.start_time === "" || aiData.start_time === "null")) {
                     aiData.type = 'note';
                     aiData.note_text = aiData.summary || text;
                 }
 
-                // Erzwinge immer eine eindeutige akustische Bestätigung
                 if (aiData.type === 'calendar') {
                     let calendarEventId = null;
                     let fullFormattedDate = new Date().toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Berlin' });
