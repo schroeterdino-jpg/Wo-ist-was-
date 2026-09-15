@@ -132,7 +132,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 3.2</span>
+        <span>Version 3.3</span>
     </footer>
 
     <!-- JavaScript -->
@@ -413,9 +413,9 @@
         async function triggerDailyBriefing() {
             statusMessage.textContent = "Lade Wetter & Briefing...";
             
-            let weatherText = "Das Wetter in Schwarzenbek konnte ich gerade leider nicht laden. ";
+            let weatherText = "";
             try {
-                const weatherRes = await fetch('https://api.open-meteo.com/v1/forecast?latitude=53.5135&current=temperature_2m,weather_code&timezone=Europe%2FBerlin');
+                const weatherRes = await fetch('https://api.open-meteo.com/v1/forecast?latitude=53.5135&longitude=10.4182&current=temperature_2m,weather_code');
                 if (weatherRes.ok) {
                     const weatherData = await weatherRes.json();
                     const temp = weatherData.current.temperature_2m;
@@ -428,18 +428,18 @@
                     else if (code >= 71 && code <= 77) condition = "schneebedeckt";
                     else if (code >= 95) condition = "Gewitter";
 
-                    weatherText = `Das aktuelle Wetter in Schwarzenbek ist ${condition} bei angenehmen ${temp} Grad. `;
+                    weatherText = `Das aktuelle Wetter in Schwarzenbek ist ${condition} bei ${temp} Grad. `;
                 }
             } catch (e) {
                 console.error("Wetterfehler:", e);
             }
 
-            let briefingText = `Guten Tag, ${currentUserName}. Hier ist dein kurzer Überblick für heute. ${weatherText} Und denke bitte daran, über den Tag verteilt ausreichend Wasser zu trinken. `;
+            let briefingText = `Guten Tag, ${currentUserName}. Hier ist dein kurzer Überblick. ${weatherText}`;
 
             if (calendarEntries.length > 0) {
-                briefingText += "Das sind deine eingetragenen Termine: ";
+                briefingText += "Deine Termine: ";
                 calendarEntries.forEach(e => {
-                    briefingText += `${e.text}, am ${e.date}. `;
+                    briefingText += `${e.text}, am ${e.shortDate}. `;
                 });
             }
 
@@ -457,7 +457,7 @@
             });
 
             if (relevantItems.length > 0) {
-                briefingText += "Und hier noch der Ort für deine wichtigen Sachen: ";
+                briefingText += "Wichtige Gegenstände: ";
                 relevantItems.forEach(item => {
                     let art = "dein";
                     let lowerName = item.name.toLowerCase();
@@ -469,10 +469,9 @@
             }
 
             if (calendarEntries.length === 0 && relevantItems.length === 0) {
-                briefingText += "Es gibt heute keine besonderen Termine oder Gegenstände, auf die du achten musst. ";
+                briefingText += "Es gibt heute keine besonderen Termine oder Gegenstände. ";
             }
 
-            briefingText += "Ich wünsche dir einen wunderschönen und entspannten Tag! ";
             statusMessage.textContent = "Fertig.";
             speak(briefingText);
         }
@@ -508,25 +507,21 @@
                         messages: [
                             {
                                 role: "system",
-                                content: `Du bist ein extrem geduldiger, freundlicher, herzlicher, ruhiger und empathischer deutscher Alltags-Assistent für ${currentUserName} in Schwarzenbek. 
-                                Du sprichst immer in einem sehr zugewandten, ruhigen und respektvollen Ton (niemals gestresst oder flapsig).
+                                content: `Du bist ein präziser, freundlicher und sprachlich exakter deutscher Alltags-Assistent für ${currentUserName} in Schwarzenbek. 
                                 Aktuelles Jahr ist 2026, heute ist ${now.toISOString().split('T')[0]}.
                                 Bisheriges Gedächtnis über Gegenstände mit Ablagezeit: ${memoryContext}
                                 
-                                ABSOLUTE REGELN FÜR TERMINE VS. TO-DOS:
-                                1. KALENDER ("calendar"): Wenn ${currentUserName} eine Aktivität mit einer klaren Uhrzeit oder einem festen Zeitpunkt nennt (z.B. "morgen um 14 Uhr Arzt", "heute um 20 Uhr einkaufen"), ist das ein Termin ("calendar"). Fülle "summary" und "start_time" aus.
-                                2. TO-DO / NOTIZ ("note"): Wenn ${currentUserName} eine Aufgabe nennt, bei der KEINE Uhrzeit genannt wird (z.B. "ich muss einkaufen gehen", "Milch kaufen"), ist das AUSSCHLIESSLICH ein To-Do ("note"). 
-                                3. KEINE GEGENFRAGEN NACH UHRZEITEN: Frage ${currentUserName} NIEMALS, ob er eine Uhrzeit hinzufügen möchte! Akzeptiere das Gesagte so wie es ist. Wenn keine Uhrzeit dabei ist, ist es ein reines To-Do und du bestätigst es einfach kurz und freundlich (z.B. "Ist notiert").
-                                
-                                ABSOLUTE GRAMMATIK- UND RECHTSCHREIBGESETZE:
-                                1. DAS WORT "PORTMONNAIE" / "GELDBEUTEL":
-                                   - Es heisst NIEMALS "Popmoney", "Popmannee", "Popmonnee"! Immer exakt "Portemonnaie".
-                                2. BESITZANZEIGENDE FÜRWÖRTER (ARTIKEL):
-                                   - NIEMALS "dein Brille"! Zwingend "deine Brille", "deine Schlüssel", "deine Papiere". Sächlich/männlich: "dein Portemonnaie", "dein Handy".
-                                3. KATEGORIEN FÜR GEGENSTÄNDE:
-                                   - Ordne jeden Gegenstand einer dieser 4 Kategorien zu: "Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer" (oder "Sonstiges").
-                                4. ZEITANGABEN BEI ABRUFEN:
-                                   - Wenn ${currentUserName} nach einem Gegenstand fragt, nenne den Ort und erwähne geduldig, wann er es dort abgelegt hat.
+                                ABSOLUTE GRAMMATIK- UND FORMULIERUNGSGESETZE:
+                                1. KORREKTE PRÄPOSITIONEN UND ARTIKEL BEI ORTEN:
+                                   - Niemals "in der Flur Schrank" oder "in der Flurschrank"! Es heisst zwingend "im Flurschrank", "im Flur", "in der Küche", "im Wohnzimmer", "in der dritten Schublade".
+                                2. DAS WORT "PORTMONNAIE" / "GELDBEUTEL":
+                                   - Niemals "Popmoney" oder "Popmannee"! Immer exakt "Portemonnaie".
+                                3. BESITZANZEIGENDE FÜRWÖRTER (ARTIKEL):
+                                   - Niemals "dein Brille"! Zwingend "deine Brille", "deine Schlüssel", "deine Papiere". Sächlich/männlich: "dein Portemonnaie", "dein Handy".
+                                4. KATEGORIEN FÜR GEGENSTÄNDE:
+                                   - Ordne jeden Gegenstand einer dieser Kategorien zu: "Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer" oder "Sonstiges".
+                                5. KURZE UND PRÄZISE ANTWORTEN:
+                                   - Antworte klar, freundlich und auf den Punkt, ohne unnötige Füllsätze.
 
                                 Gib ein JSON-Objekt zurück mit:
                                 - "type": string ("chat", "name_change", "item_store", "item_query", "note", "calendar")
@@ -537,7 +532,7 @@
                                 - "note_text": string
                                 - "summary": string (Zusammenfassung für den Kalender)
                                 - "start_time": string (ISO-Format für Termine, z.B. "2026-09-15T20:00:00")
-                                - "reply": string (Deine sehr geduldige, warme und freundliche Antwort auf Deutsch)`
+                                - "reply": string (Deine präzise, korrekte und freundliche Antwort auf Deutsch)`
                             },
                             {
                                 role: "user",
@@ -559,14 +554,19 @@
                     localStorage.setItem('user_custom_name', currentUserName);
                     userNameInput.value = currentUserName;
                     updateUserGreeting();
-                    finalReply = `Sehr gerne, ${currentUserName}. Ab sofort nenne ich dich selbstverständlich so.`;
+                    finalReply = `Sehr gerne, ${currentUserName}. Ab sofort nenne ich dich so.`;
                 }
 
                 if (aiData.type === 'item_store' && aiData.item_name && aiData.item_location) {
                     let cleanName = aiData.item_name.toLowerCase();
                     let cleanLoc = aiData.item_location;
-                    if (!cleanLoc.startsWith("in") && !cleanLoc.startsWith("auf") && !cleanLoc.startsWith("unter") && !cleanLoc.startsWith("neben")) {
-                        cleanLoc = "in der " + cleanLoc;
+                    
+                    // Grammatikalische Korrektur für Ablageorte falls die KI schludert
+                    cleanLoc = cleanLoc.replace(/in der flur schrank/gi, 'im Flurschrank');
+                    cleanLoc = cleanLoc.replace(/in der flur/gi, 'im Flur');
+                    
+                    if (!cleanLoc.startsWith("im") && !cleanLoc.startsWith("in der") && !cleanLoc.startsWith("auf") && !cleanLoc.startsWith("unter") && !cleanLoc.startsWith("neben")) {
+                        cleanLoc = "im " + cleanLoc;
                     }
                     let category = aiData.item_category || "Sonstiges";
                     
@@ -601,14 +601,14 @@
                         let diffDays = Math.floor((Date.now() - foundItem.timestamp) / (1000 * 60 * 60 * 24));
                         let timeString = diffDays === 0 ? "heute" : (diffDays === 1 ? "vor 1 Tag" : `vor ${diffDays} Tagen`);
                         
-                        finalReply = `Keine Sorge, ${currentUserName}, ich helfe dir gerne. ${art} ${matchedName} liegt ${foundItem.location}. Das hast du ${timeString} dort abgelegt.`;
+                        finalReply = `${art} ${matchedName} liegt ${foundItem.location}. Das hast du ${timeString} dort abgelegt.`;
                     } else {
                         let art = "dein";
                         let lowerAi = aiData.item_name.toLowerCase();
                         if (lowerAi.endsWith('e') || lowerAi.includes('brille') || lowerAi.includes('tasche')) {
                             art = "deine";
                         }
-                        finalReply = `Da bin ich mir im Moment leider nicht sicher, ${currentUserName}. Ich habe keinen Eintrag darüber, wo ${art} ${aiData.item_name} liegen könnte.`;
+                        finalReply = `Dazu habe ich keinen Eintrag, wo ${art} ${aiData.item_name} liegen könnte.`;
                     }
                 }
 
@@ -617,13 +617,17 @@
 
                 if (aiData.type === 'calendar') {
                     let calendarEventId = null;
-                    let formattedDate = new Date().toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
+                    let fullFormattedDate = new Date().toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
+                    let shortFormattedDate = new Date().toLocaleDateString('de-DE', { day: 'numeric', month: 'long' });
                     
                     if (aiData.start_time) {
                         calendarEventId = await createGoogleCalendarEvent(aiData.summary || text, aiData.start_time);
                         const parsedDate = new Date(aiData.start_time);
                         if (!isNaN(parsedDate)) {
-                            formattedDate = parsedDate.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
+                            fullFormattedDate = parsedDate.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
+                            let timePart = parsedDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                            let datePart = parsedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' });
+                            shortFormattedDate = `${datePart} um ${timePart} Uhr`;
                         }
                     }
 
@@ -631,7 +635,8 @@
                         id: Date.now(),
                         calendarId: calendarEventId,
                         text: aiData.summary || text,
-                        date: formattedDate
+                        date: fullFormattedDate,
+                        shortDate: shortFormattedDate
                     };
                     calendarEntries.unshift(newCalEntry);
                     localStorage.setItem('helfer_calendar_entries', JSON.stringify(calendarEntries));
@@ -649,7 +654,7 @@
 
             } catch (error) {
                 statusMessage.textContent = "❌ Fehler bei der Verarbeitung.";
-                speak(`Es tut mir leid, ${currentUserName}, da ist gerade leider etwas schiefgegangen.`);
+                speak(`Es ist ein Fehler aufgetreten.`);
                 console.error(error);
             }
         }
@@ -708,28 +713,28 @@
             calendarEntries = calendarEntries.filter(e => e.id !== id);
             localStorage.setItem('helfer_calendar_entries', JSON.stringify(calendarEntries));
             renderAllLists();
-            speak("Der Termin wurde für dich gelöscht.");
+            speak("Termin gelöscht.");
         }
 
         function deleteTodoEntry(id) {
             todoEntries = todoEntries.filter(e => e.id !== id);
             localStorage.setItem('helfer_todo_entries', JSON.stringify(todoEntries));
             renderAllLists();
-            speak("Das To-Do wurde erledigt.");
+            speak("Erledigt.");
         }
 
         function deleteMemoryItem(key) {
             delete memoryItems[key];
             localStorage.setItem('helfer_memory', JSON.stringify(memoryItems));
             renderAllLists();
-            speak("Der Gegenstand wurde aus meinem Gedächtnis gelöscht.");
+            speak("Gelöscht.");
         }
 
         function clearAllMemory() {
             memoryItems = {};
             localStorage.removeItem('helfer_memory');
             renderAllLists();
-            speak("Mein Gedächtnis wurde vollständig geleert.");
+            speak("Gedächtnis geleert.");
         }
 
         function renderAllLists() {
