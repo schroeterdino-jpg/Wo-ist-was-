@@ -93,7 +93,7 @@
             </button>
         </div>
 
-        <!-- Reiter-Navigation (Termine & To-Dos vorne, Gegenstände dezent im Menü versteckt) -->
+        <!-- Reiter-Navigation -->
         <div class="flex bg-slate-200 p-1 rounded-xl">
             <button id="tabCalendarBtn" onclick="switchTab('calendar')" class="flex-1 py-2 rounded-lg font-bold text-sm bg-white text-blue-800 shadow-sm transition">📅 Termine</button>
             <button id="tabTodoBtn" onclick="switchTab('todo')" class="flex-1 py-2 rounded-lg font-bold text-sm text-slate-600 transition">📝 To-Dos</button>
@@ -132,7 +132,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 3.1</span>
+        <span>Version 3.2</span>
     </footer>
 
     <!-- JavaScript -->
@@ -185,9 +185,6 @@
         let todoEntries = JSON.parse(localStorage.getItem('helfer_todo_entries')) || [];
         let memoryItems = JSON.parse(localStorage.getItem('helfer_memory')) || {};
         let savedContacts = JSON.parse(localStorage.getItem('helfer_contacts')) || {};
-        
-        let pendingTaskContext = localStorage.getItem('helfer_pending_context') || null;
-        let autoListenAfterSpeech = false; // Steuert, ob nach der Sprachausgabe direkt wieder gelauscht werden soll
 
         renderAllLists();
         renderContactList();
@@ -307,23 +304,12 @@
             }
         }
 
-        function speak(text, triggerAutoListen = false) {
+        function speak(text) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'de-DE';
                 utterance.rate = 0.95;
-                
-                utterance.onend = function() {
-                    if (triggerAutoListen && recognition) {
-                        try {
-                            recognition.start();
-                        } catch (e) {
-                            console.log("Auto-Listen Start-Fehler:", e);
-                        }
-                    }
-                };
-
                 window.speechSynthesis.speak(utterance);
             }
         }
@@ -526,12 +512,11 @@
                                 Du sprichst immer in einem sehr zugewandten, ruhigen und respektvollen Ton (niemals gestresst oder flapsig).
                                 Aktuelles Jahr ist 2026, heute ist ${now.toISOString().split('T')[0]}.
                                 Bisheriges Gedächtnis über Gegenstände mit Ablagezeit: ${memoryContext}
-                                Aktueller aktiver Kontext/vorherige offene Aufgabe (falls ${currentUserName} gerade auf eine Nachfrage antwortet): "${pendingTaskContext || 'keiner'}"
                                 
-                                ABSOLUTE REGELN FÜR TERMINE VS. TO-DOS & KONTEXT:
-                                1. BEZUG BEI ZEITANGABEN: Wenn ein aktiver Kontext vorliegt (z.B. "Isabelle abholen") und ${currentUserName} eine Uhrzeit nennt (z.B. "16 Uhr" oder "ja 16 Uhr"), wandle diesen Kontext in einen Kalendereintrag ("calendar") um! Nutze dabei den Inhalt des aktiven Kontexts als Zusammenfassung ("summary") und berechne die "start_time" für heute (${now.toISOString().split('T')[0]}) um diese Uhrzeit.
-                                2. KEINE ERFUNDENEN UHRZEITEN: Wenn ${currentUserName} eine Aufgabe äußert, bei der KEINE feste Uhrzeit genannt wird und kein Kontext ansteht, ist das AUSSCHLIESSLICH ein To-Do ("note"). 
-                                3. FRAGE NACH UHRZEIT BEI BEDARF: Wenn es wie ein Termin klingt (z.B. Abholen, Treffen, Arzt), aber keine Uhrzeit genannt wurde, lege es als To-Do ("note") an, setze den pendingTaskContext im JSON und frage in deiner Antwort geduldig: "Möchtest du eine Uhrzeit hinzufügen, damit ich einen Termin daraus machen kann?"
+                                ABSOLUTE REGELN FÜR TERMINE VS. TO-DOS:
+                                1. KALENDER ("calendar"): Wenn ${currentUserName} eine Aktivität mit einer klaren Uhrzeit oder einem festen Zeitpunkt nennt (z.B. "morgen um 14 Uhr Arzt", "heute um 20 Uhr einkaufen"), ist das ein Termin ("calendar"). Fülle "summary" und "start_time" aus.
+                                2. TO-DO / NOTIZ ("note"): Wenn ${currentUserName} eine Aufgabe nennt, bei der KEINE Uhrzeit genannt wird (z.B. "ich muss einkaufen gehen", "Milch kaufen"), ist das AUSSCHLIESSLICH ein To-Do ("note"). 
+                                3. KEINE GEGENFRAGEN NACH UHRZEITEN: Frage ${currentUserName} NIEMALS, ob er eine Uhrzeit hinzufügen möchte! Akzeptiere das Gesagte so wie es ist. Wenn keine Uhrzeit dabei ist, ist es ein reines To-Do und du bestätigst es einfach kurz und freundlich (z.B. "Ist notiert").
                                 
                                 ABSOLUTE GRAMMATIK- UND RECHTSCHREIBGESETZE:
                                 1. DAS WORT "PORTMONNAIE" / "GELDBEUTEL":
@@ -551,8 +536,7 @@
                                 - "item_category": string
                                 - "note_text": string
                                 - "summary": string (Zusammenfassung für den Kalender)
-                                - "start_time": string (ISO-Format für Termine, z.B. "2026-09-15T16:00:00")
-                                - "pending_context": string (Falls nach Uhrzeit gefragt wird, speichere hier kurz worum es ging, sonst leerer String "")
+                                - "start_time": string (ISO-Format für Termine, z.B. "2026-09-15T20:00:00")
                                 - "reply": string (Deine sehr geduldige, warme und freundliche Antwort auf Deutsch)`
                             },
                             {
@@ -569,15 +553,6 @@
                 const aiData = JSON.parse(data.choices[0].message.content);
 
                 let finalReply = aiData.reply;
-
-                // Kontext aktualisieren oder leeren
-                if (aiData.pending_context) {
-                    pendingTaskContext = aiData.pending_context;
-                    localStorage.setItem('helfer_pending_context', pendingTaskContext);
-                } else {
-                    pendingTaskContext = null;
-                    localStorage.removeItem('helfer_pending_context');
-                }
 
                 if (aiData.type === 'name_change' && aiData.new_name) {
                     currentUserName = aiData.new_name;
@@ -638,11 +613,7 @@
                 }
 
                 statusMessage.textContent = "Fertig.";
-
-                // WICHTIG: Wenn die KI nach einer Uhrzeit fragt (pending_context aktiv), 
-                // schalten wir das Mikrofon nach dem Sprechen AUTOMATISCH wieder ein!
-                const shouldAutoListen = (aiData.pending_context && aiData.pending_context.length > 0);
-                speak(finalReply, shouldAutoListen);
+                speak(finalReply);
 
                 if (aiData.type === 'calendar') {
                     let calendarEventId = null;
@@ -810,7 +781,7 @@
                 let item = memoryItems[key];
                 let loc = typeof item === 'object' ? item.location : item;
                 let cat = (typeof item === 'object' && item.category) ? item.category : "Sonstiges";
-                if (!grouped[cat]) cat =="Sonstiges";
+                if (!grouped[cat]) cat = "Sonstiges";
                 
                 grouped[cat].push({ key: key, location: loc });
             }
