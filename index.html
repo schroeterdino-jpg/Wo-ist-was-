@@ -93,11 +93,11 @@
             </button>
         </div>
 
-        <!-- Reiter-Navigation -->
+        <!-- Reiter-Navigation (Termine & To-Dos vorne, Gegenstände dezent im Menü versteckt) -->
         <div class="flex bg-slate-200 p-1 rounded-xl">
             <button id="tabCalendarBtn" onclick="switchTab('calendar')" class="flex-1 py-2 rounded-lg font-bold text-sm bg-white text-blue-800 shadow-sm transition">📅 Termine</button>
             <button id="tabTodoBtn" onclick="switchTab('todo')" class="flex-1 py-2 rounded-lg font-bold text-sm text-slate-600 transition">📝 To-Dos</button>
-            <button id="tabMemoryBtn" onclick="switchTab('memory')" class="flex-1 py-2 rounded-lg font-bold text-sm text-slate-600 transition">🔍 Gegenstände</button>
+            <button id="tabMemoryBtn" onclick="switchTab('memory')" class="py-2 px-3 rounded-lg font-bold text-xs text-slate-400 hover:text-slate-600 transition" title="Gedächtnis">⚙️</button>
         </div>
 
         <!-- Ansicht: Kalender-Termine -->
@@ -110,19 +110,16 @@
 
         <!-- Ansicht: To-Dos & Notizen -->
         <div id="todoView" class="hidden bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-4">
-            <div class="flex justify-between items-center">
-                <h2 class="text-xl font-bold text-blue-800">📝 To-Dos & Notizen:</h2>
-                <button onclick="addWaterReminder()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-2 py-1 rounded-lg text-xs font-semibold shadow">💧 Trinkerinnerung</button>
-            </div>
+            <h2 class="text-xl font-bold text-blue-800">📝 To-Dos & Notizen:</h2>
             <ul id="todoList" class="space-y-2 text-lg">
                 <li class="text-slate-500">Keine offenen To-Dos.</li>
             </ul>
         </div>
 
-        <!-- Ansicht: Gegenstände nach Kategorien -->
+        <!-- Ansicht: Gegenstände (versteckter Reiter) -->
         <div id="memoryView" class="hidden bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-4">
             <div class="flex justify-between items-center">
-                <h2 class="text-xl font-bold text-blue-800">🔍 Gespeicherte Gegenstände:</h2>
+                <h2 class="text-xl font-bold text-blue-800">🔍 Gedächtnis (Gegenstände):</h2>
                 <button onclick="clearAllMemory()" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded-lg text-xs font-semibold shadow">🗑️ Alles löschen</button>
             </div>
             <div id="categoryContainer" class="space-y-3 text-base">
@@ -135,7 +132,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 2.8</span>
+        <span>Version 2.9</span>
     </footer>
 
     <!-- JavaScript -->
@@ -189,6 +186,9 @@
         let memoryItems = JSON.parse(localStorage.getItem('helfer_memory')) || {};
         let savedContacts = JSON.parse(localStorage.getItem('helfer_contacts')) || {};
         
+        // Kontextspeicher für Nachfragen (z.B. wenn nach Uhrzeit gefragt wurde)
+        let pendingTaskContext = localStorage.getItem('helfer_pending_context') || null;
+
         renderAllLists();
         renderContactList();
 
@@ -232,7 +232,7 @@
             memoryView.classList.add('hidden');
             tabCalendarBtn.className = "flex-1 py-2 rounded-lg font-bold text-sm text-slate-600 transition";
             tabTodoBtn.className = "flex-1 py-2 rounded-lg font-bold text-sm text-slate-600 transition";
-            tabMemoryBtn.className = "flex-1 py-2 rounded-lg font-bold text-sm text-slate-600 transition";
+            tabMemoryBtn.className = "py-2 px-3 rounded-lg font-bold text-xs text-slate-400 hover:text-slate-600 transition";
 
             if (tab === 'calendar') {
                 calendarView.classList.remove('hidden');
@@ -242,7 +242,7 @@
                 tabTodoBtn.className = "flex-1 py-2 rounded-lg font-bold text-sm bg-white text-blue-800 shadow-sm transition";
             } else if (tab === 'memory') {
                 memoryView.classList.remove('hidden');
-                tabMemoryBtn.className = "flex-1 py-2 rounded-lg font-bold text-sm bg-white text-blue-800 shadow-sm transition";
+                tabMemoryBtn.className = "py-2 px-3 rounded-lg font-bold text-xs bg-white text-blue-800 shadow-sm transition";
             }
         }
 
@@ -413,18 +413,6 @@
             recordText.textContent = "SPRECHEN";
         }
 
-        function addWaterReminder() {
-            const newTodoEntry = {
-                id: Date.now(),
-                text: "💧 Trinkerinnerung: Ein Glas Wasser trinken!",
-                date: new Date().toLocaleDateString('de-DE', { hour: '2-digit', minute: '2-digit' })
-            };
-            todoEntries.unshift(newTodoEntry);
-            localStorage.setItem('helfer_todo_entries', JSON.stringify(todoEntries));
-            renderAllLists();
-            speak("Ich habe eine Trinkerinnerung für dich in deine To-Dos eingetragen.");
-        }
-
         async function triggerDailyBriefing() {
             statusMessage.textContent = "Lade Wetter & Briefing...";
             
@@ -449,7 +437,7 @@
                 console.error("Wetterfehler:", e);
             }
 
-            let briefingText = `Guten Tag, ${currentUserName}. Hier ist ganz in Ruhe dein kurzer Überblick für heute. ${weatherText}`;
+            let briefingText = `Guten Tag, ${currentUserName}. Hier ist dein kurzer Überblick für heute. ${weatherText} Und denke bitte daran, über den Tag verteilt ausreichend Wasser zu trinken. `;
 
             if (calendarEntries.length > 0) {
                 briefingText += "Das sind deine eingetragenen Termine: ";
@@ -527,11 +515,12 @@
                                 Du sprichst immer in einem sehr zugewandten, ruhigen und respektvollen Ton (niemals gestresst oder flapsig).
                                 Aktuelles Jahr ist 2026, heute ist ${now.toISOString().split('T')[0]}.
                                 Bisheriges Gedächtnis über Gegenstände mit Ablagezeit: ${memoryContext}
+                                Aktueller aktiver Kontext/vorherige offene Aufgabe (falls ${currentUserName} gerade auf eine Nachfrage antwortet): "${pendingTaskContext || 'keiner'}"
                                 
-                                ABSOLUTE REGELN FÜR TERMINE VS. TO-DOS:
-                                1. KEINE ERFUNDENEN UHRZEITEN: Wenn ${currentUserName} eine Aufgabe äußert (z.B. "Ich muss Isabelle heute noch abholen"), bei der KEINE feste Uhrzeit genannt wird, ist das AUSSCHLIESSLICH ein To-Do ("note"). Erstelle NIEMALS einen Kalendereintrag mit einer erfundenen oder geschätzten Standard-Uhrzeit!
-                                2. FRAGE NACH UHRZEIT BEI BEDARF: Wenn es wie ein Termin klingt, aber keine Uhrzeit genannt wurde, lege es als To-Do/Notiz an und frage in deiner Antwort geduldig: "Möchtest du eine Uhrzeit hinzufügen, damit ich einen Termin daraus machen kann?"
-                                3. NUR BEI KLARER UHRZEIT ALS TERMIN: Ein Kalendereintrag ("calendar") darf NUR dann erstellt werden, wenn ${currentUserName} explizit eine Uhrzeit (z.B. "um 16 Uhr") genannt hat.
+                                ABSOLUTE REGELN FÜR TERMINE VS. TO-DOS & KONTEXT:
+                                1. BEZUG BEI ZEITANGABEN: Wenn ein aktiver Kontext vorliegt (z.B. "Isabelle abholen") und ${currentUserName} eine Uhrzeit nennt (z.B. "16 Uhr" oder "ja 16 Uhr"), wandle diesen Kontext in einen Kalendereintrag ("calendar") um! Nutze dabei den Inhalt des aktiven Kontexts als Zusammenfassung ("summary") und berechne die "start_time" für heute (${now.toISOString().split('T')[0]}) um diese Uhrzeit.
+                                2. KEINE ERFUNDENEN UHRZEITEN: Wenn ${currentUserName} eine Aufgabe äußert, bei der KEINE feste Uhrzeit genannt wird und kein Kontext ansteht, ist das AUSSCHLIESSLICH ein To-Do ("note"). 
+                                3. FRAGE NACH UHRZEIT BEI BEDARF: Wenn es wie ein Termin klingt (z.B. Abholen, Treffen, Arzt), aber keine Uhrzeit genannt wurde, lege es als To-Do ("note") an, setze den pendingTaskContext im JSON und frage in deiner Antwort geduldig: "Möchtest du eine Uhrzeit hinzufügen, damit ich einen Termin daraus machen kann?"
                                 
                                 ABSOLUTE GRAMMATIK- UND RECHTSCHREIBGESETZE:
                                 1. DAS WORT "PORTMONNAIE" / "GELDBEUTEL":
@@ -539,28 +528,21 @@
                                 2. BESITZANZEIGENDE FÜRWÖRTER (ARTIKEL):
                                    - NIEMALS "dein Brille"! Zwingend "deine Brille", "deine Schlüssel", "deine Papiere". Sächlich/männlich: "dein Portemonnaie", "dein Handy".
                                 3. KATEGORIEN FÜR GEGENSTÄNDE:
-                                   - Ordne jeden Gegenstand einer dieser 4 Kategorien zu: "Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer" (oder "Sonstiges", falls es nirgends passt).
+                                   - Ordne jeden Gegenstand einer dieser 4 Kategorien zu: "Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer" (oder "Sonstiges").
                                 4. ZEITANGABEN BEI ABRUFEN:
-                                   - Wenn ${currentUserName} nach einem Gegenstand fragt, nenne den Ort und erwähne geduldig, wann er es dort abgelegt hat (z.B. "...das hast du vor 3 Tagen dort abgelegt").
-                                
-                                KLASSIFIZIERUNG DER TYPEN:
-                                1. "chat": Smalltalk, Unterhaltung, Fragen.
-                                2. "name_change": Namensänderung.
-                                3. "item_store": Gegenstand ablegen.
-                                4. "item_query": Nach einem Gegenstand fragen.
-                                5. "note": To-Dos, Aufgaben oder Erinnerungen ohne feste Uhrzeit (oder wenn nach Uhrzeit gefragt werden soll).
-                                6. "calendar": Termine mit explizit genannter fester Uhrzeit.
+                                   - Wenn ${currentUserName} nach einem Gegenstand fragt, nenne den Ort und erwähne geduldig, wann er es dort abgelegt hat.
 
                                 Gib ein JSON-Objekt zurück mit:
                                 - "type": string ("chat", "name_change", "item_store", "item_query", "note", "calendar")
                                 - "new_name": string
                                 - "item_name": string
-                                - "item_location": string (z.B. "in der Vitrine")
-                                - "item_category": string ("Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer" oder "Sonstiges")
+                                - "item_location": string
+                                - "item_category": string
                                 - "note_text": string
-                                - "summary": string
-                                - "start_time": string (ISO-Format für Termine, NUR bei Angabe einer echten Uhrzeit)
-                                - "reply": string (Deine sehr geduldige, warme und freundliche Antwort auf Deutsch mit korrekter Grammatik und Portemonnaie-Schreibweise)`
+                                - "summary": string (Zusammenfassung für den Kalender)
+                                - "start_time": string (ISO-Format für Termine, z.B. "2026-09-15T16:00:00")
+                                - "pending_context": string (Falls nach Uhrzeit gefragt wird, speichere hier kurz worum es ging, sonst leerer String "")
+                                - "reply": string (Deine sehr geduldige, warme und freundliche Antwort auf Deutsch)`
                             },
                             {
                                 role: "user",
@@ -576,6 +558,15 @@
                 const aiData = JSON.parse(data.choices[0].message.content);
 
                 let finalReply = aiData.reply;
+
+                // Kontext aktualisieren oder leeren
+                if (aiData.pending_context) {
+                    pendingTaskContext = aiData.pending_context;
+                    localStorage.setItem('helfer_pending_context', pendingTaskContext);
+                } else {
+                    pendingTaskContext = null;
+                    localStorage.removeItem('helfer_pending_context');
+                }
 
                 if (aiData.type === 'name_change' && aiData.new_name) {
                     currentUserName = aiData.new_name;
