@@ -641,7 +641,7 @@
 
                 if (!response.ok) {
                     const errText = await response.text();
-                    throw new Error(`HTTP Error ${response.status}: ${errText}`);
+                    throw new Error(`HTTP ${response.status}: ${errText}`);
                 }
 
                 const data = await response.json();
@@ -746,18 +746,8 @@
 
             } catch (error) {
                 console.error(error);
-                let errorMessage = "❌ Fehler bei der Verarbeitung.";
-                
-                if (error.message.includes("401") || error.message.includes("Unauthorized")) {
-                    errorMessage = "❌ Ungültiger API-Key! Bitte prüfen.";
-                } else if (error.message.includes("429") || error.message.includes("Too Many Requests")) {
-                    errorMessage = "⏳ Limit erreicht! Bitte warte 1-2 Minuten.";
-                } else if (error.message.includes("Failed to fetch")) {
-                    errorMessage = "🌐 Keine Internetverbindung.";
-                }
-
-                statusMessage.textContent = errorMessage;
-                speak("Entschuldigung, das Limit ist kurzzeitig erreicht oder es gab ein Verbindungsproblem.", () => startListeningAuto());
+                statusMessage.textContent = error.message;
+                speak("Es gab einen Fehler: " + error.message, () => startListeningAuto());
             }
         }
 
