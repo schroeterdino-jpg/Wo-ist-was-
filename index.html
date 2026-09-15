@@ -139,7 +139,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.6</span>
+        <span>Version 4.7</span>
     </footer>
 
     <!-- JavaScript -->
@@ -347,12 +347,6 @@
                 
                 if ((lower.includes("ruf") || lower.includes("anrufen")) && lower.includes("an")) {
                     handleCallCommand(lower);
-                } else if (lower.includes("wie spät") || lower.includes("wieviel uhr") || lower.includes("wie viel uhr") || (lower.includes("uhrzeit") && !lower.includes("termin"))) {
-                    const now = new Date();
-                    const timeStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
-                    const replyText = `Es ist jetzt ${timeStr} Uhr.`;
-                    statusMessage.textContent = replyText;
-                    speak(replyText);
                 } else if (lower.includes("was steht heute an") || lower.includes("was liegt heute an") || lower.includes("bevor ich das haus verlasse")) {
                     triggerDailyBriefing();
                 } else {
@@ -578,10 +572,12 @@
                                 Aktuelle Kalender-Termine im System: ${calendarContext}
                                 Aktuelle To-Dos im System: ${todoContext}
                                 
+                                ABSOLUTE REGELN FÜR DIE UHRZEIT-FRAGE:
+                                Wenn der Nutzer nach der Uhrzeit fragt ("wie spät ist es", "wieviel Uhr haben wir", "wie viel Uhr", "Uhrzeit"), setze den Typ auf "chat" und antworte im Feld "reply" IMMER exakt mit der aktuellen Uhrzeit: "Es ist jetzt ${currentClockTime} Uhr."
+
                                 ABSOLUTE REGELN FÜR TERMIN- UND TO-DO-ERSTELLUNG:
-                                1. STRICT TO-DO RULE: Wähle "note" (To-Do), IMMER WENN der Nutzer eine Aufgabe, einen Erledigungswunsch oder eine Notiz äußert (z.B. "ich muss Isabelle abholen", "kauf Milch", "Erinnerung an X"), bei der **KEINE EXAKTE UHRZEIT** (z.B. "um 14 Uhr", "um 15:30 Uhr") genannt wird. Auch wenn Wörter wie "heute" oder "morgen" vorkommen, aber **keine Uhrzeit** dabeisteht, darf NIEMALS "calendar" gewählt werden! Es ist zu 100% ansonsten ein To-Do ("type": "note").
+                                1. STRICT TO-DO RULE: Wähle "note" (To-Do), IMMER WENN der Nutzer eine Aufgabe, einen Erledigungswunsch oder eine Notiz äußert, bei der **KEINE EXAKTE UHRZEIT** genannt wird.
                                 2. TERMIN NUR BEI UHRZEIT: Wähle "calendar" AUSSCHLIESSLICH DANN, wenn der Nutzer explizit eine feste Uhrzeit nennt.
-                                3. FRAGEN ZU TERMINEN: Wenn der Nutzer fragt, ob er Termine hat (heute/morgen), prüfe die Kalender-Liste. Existiert ein Termin für diesen Tag, nenne ihn im Feld "reply" exakt mit Inhalt und Zeit.
                                 
                                 ABSOLUTE GRAMMATIK- UND FORMULIERUNGSGESETZE:
                                 1. KEINE DOPPELTEN PRÄPOSITIONEN.
