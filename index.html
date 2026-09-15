@@ -138,7 +138,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.9</span>
+        <span>Version 4.10</span>
     </footer>
 
     <!-- JavaScript -->
@@ -369,7 +369,6 @@
                 return;
             }
 
-            // HIER KORRIGIERT: Wir bauen einen natürlicheren Satz mit Aufzählungspunkten
             let textToSpeak = "Auf deiner To-Do-Liste stehen folgende Einträge: ";
             todoEntries.forEach((entry, index) => {
                 textToSpeak += `Punkt ${index + 1}: ${entry.text}. `;
@@ -470,17 +469,27 @@
             const currentTimeStr = nowBriefing.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
             let briefingText = `Guten Tag, ${currentUserName}. Es ist jetzt ${currentTimeStr} Uhr. Hier ist dein kurzer Überblick. ${weatherText} ${weatherAdvice}`;
 
-            const todayStr = nowBriefing.toISOString().split('T')[0];
+            // --- HIER ANGEPASST: Nur Termine filtern, die exakt auf den heutigen Tag fallen ---
+            const todayStr = nowBriefing.toLocaleDateString('en-CA'); // YYYY-MM-DD format
             const todayCalendarEntries = calendarEntries.filter(e => {
-                if (!e.isoDate) return true;
+                if (!e.isoDate) return false;
                 return e.isoDate.startsWith(todayStr);
             });
 
             if (todayCalendarEntries.length > 0) {
                 briefingText += "Deine Termine heute: ";
-                todayCalendarEntries.forEach(e => {
-                    briefingText += `${e.text}, am ${e.shortDate}. `;
+                todayCalendarEntries.forEach((e, index) => {
+                    let timeOnly = "ganztägig";
+                    try {
+                        const parsedDate = new Date(e.isoDate);
+                        if (!isNaN(parsedDate)) {
+                            timeOnly = parsedDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' }) + " Uhr";
+                        }
+                    } catch (err) {}
+                    briefingText += `Termin ${index + 1}: ${e.text}, um ${timeOnly}. `;
                 });
+            } else {
+                briefingText += "Du hast heute keine Termine. ";
             }
 
             if (todoEntries.length > 0) {
@@ -527,10 +536,6 @@
                     let randomPhraseFunc = humanPhrases[Math.floor(Math.random() * humanPhrases.length)];
                     briefingText += randomPhraseFunc(art, item.name, item.loc);
                 });
-            }
-
-            if (todayCalendarEntries.length === 0 && todoEntries.length === 0 && relevantItems.length === 0) {
-                briefingText += "Es gibt heute keine besonderen Termine oder Gegenstände. ";
             }
 
             statusMessage.textContent = "Fertig.";
