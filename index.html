@@ -32,7 +32,7 @@
             <button onclick="checkGroqConnection()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium">
                 🔍 Verbindung prüfen
             </button>
-            <p id="connectionStatus" class="text-xs text-amber-800 mt-2 font-medium"></p>
+            <p id="connectionStatus" class="text-xs text-amber-800 mt-2 font-medium break-all"></p>
         </div>
     </div>
 
@@ -85,7 +85,6 @@
         let entries = JSON.parse(localStorage.getItem('helfer_entries')) || [];
         renderEntries();
 
-        // Einheitlicher Key-Name für den Speicher
         const savedKey = localStorage.getItem('user_api_key');
         if (savedKey) {
             apiKeyInput.value = savedKey;
@@ -98,7 +97,6 @@
         function saveApiKey() {
             const key = apiKeyInput.value.trim();
             if (key) {
-                // Hier wird jetzt einheitlich 'user_api_key' genutzt
                 localStorage.setItem('user_api_key', key);
                 connectionStatus.textContent = "Schlüssel gespeichert. Teste Verbindung...";
                 checkGroqConnection();
@@ -107,7 +105,7 @@
             }
         }
 
-        // Verbindung zu Groq prüfen
+        // Erweiterte Verbindungsprüfung mit Fehlerdetails
         async function checkGroqConnection() {
             const key = localStorage.getItem('user_api_key');
             if (!key) {
@@ -127,10 +125,11 @@
                 if (response.ok) {
                     connectionStatus.textContent = `✅ Verbindung erfolgreich! (Modell: llama-3.1-8b-instant)`;
                 } else {
-                    connectionStatus.textContent = "❌ Fehler: Ungültiger API-Key.";
+                    const errorDetails = await response.text();
+                    connectionStatus.textContent = `❌ Fehler ${response.status}: ${errorDetails}`;
                 }
             } catch (error) {
-                connectionStatus.textContent = "❌ Netzwerkfehler beim Prüfen.";
+                connectionStatus.textContent = `❌ Netzwerk-/CORS-Fehler: ${error.message}`;
                 console.error(error);
             }
         }
@@ -206,7 +205,7 @@
             recordText.textContent = "SPRECHEN";
         }
 
-        // Anfrage an Groq senden
+        // Anfrage an Groq senden mit genauer Fehlererfassung
         async function sendToGroq(text) {
             const key = localStorage.getItem('user_api_key');
             outputBox.textContent = "Verarbeite mit Groq...";
@@ -234,7 +233,8 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error("API-Anfrage fehlgeschlagen");
+                    const errorDetails = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorDetails}`);
                 }
 
                 const data = await response.json();
@@ -242,7 +242,6 @@
 
                 outputBox.textContent = aiReply;
 
-                // In die lokale Liste eintragen
                 const newEntry = {
                     text: aiReply,
                     date: new Date().toLocaleDateString('de-DE', { hour: '2-digit', minute: '2-digit' })
@@ -254,7 +253,7 @@
                 renderEntries();
 
             } catch (error) {
-                outputBox.textContent = "Fehler bei der KI-Verarbeitung. Prüfe den API-Key.";
+                outputBox.textContent = `❌ Fehlerdetails: ${error.message}`;
                 console.error(error);
             }
         }
