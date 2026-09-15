@@ -139,7 +139,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.3</span>
+        <span>Version 4.4</span>
     </footer>
 
     <!-- JavaScript -->
@@ -347,6 +347,11 @@
                 
                 if ((lower.includes("ruf") || lower.includes("anrufen")) && lower.includes("an")) {
                     handleCallCommand(lower);
+                } else if (lower.includes("wie spät ist es") || lower.includes("wieviel uhr") || lower.includes("wie viel uhr")) {
+                    const timeStr = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                    const replyText = `Es ist jetzt ${timeStr} Uhr.`;
+                    statusMessage.textContent = replyText;
+                    speak(replyText);
                 } else if (lower.includes("was steht heute an") || lower.includes("was liegt heute an") || lower.includes("bevor ich das haus verlasse")) {
                     triggerDailyBriefing();
                 } else {
@@ -455,7 +460,8 @@
                 console.error("Wetterfehler:", e);
             }
 
-            let briefingText = `Guten Tag, ${currentUserName}. Hier ist dein kurzer Überblick. ${weatherText} ${weatherAdvice}`;
+            const currentTimeStr = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+            let briefingText = `Guten Tag, ${currentUserName}. Es ist jetzt ${currentTimeStr} Uhr. Hier ist dein kurzer Überblick. ${weatherText} ${weatherAdvice}`;
 
             const todayStr = new Date().toISOString().split('T')[0];
             const todayCalendarEntries = calendarEntries.filter(e => {
@@ -534,6 +540,7 @@
             
             const todayStr = now.toISOString().split('T')[0];
             const tomorrowStr = tomorrow.toISOString().split('T')[0];
+            const currentClockTime = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 
             const memoryWithDetails = {};
             for (let k in memoryItems) {
@@ -564,7 +571,7 @@
                             {
                                 role: "system",
                                 content: `Du bist ein hochpräziser, fehlerfreier und sprachlich eleganter deutscher Alltags-Assistent für ${currentUserName} in Schwarzenbek. 
-                                Aktuelles Jahr ist 2026, heute ist ${todayStr} (${now.toLocaleDateString('de-DE', {weekday: 'long'})}), morgen ist ${tomorrowStr} (${tomorrow.toLocaleDateString('de-DE', {weekday: 'long'})}).
+                                Aktuelles Jahr ist 2026, heute ist ${todayStr} (${now.toLocaleDateString('de-DE', {weekday: 'long'})}), Uhrzeit ist ${currentClockTime} Uhr, morgen ist ${tomorrowStr}.
                                 Bisheriges Gedächtnis über Gegenstände: ${memoryContext}
                                 Aktuelle Kalender-Termine im System: ${calendarContext}
                                 Aktuelle To-Dos im System: ${todoContext}
@@ -612,15 +619,46 @@
                     aiData.note_text = aiData.summary || text;
                 }
 
-                if (aiData.type === 'name_change' && aiData.new_name) {
-                    currentUserName = aiData.new_name;
-                    localStorage.setItem('user_custom_name', currentUserName);
-                    userNameInput.value = currentUserName;
-                    updateUserGreeting();
-                    finalReply = `Sehr gerne, ${currentUserName}. Ab sofort nenne ich dich so.`;
-                }
+                // Erzwinge immer eine eindeutige akustische Bestätigung
+                if (aiData.type === 'calendar') {
+                    let calendarEventId = null;
+                    let fullFormattedDate = new Date().toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
+                    let shortFormattedDate = new Date().toLocaleDateString('de-DE', { day: 'numeric', month: 'long' });
+                    let rawIsoTime = aiData.start_time || new Date().toISOString();
+                    
+                    if (aiData.start_time) {
+                        calendarEventId = await createGoogleCalendarEvent(aiData.summary || text, aiData.start_time);
+                        const parsedDate = new Date(aiData.start_time);
+                        if (!isNaN(parsedDate)) {
+                            fullFormattedDate = parsedDate.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
+                            let timePart = parsedDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                            let datePart = parsedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' });
+                            shortFormattedDate = `${datePart} um ${timePart} Uhr`;
+                        }
+                    }
 
-                if (aiData.type === 'item_store' && aiData.item_name && aiData.item_location) {
+                    const newCalEntry = {
+                        id: Date.now(),
+                        calendarId: calendarEventId,
+                        text: aiData.summary || text,
+                        date: fullFormattedDate,
+                        shortDate: shortFormattedDate,
+                        isoDate: rawIsoTime
+                    };
+                    calendarEntries.unshift(newCalEntry);
+                    localStorage.setItem('helfer_calendar_entries', JSON.stringify(calendarEntries));
+                    finalReply = `Ich habe den Termin "${aiData.summary || text}" für den ${shortFormattedDate} eingetragen.`;
+                } else if (aiData.type === 'note') {
+                    const noteContent = aiData.note_text || text;
+                    const newTodoEntry = {
+                        id: Date.now(),
+                        text: noteContent,
+                        date: new Date().toLocaleDateString('de-DE', { hour: '2-digit', minute: '2-digit' })
+                    };
+                    todoEntries.unshift(newTodoEntry);
+                    localStorage.setItem('helfer_todo_entries', JSON.stringify(todoEntries));
+                    finalReply = `Ich habe "${noteContent}" als To-Do notiert.`;
+                } else if (aiData.type === 'item_store' && aiData.item_name && aiData.item_location) {
                     let cleanName = aiData.item_name.toLowerCase();
                     let cleanLoc = aiData.item_location;
                     
@@ -639,6 +677,15 @@
                         category: category
                     };
                     localStorage.setItem('helfer_memory', JSON.stringify(memoryItems));
+                    finalReply = `Ich habe gemerkt: ${aiData.item_name} liegt ${cleanLoc}.`;
+                }
+
+                if (aiData.type === 'name_change' && aiData.new_name) {
+                    currentUserName = aiData.new_name;
+                    localStorage.setItem('user_custom_name', currentUserName);
+                    userNameInput.value = currentUserName;
+                    updateUserGreeting();
+                    finalReply = `Sehr gerne, ${currentUserName}. Ab sofort nenne ich dich so.`;
                 }
 
                 if (aiData.type === 'item_query' && aiData.item_name) {
@@ -677,44 +724,6 @@
 
                 statusMessage.textContent = "Fertig.";
                 speak(finalReply);
-
-                if (aiData.type === 'calendar') {
-                    let calendarEventId = null;
-                    let fullFormattedDate = new Date().toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
-                    let shortFormattedDate = new Date().toLocaleDateString('de-DE', { day: 'numeric', month: 'long' });
-                    let rawIsoTime = aiData.start_time || new Date().toISOString();
-                    
-                    if (aiData.start_time) {
-                        calendarEventId = await createGoogleCalendarEvent(aiData.summary || text, aiData.start_time);
-                        const parsedDate = new Date(aiData.start_time);
-                        if (!isNaN(parsedDate)) {
-                            fullFormattedDate = parsedDate.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
-                            let timePart = parsedDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-                            let datePart = parsedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' });
-                            shortFormattedDate = `${datePart} um ${timePart} Uhr`;
-                        }
-                    }
-
-                    const newCalEntry = {
-                        id: Date.now(),
-                        calendarId: calendarEventId,
-                        text: aiData.summary || text,
-                        date: fullFormattedDate,
-                        shortDate: shortFormattedDate,
-                        isoDate: rawIsoTime
-                    };
-                    calendarEntries.unshift(newCalEntry);
-                    localStorage.setItem('helfer_calendar_entries', JSON.stringify(calendarEntries));
-                } else if (aiData.type === 'note') {
-                    const newTodoEntry = {
-                        id: Date.now(),
-                        text: aiData.note_text || text,
-                        date: new Date().toLocaleDateString('de-DE', { hour: '2-digit', minute: '2-digit' })
-                    };
-                    todoEntries.unshift(newTodoEntry);
-                    localStorage.setItem('helfer_todo_entries', JSON.stringify(todoEntries));
-                }
-
                 renderAllLists();
 
             } catch (error) {
