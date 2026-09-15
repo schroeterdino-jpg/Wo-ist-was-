@@ -129,7 +129,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.18</span>
+        <span>Version 4.19</span>
     </footer>
 
     <!-- JavaScript -->
@@ -501,15 +501,18 @@
                 });
             }
 
-            const unimportantKeywords = ["kuscheltier", "spielzeug", "puppe", "teddy", "kuscheltiere"];
+            // NUR WICHTIGE GEGENSTÄNDE BEIM BRIEFING ERWÄHNEN!
+            const importantKeywords = ["schlüssel", "brille", "portemonnaie", "geldbeutel", "beutel", "geld", "ausweis", "unterlage", "unterlagen", "dokument", "dokumente", "medikament", "medikamente", "tablette", "tabletten", "karte", "karten"];
             const memKeys = Object.keys(memoryItems);
             let relevantItems = [];
 
             memKeys.forEach(k => {
                 let itemObj = memoryItems[k];
                 let loc = typeof itemObj === 'object' ? itemObj.location : itemObj;
-                let isUnimportant = unimportantKeywords.some(badWord => k.toLowerCase().includes(badWord));
-                if (!isUnimportant) {
+                let lowerKey = k.toLowerCase();
+                
+                let isImportant = importantKeywords.some(keyword => lowerKey.includes(keyword));
+                if (isImportant) {
                     relevantItems.push({ name: k, loc: loc });
                 }
             });
@@ -573,11 +576,11 @@
 
                                 Gib ein JSON-Objekt zurück mit folgenden Feldern:
                                 - "type": string (Wähle aus: "chat", "name_change", "item_store", "item_query", "note", "calendar")
-                                - "new_name": string (Falls der Nutzer seinen Namen ändern will)
+                                - "new_name": string (Falls er seinen Namen ändern will)
                                 - "item_name": string (Name des Gegenstands bei store/query)
                                 - "item_location": string (Der genaue Ort mit exaktem Verb)
                                 - "item_category": string (Kategorie: "Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer", "Sonstiges")
-                                - "note_text": string (Nur bei echten To-Dos oder Notizen, die der Nutzer explizit aufschreiben will – NIEMALS bei Fragen!)
+                                - "note_text": string (Nur bei echten To-Dos oder Notizen – NIEMALS bei Fragen!)
                                 - "summary": string (Titel für Kalender)
                                 - "start_time": string (Exaktes ISO-Datum im Format YYYY-MM-DDTHH:mm:ss für Kalender)
                                 - "reply": string (Deine komplette, natürliche, fehlerfreie Antwort auf Deutsch, die per Sprachausgabe vorgelesen wird!)`
@@ -597,8 +600,6 @@
 
                 let finalReply = aiData.reply || "Alles klar!";
 
-                // SICHERHEITSSPERRE IM CODE: 
-                // Wenn der Nutzer nach Terminen oder Fragen fragt, erzwinge IMMER Typ 'chat', selbst wenn die KI 'note' gewählt hat!
                 const lowerText = text.toLowerCase();
                 if (lowerText.includes("termin") || lowerText.includes("was habe ich") || lowerText.includes("was steht") || lowerText.includes("wo ist")) {
                     if (aiData.type === 'note') {
@@ -837,24 +838,21 @@
             let catHtml = '';
             let hasAnyItems = false;
 
-            categories.forEach(cat => {
-                let itemsInCat = grouped[cat];
-                if (itemsInCat.length > 0) {
-                    hasAnyItems = true;
-                    catHtml += `<div class="border border-slate-200 rounded-xl p-3 bg-slate-50 mb-2">
-                        <h3 class="font-bold text-amber-900 mb-2">📌 ${cat}</h3>
-                        <ul class="space-y-1">`;
-                    
-                    itemsInCat.forEach(i => {
-                        let capitalizedName = i.key.charAt(0).toUpperCase() + i.key.slice(1);
-                        catHtml += `<li class="flex justify-between items-center text-xs py-1 border-b border-slate-200 last:border-none">
-                            <span>• <b>${capitalizedName}</b>: ${i.location}</span>
-                            <button onclick="deleteMemoryItem('${i.key}')" class="text-red-600 font-bold ml-2">Löschen</button>
-                        </li>`;
-                    });
+            categories.filter(cat => grouped[cat].length > 0).forEach(cat => {
+                hasAnyItems = true;
+                catHtml += `<div class="border border-slate-200 rounded-xl p-3 bg-slate-50 mb-2">
+                    <h3 class="font-bold text-amber-900 mb-2">📌 ${cat}</h3>
+                    <ul class="space-y-1">`;
+                
+                grouped[cat].forEach(i => {
+                    let capitalizedName = i.key.charAt(0).toUpperCase() + i.key.slice(1);
+                    catHtml += `<li class="flex justify-between items-center text-xs py-1 border-b border-slate-200 last:border-none">
+                        <span>• <b>${capitalizedName}</b>: ${i.location}</span>
+                        <button onclick="deleteMemoryItem('${i.key}')" class="text-red-600 font-bold ml-2">Löschen</button>
+                    </li>`;
+                });
 
-                    catHtml += `</ul></div>`;
-                }
+                catHtml += `</ul></div>`;
             });
 
             if (!hasAnyItems) {
