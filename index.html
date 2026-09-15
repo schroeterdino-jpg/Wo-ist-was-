@@ -132,7 +132,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 3.3</span>
+        <span>Version 3.4</span>
     </footer>
 
     <!-- JavaScript -->
@@ -443,6 +443,13 @@
                 });
             }
 
+            if (todoEntries.length > 0) {
+                briefingText += "Offene To-Dos: ";
+                todoEntries.forEach(e => {
+                    briefingText += `${e.text}, `;
+                });
+            }
+
             const unimportantKeywords = ["kuscheltier", "spielzeug", "puppe", "teddy", "kuscheltiere"];
             const memKeys = Object.keys(memoryItems);
             let relevantItems = [];
@@ -468,7 +475,7 @@
                 });
             }
 
-            if (calendarEntries.length === 0 && relevantItems.length === 0) {
+            if (calendarEntries.length === 0 && todoEntries.length === 0 && relevantItems.length === 0) {
                 briefingText += "Es gibt heute keine besonderen Termine oder Gegenstände. ";
             }
 
@@ -511,6 +518,11 @@
                                 Aktuelles Jahr ist 2026, heute ist ${now.toISOString().split('T')[0]}.
                                 Bisheriges Gedächtnis über Gegenstände mit Ablagezeit: ${memoryContext}
                                 
+                                ABSOLUTE REGELN FÜR TERMINE VS. TO-DOS:
+                                1. STRIKTE TRENNUNG VON TERMINEN UND TO-DOS:
+                                   - Wähle "calendar" NUR DANN, wenn der Nutzer explizit eine Uhrzeit (z.B. "um 14 Uhr", "um 15:30 Uhr") oder einen konkreten zeitlichen Zeitpunkt mit Uhrzeit nennt.
+                                   - Wenn der Nutzer eine Aufgabe nennt, die keine genaue Uhrzeit enthält (z.B. "ich muss Isabelle abholen", "ich muss einkaufen gehen", "Den Müll rausbringen"), ist das KEIN Termin! Wähle dafür zwingend "note" (To-Do/Notiz) und erfinde NIEMALS eine ausgedachte Uhrzeit oder einen Kalendereintrag!
+                                
                                 ABSOLUTE GRAMMATIK- UND FORMULIERUNGSGESETZE:
                                 1. KORREKTE PRÄPOSITIONEN UND ARTIKEL BEI ORTEN:
                                    - Niemals "in der Flur Schrank" oder "in der Flurschrank"! Es heisst zwingend "im Flurschrank", "im Flur", "in der Küche", "im Wohnzimmer", "in der dritten Schublade".
@@ -530,8 +542,8 @@
                                 - "item_location": string
                                 - "item_category": string
                                 - "note_text": string
-                                - "summary": string (Zusammenfassung für den Kalender)
-                                - "start_time": string (ISO-Format für Termine, z.B. "2026-09-15T20:00:00")
+                                - "summary": string (Zusammenfassung für den Termin/Kalender)
+                                - "start_time": string (ISO-Format für Termine NUR WENN eine Uhrzeit genannt wurde, z.B. "2026-09-15T14:00:00", sonst leer lassen)
                                 - "reply": string (Deine präzise, korrekte und freundliche Antwort auf Deutsch)`
                             },
                             {
@@ -561,7 +573,6 @@
                     let cleanName = aiData.item_name.toLowerCase();
                     let cleanLoc = aiData.item_location;
                     
-                    // Grammatikalische Korrektur für Ablageorte falls die KI schludert
                     cleanLoc = cleanLoc.replace(/in der flur schrank/gi, 'im Flurschrank');
                     cleanLoc = cleanLoc.replace(/in der flur/gi, 'im Flur');
                     
