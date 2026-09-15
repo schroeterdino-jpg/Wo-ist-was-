@@ -106,38 +106,44 @@
         }
 
         // Funktion zum Prüfen, ob der Key gültig ist und welche Modelle bereitstehen
-        async function checkGroqConnection() {
-            const key = localStorage.getItem('user_api_key');
-            if (!key) {
-                connectionStatus.textContent = "⚠️ Kein Schlüssel hinterlegt.";
-                return;
+      async function checkGroqConnection() {
+    const key = localStorage.getItem('user_api_key');
+    if (!key) {
+        connectionStatus.textContent = "⚠️ Kein Schlüssel hinterlegt.";
+        return;
+    }
+
+    connectionStatus.textContent = "Prüfe Verbindung zu Groq...";
+    try {
+        const response = await fetch('https://api.groq.com/openai/v1/models', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${key}`
             }
+        });
 
-            connectionStatus.textContent = "Prüfe Verbindung zu Groq...";
-            try {
-                const response = await fetch('https://api.groq.com/openai/v1/models', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${key}`
-                    }
-                });
+        if (response.ok) {
+            const data = await response.json();
+            const models = data.data.map(m => m.id);
+            console.log("Verfügbare Groq-Modelle:", models);
+            
+            // Wir filtern gezielt nach echten Chat-Modellen und meiden Schutz- oder Einbettungsmodelle
+            let activeModel = models.find(m => m.includes('llama-3.3') || m.includes('llama-3.1') || m.includes('llama3')) 
+                              || models.find(m => !m.includes('guard') && !m.includes('embed')) 
+                              || 'llama-3.1-8b-instant';
 
-                if (response.ok) {
-                    const data = await response.json();
-                    const models = data.data.map(m => m.id);
-                    console.log("Verfügbare Groq-Modelle:", models);
-                    
-                    // Wir suchen nach einem passenden Standardmodell (z.B. Llama)
-                    let activeModel = models.find(m => m.includes('llama')) || models[0];
-                    localStorage.setItem('active_groq_model', activeModel);
+            localStorage.setItem('active_groq_model', activeModel);
 
-                    connectionStatus.textContent = `✅ Verbindung erfolgreich! Aktives Modell: ${activeModel}`;
-                } else {
-                    connectionStatus.textContent = "❌ Fehler: Ungültiger API-Key oder Zugriff verweigert.";
-                }
-            } catch (error) {
-                connectionStatus.textContent = "❌ Netzwerkfehler beim Prüfen.";
-                console.error(error);
+            connectionStatus.textContent = `✅ Verbunden! Modell: ${activeModel}`;
+        } else {
+            connectionStatus.textContent = "❌ Fehler: Ungültiger API-Key.";
+        }
+    } catch (error) {
+        connectionStatus.textContent = "❌ Netzwerkfehler beim Prüfen.";
+        console.error(error);
+    }
+}
+
             }
         }
 
