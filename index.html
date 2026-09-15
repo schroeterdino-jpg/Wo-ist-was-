@@ -8,6 +8,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Identity Services (OAuth / Login) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
+    <!-- Eigenes Icon direkt aus dem Projektordner -->
+    <link rel="icon" type="image/png" href="./dino.png">
+    <link rel="apple-touch-icon" href="./dino.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
     <style>
         body { font-size: 1.25rem; }
     </style>
@@ -132,7 +139,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 3.7</span>
+        <span>Version 3.9</span>
     </footer>
 
     <!-- JavaScript -->
@@ -478,30 +485,28 @@
             });
 
             if (relevantItems.length > 0) {
-                // Menschliche, abwechslungsreiche Formulierungen ohne das Wort "Wichtige Gegenstände"
                 const humanPhrases = [
-                    `Ach ja, ${currentUserName}, denk dran: `,
-                    `Vergiss nicht, `,
-                    `Möchtest du `,
-                    `Und schau mal, `
+                    (art, name, loc) => `Ach ja, ${currentUserName}, denk dran: ${art} ${name} liegt ${loc}. `,
+                    (art, name, loc) => `Vergiss nicht, ${art} ${name} einzupacken – das liegt ${loc}. `,
+                    (art, name, loc) => `Möchtest du ${art} ${name} vielleicht mitnehmen? Die liegt ${loc}. `,
+                    (art, name, loc) => `Und schau mal, ${art} ${name} liegt ${loc}, brauchst du die heute? `,
+                    (art, name, loc) => `Hast du eigentlich ${art} ${name} eingepackt? Die liegt ja ${loc}. `,
+                    (art, name, loc) => `Schau lieber noch mal kurz nach, ${art} ${name} liegt doch ${loc}. `,
+                    (art, name, loc) => `Falls du sie brauchst: ${art} ${name} liegt drüben ${loc}. `,
+                    (art, name, loc) => `Ach, übrigens: ${art} ${name} liegt noch ${loc}, falls du sie mitnehmen möchtest. `,
+                    (art, name, loc) => `Nur ein kurzer Gedanke – denk an ${art} ${name}, die müsste ${loc} liegen. `,
+                    (art, name, loc) => `Nicht dass du sie vergisst: ${art} ${name} liegt ${loc}. `
                 ];
 
-                relevantItems.forEach((item, index) => {
+                relevantItems.forEach((item) => {
                     let art = "dein";
                     let lowerName = item.name.toLowerCase();
                     if (lowerName.endsWith('e') || lowerName.includes('brille') || lowerName.includes('tasche') || lowerName.includes('uhr')) {
                         art = "deine";
                     }
                     
-                    let chosenPhrase = humanPhrases[Math.floor(Math.random() * humanPhrases.length)];
-                    
-                    if (chosenPhrase.includes("Möchtest du")) {
-                        briefingText += `${chosenPhrase} ${art} ${item.name} mitnehmen? Das liegt ${item.loc}. `;
-                    } else if (chosenPhrase.includes("Vergiss nicht")) {
-                        briefingText += `${chosenPhrase} ${art} ${item.name} einzupacken – das liegt ${item.loc}. `;
-                    } else {
-                        briefingText += `${chosenPhrase} ${art} ${item.name} mitzunehmen, das liegt ${item.loc}. `;
-                    }
+                    let randomPhraseFunc = humanPhrases[Math.floor(Math.random() * humanPhrases.length)];
+                    briefingText += randomPhraseFunc(art, item.name, item.loc);
                 });
             }
 
@@ -544,26 +549,24 @@
                         messages: [
                             {
                                 role: "system",
-                                content: `Du bist ein präziser, freundlicher und sprachlich exakter deutscher Alltags-Assistent für ${currentUserName} in Schwarzenbek. 
+                                content: `Du bist ein hochpräziser, fehlerfreier und sprachlich eleganter deutscher Alltags-Assistent für ${currentUserName} in Schwarzenbek. 
                                 Aktuelles Jahr ist 2026, heute ist ${now.toISOString().split('T')[0]}.
                                 Bisheriges Gedächtnis über Gegenstände mit Ablagezeit: ${memoryContext}
                                 
                                 ABSOLUTE REGELN FÜR TERMINE VS. TO-DOS:
                                 1. STRIKTE TRENNUNG VON TERMINEN UND TO-DOS:
-                                   - Wähle "calendar" NUR DANN, wenn der Nutzer explizit eine Uhrzeit (z.B. "um 14 Uhr", "um 15:30 Uhr") oder einen konkreten zeitlichen Zeitpunkt mit Uhrzeit nennt.
-                                   - Wenn der Nutzer eine Aufgabe nennt, die keine genaue Uhrzeit enthält, ist das KEIN Termin! Wähle dafür zwingend "note" (To-Do/Notiz).
+                                   - Wähle "calendar" NUR DANN, wenn der Nutzer explizit eine Uhrzeit nennt.
+                                   - Wenn keine genaue Uhrzeit genannt wird, ist das ein To-Do ("note").
                                 
                                 ABSOLUTE GRAMMATIK- UND FORMULIERUNGSGESETZE:
-                                1. KORREKTE PRÄPOSITIONEN UND ARTIKEL BEI ORTEN (VERHINDERE DOPPELTE WÖRTER WIE "im in"):
-                                   - Niemals doppelte Präpositionen wie "im in", "in in", "in der in der"! Formuliere Orte natürlich auf Deutsch, z.B. "in der dritten Schublade der Vitrine", "im Flurschrank".
-                                2. DAS WORT "PORTMONNAIE" / "GELDBEUTEL":
-                                   - Niemals "Popmoney" oder "Popmannee"! Immer exakt "Portemonnaie".
-                                3. BESITZANZEIGENDE FÜRWÖRTER (ARTIKEL):
-                                   - Niemals "dein Brille"! Zwingend "deine Brille", "deine Schlüssel", "deine Papiere". Sächlich/männlich: "dein Portemonnaie", "dein Handy".
-                                4. KATEGORIEN FÜR GEGENSTÄNDE:
-                                   - Ordne jeden Gegenstand einer dieser Kategorien zu: "Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer" oder "Sonstiges".
-                                5. KURZE UND PRÄZISE ANTWORTEN:
-                                   - Antworte klar, freundlich und auf den Punkt.
+                                1. KEINE DOPPELTEN PRÄPOSITIONEN: Nutze niemals Konstruktionen wie "im in", "in der im" oder "auf dem in". Verwende immer korrekte deutsche Ortsangaben (z.B. "in der dritten Schublade", "im Flurschrank").
+                                2. KORREKTE ARTIKEL FÜR GEGENSTÄNDE: 
+                                   - Sag niemals "dein Brille", "dein Tasche" oder "dein Uhr"! 
+                                   - Nutze zwingend immer das korrekte Geschlecht: "deine Brille", "deine Tasche", "deine Uhr", "deine Papiere", "dein Portemonnaie", "dein Handy", "dein Schlüssel".
+                                3. SCHREIBWEISE VON "PORTMONNAIE": 
+                                   - Schreibe dieses Wort immer exakt als "Portemonnaie" und niemals anders.
+                                4. SPRACHLICHER STIL: 
+                                   - Antworte extrem natürlich, freundlich, warmherzig und auf den Punkt.
 
                                 Gib ein JSON-Objekt zurück mit:
                                 - "type": string ("chat", "name_change", "item_store", "item_query", "note", "calendar")
