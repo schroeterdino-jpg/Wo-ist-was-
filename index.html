@@ -132,7 +132,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 2.9</span>
+        <span>Version 3.1</span>
     </footer>
 
     <!-- JavaScript -->
@@ -186,8 +186,8 @@
         let memoryItems = JSON.parse(localStorage.getItem('helfer_memory')) || {};
         let savedContacts = JSON.parse(localStorage.getItem('helfer_contacts')) || {};
         
-        // Kontextspeicher für Nachfragen (z.B. wenn nach Uhrzeit gefragt wurde)
         let pendingTaskContext = localStorage.getItem('helfer_pending_context') || null;
+        let autoListenAfterSpeech = false; // Steuert, ob nach der Sprachausgabe direkt wieder gelauscht werden soll
 
         renderAllLists();
         renderContactList();
@@ -307,12 +307,23 @@
             }
         }
 
-        function speak(text) {
+        function speak(text, triggerAutoListen = false) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'de-DE';
                 utterance.rate = 0.95;
+                
+                utterance.onend = function() {
+                    if (triggerAutoListen && recognition) {
+                        try {
+                            recognition.start();
+                        } catch (e) {
+                            console.log("Auto-Listen Start-Fehler:", e);
+                        }
+                    }
+                };
+
                 window.speechSynthesis.speak(utterance);
             }
         }
@@ -627,7 +638,11 @@
                 }
 
                 statusMessage.textContent = "Fertig.";
-                speak(finalReply);
+
+                // WICHTIG: Wenn die KI nach einer Uhrzeit fragt (pending_context aktiv), 
+                // schalten wir das Mikrofon nach dem Sprechen AUTOMATISCH wieder ein!
+                const shouldAutoListen = (aiData.pending_context && aiData.pending_context.length > 0);
+                speak(finalReply, shouldAutoListen);
 
                 if (aiData.type === 'calendar') {
                     let calendarEventId = null;
@@ -677,7 +692,14 @@
             const event = {
                 summary: summary,
                 start: { dateTime: startDate.toISOString() },
-                end: { dateTime: endDate.toISOString() }
+                end: { dateTime: endDate.toISOString() },
+                reminders: {
+                    useDefault: false,
+                    overrides: [
+                        { method: 'popup', minutes: 120 },
+                        { method: 'email', minutes: 120 }
+                    ]
+                }
             };
 
             try {
@@ -788,7 +810,7 @@
                 let item = memoryItems[key];
                 let loc = typeof item === 'object' ? item.location : item;
                 let cat = (typeof item === 'object' && item.category) ? item.category : "Sonstiges";
-                if (!grouped[cat]) cat = "Sonstiges";
+                if (!grouped[cat]) cat =="Sonstiges";
                 
                 grouped[cat].push({ key: key, location: loc });
             }
