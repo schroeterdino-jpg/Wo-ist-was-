@@ -132,7 +132,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 3.6</span>
+        <span>Version 3.7</span>
     </footer>
 
     <!-- JavaScript -->
@@ -478,15 +478,13 @@
             });
 
             if (relevantItems.length > 0) {
-                // Natürliche, wechselnde Einleitungen für Gegenstände, um das monoton Wiederholende zu vermeiden
-                const memoryIntroOptions = [
-                    `Ach ja, ${currentUserName}, vergiss nicht: `,
-                    `Und denk dran: `,
-                    `Falls du es suchst – `,
-                    `Nicht vergessen: `
+                // Menschliche, abwechslungsreiche Formulierungen ohne das Wort "Wichtige Gegenstände"
+                const humanPhrases = [
+                    `Ach ja, ${currentUserName}, denk dran: `,
+                    `Vergiss nicht, `,
+                    `Möchtest du `,
+                    `Und schau mal, `
                 ];
-                let randomIntro = memoryIntroOptions[Math.floor(Math.random() * memoryIntroOptions.length)];
-                briefingText += randomIntro;
 
                 relevantItems.forEach((item, index) => {
                     let art = "dein";
@@ -494,8 +492,16 @@
                     if (lowerName.endsWith('e') || lowerName.includes('brille') || lowerName.includes('tasche') || lowerName.includes('uhr')) {
                         art = "deine";
                     }
-                    if (index > 0) briefingText += " Und außerdem: ";
-                    briefingText += `${art} ${item.name} liegt ${item.loc}. `;
+                    
+                    let chosenPhrase = humanPhrases[Math.floor(Math.random() * humanPhrases.length)];
+                    
+                    if (chosenPhrase.includes("Möchtest du")) {
+                        briefingText += `${chosenPhrase} ${art} ${item.name} mitnehmen? Das liegt ${item.loc}. `;
+                    } else if (chosenPhrase.includes("Vergiss nicht")) {
+                        briefingText += `${chosenPhrase} ${art} ${item.name} einzupacken – das liegt ${item.loc}. `;
+                    } else {
+                        briefingText += `${chosenPhrase} ${art} ${item.name} mitzunehmen, das liegt ${item.loc}. `;
+                    }
                 });
             }
 
