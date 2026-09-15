@@ -106,7 +106,7 @@
                 </ul>
             </div>
 
-            <!-- Gemerkte Gegenstände (Neu mit Löschbutton!) -->
+            <!-- Gemerkte Gegenstände (Mit Löschbutton!) -->
             <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200">
                 <h2 class="text-xl font-bold text-blue-800 mb-3">🔑 Gemerkte Gegenstände:</h2>
                 <ul id="memoryList" class="space-y-2 text-lg">
@@ -310,7 +310,7 @@
             recordText.textContent = "SPRECHEN";
         }
 
-        // Briefing beim Haus Verlassen (Filtert NUR wichtige Gegenstände)
+        // Briefing beim Haus Verlassen (Filtert NUR wichtige Gegenstände mit sauberer Aufzählung)
         function triggerDailyBriefing() {
             let briefingText = `Mensch ${currentUserName}, pass auf, hier ist dein kurzer Überblick für heute: `;
 
@@ -332,19 +332,24 @@
                 briefingText += "Du hast heute keine anstehenden Termine oder To-Dos im Kalender. ";
             }
 
-            // Strikte Filterung: Nur WICHTIGE Gegenstände
+            // Strikte Filterung: Nur WICHTIGE Gegenstände mit perfekter Grammatik
             let importantItems = [];
             const allowedKeywords = ['schlüssel', 'portemonnaie', 'geldbörse', 'popmaney', 'popmoney', 'zahnprothese', 'papiere', 'bankkarte', 'zigarettenetui'];
 
             for (let key in memoryItems) {
                 let isImportant = allowedKeywords.some(kw => key.includes(kw));
                 if (isImportant) {
-                    importantItems.push(`deine ${key} liegt ${memoryItems[key]}`);
+                    let loc = memoryItems[key];
+                    // Falls noch alter unvollständiger Text im Speicher liegt, fangen wir es ab
+                    if (!loc.startsWith("in") && !loc.startsWith("auf") && !loc.startsWith("unter") && !loc.startsWith("neben")) {
+                        loc = "in der " + loc;
+                    }
+                    importantItems.push(`deine ${key} liegt ${loc}`);
                 }
             }
 
             if (importantItems.length > 0) {
-                briefingText += "Und vergiss mir bloß nicht: " + importantItems.join(", Höhe ") + "! Komm gut durch den Tag. ";
+                briefingText += "Und vergiss mir bloß nicht: " + importantItems.join(", und ") + "! Komm gut durch den Tag. ";
             } else {
                 briefingText += "Das wars auch schon, komm gut raus! ";
             }
@@ -376,24 +381,24 @@
                                 Aktuelles Jahr ist 2026, heute ist ${new Date().toISOString().split('T')[0]}.
                                 Bisheriges Gedächtnis über Gegenstände: ${memoryContext}
                                 
-                                EXTREM WICHTIGE GRAMMATIK-REGELN FÜR DIE ANTWORT ("reply"):
+                                EXTREM WICHTIGE GRAMMATIK-REGELN FÜR DIE ANTWORT ("reply") UND ORTE ("item_location"):
                                 - Du musst absolut fehlerfreies, natürliches Deutsch sprechen.
-                                - Verwende NIEMALS rohe Substantive ohne Artikel oder Präpositionen (Schlecht: "Dein Bankkarte liegt Vitrine").
-                                - Nutze IMMER vollständige Sätze mit Artikeln und grammatikalisch korrekten Fällen (Beispiel: "Deine Bankkarte liegt in der Vitrine" oder "Dein Schlüssel liegt auf dem Tisch").
+                                - Verwende NIEMALS rohe Substantive ohne Artikel oder Präpositionen (Falsch: "liegt Vitrine" oder "liegt Tisch").
+                                - Nutze IMMER vollständige Präpositionen und Artikel (Richtig: "in der Vitrine", "auf dem Tisch", "im Küchenschrank", "im Briefkasten").
                                 
                                 KLASSIFIZIERUNG DER TYPEN:
                                 1. "chat": Wenn der Benutzer Smalltalk betreibt, sich unterhält, Witze macht oder etwas fragt, das keine Aufgabe oder kein Gegenstand ist.
                                 2. "name_change": Wenn der Benutzer seinen Namen ändern will.
                                 3. "item_store": Wenn der Benutzer sagt, er legt einen Gegenstand irgendwo hin (z.B. "Schlüssel liegt auf dem Tisch").
                                 4. "item_query": Wenn der Benutzer fragt, wo ein Gegenstand ist.
-                                5. "note": To-Dos oder Erinnerungen OHNE feste Uhrzeit (z.B. "Ich muss Isabel heute noch abholen").
-                                6. "calendar": NUR WENN eine EXAKTE Uhrzeit genannt wird (z.B. "Termin um 14 Uhr").
+                                5. "note": To-Dos oder Erinnerungen OHNE feste Uhrzeit.
+                                6. "calendar": NUR WENN eine EXAKTE Uhrzeit genannt wird.
 
                                 Gib ein JSON-Objekt zurück mit:
                                 - "type": string ("chat", "name_change", "item_store", "item_query", "note", "calendar")
                                 - "new_name": string
                                 - "item_name": string
-                                - "item_location": string (vollständiger Satz mit Präposition, z.B. "in der Vitrine" oder "auf dem Tisch")
+                                - "item_location": string (vollständiger Satz mit Präposition und Artikel, z.B. "in der Vitrine" oder "auf dem Tisch")
                                 - "note_text": string
                                 - "summary": string
                                 - "start_time": string
@@ -424,7 +429,12 @@
 
                 if (aiData.type === 'item_store' && aiData.item_name && aiData.item_location) {
                     let cleanName = aiData.item_name.toLowerCase();
-                    memoryItems[cleanName] = aiData.item_location;
+                    let cleanLoc = aiData.item_location;
+                    // Sicherheitscheck: Falls Artikel fehlen, direkt korrigieren
+                    if (!cleanLoc.startsWith("in") && !cleanLoc.startsWith("auf") && !cleanLoc.startsWith("unter") && !cleanLoc.startsWith("neben")) {
+                        cleanLoc = "in der " + cleanLoc;
+                    }
+                    memoryItems[cleanName] = cleanLoc;
                     localStorage.setItem('helfer_memory', JSON.stringify(memoryItems));
                 }
 
@@ -500,7 +510,7 @@
             };
 
             try {
-                const res = wasFetchAllowed = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+                const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${accessToken}`,
@@ -544,7 +554,6 @@
             speak("To-Do erledigt.");
         }
 
-        // Funktion zum Löschen einzelner gemerkter Gegenstände
         function deleteMemoryItem(key) {
             delete memoryItems[key];
             localStorage.setItem('helfer_memory', JSON.stringify(memoryItems));
@@ -595,7 +604,7 @@
                 });
             }
 
-            // Gemerkte Gegenstände Liste (Mit Löschbutton für jeden Eintrag!)
+            // Gemerkte Gegenstände Liste
             const memKeys = Object.keys(memoryItems);
             if (memKeys.length === 0) {
                 memoryList.innerHTML = '<li class="text-slate-500">Keine Gegenstände gespeichert.</li>';
