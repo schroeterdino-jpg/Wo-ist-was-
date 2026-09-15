@@ -132,7 +132,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 3.4</span>
+        <span>Version 3.5</span>
     </footer>
 
     <!-- JavaScript -->
@@ -414,12 +414,14 @@
             statusMessage.textContent = "Lade Wetter & Briefing...";
             
             let weatherText = "";
+            let weatherAdvice = "";
             try {
-                const weatherRes = await fetch('https://api.open-meteo.com/v1/forecast?latitude=53.5135&longitude=10.4182&current=temperature_2m,weather_code');
+                const weatherRes = await fetch('https://api.open-meteo.com/v1/forecast?latitude=53.5135&longitude=10.4182&current=temperature_2m,weather_code,wind_speed_10m');
                 if (weatherRes.ok) {
                     const weatherData = await weatherRes.json();
                     const temp = weatherData.current.temperature_2m;
                     const code = weatherData.current.weather_code;
+                    const wind = weatherData.current.wind_speed_10m || 0;
                     
                     let condition = "bewölkt";
                     if (code === 0) condition = "klar und sonnig";
@@ -429,12 +431,25 @@
                     else if (code >= 95) condition = "Gewitter";
 
                     weatherText = `Das aktuelle Wetter in Schwarzenbek ist ${condition} bei ${temp} Grad. `;
+
+                    // Intelligente Empfehlung basierend auf Temperatur, Wettercode und Wind
+                    if (code >= 51 && code <= 67) {
+                        weatherAdvice = "Es ist regnerisch, nimm bitte einen Regenschirm mit! ";
+                    } else if (temp < 12) {
+                        weatherAdvice = "Es ist ziemlich frisch draußen, zieh dir am besten eine Jacke an. ";
+                    } else if (temp > 24) {
+                        weatherAdvice = "Heute wird es schön warm! ";
+                    } else if (wind > 30) {
+                        weatherAdvice = "Es ist windig, nimm lieber eine Jacke mit. ";
+                    } else {
+                        weatherAdvice = "Das Wetter ist ganz angenehm. ";
+                    }
                 }
             } catch (e) {
                 console.error("Wetterfehler:", e);
             }
 
-            let briefingText = `Guten Tag, ${currentUserName}. Hier ist dein kurzer Überblick. ${weatherText}`;
+            let briefingText = `Guten Tag, ${currentUserName}. Hier ist dein kurzer Überblick. ${weatherText} ${weatherAdvice}`;
 
             if (calendarEntries.length > 0) {
                 briefingText += "Deine Termine: ";
@@ -521,11 +536,12 @@
                                 ABSOLUTE REGELN FÜR TERMINE VS. TO-DOS:
                                 1. STRIKTE TRENNUNG VON TERMINEN UND TO-DOS:
                                    - Wähle "calendar" NUR DANN, wenn der Nutzer explizit eine Uhrzeit (z.B. "um 14 Uhr", "um 15:30 Uhr") oder einen konkreten zeitlichen Zeitpunkt mit Uhrzeit nennt.
-                                   - Wenn der Nutzer eine Aufgabe nennt, die keine genaue Uhrzeit enthält (z.B. "ich muss Isabelle abholen", "ich muss einkaufen gehen", "Den Müll rausbringen"), ist das KEIN Termin! Wähle dafür zwingend "note" (To-Do/Notiz) und erfinde NIEMALS eine ausgedachte Uhrzeit oder einen Kalendereintrag!
+                                   - Wenn der Nutzer eine Aufgabe nennt, die keine genaue Uhrzeit enthält (z.B. "ich muss Isabelle abholen", "ich muss einkaufen gehen"), ist das KEIN Termin! Wähle dafür zwingend "note" (To-Do/Notiz) und erfinde NIEMALS eine ausgedachte Uhrzeit oder einen Kalendereintrag!
                                 
                                 ABSOLUTE GRAMMATIK- UND FORMULIERUNGSGESETZE:
-                                1. KORREKTE PRÄPOSITIONEN UND ARTIKEL BEI ORTEN:
-                                   - Niemals "in der Flur Schrank" oder "in der Flurschrank"! Es heisst zwingend "im Flurschrank", "im Flur", "in der Küche", "im Wohnzimmer", "in der dritten Schublade".
+                                1. KORREKTE PRÄPOSITIONEN UND ARTIKEL BEI ORTEN (VERHINDERE DOPPELTE WÖRTER WIE "im in"):
+                                   - Niemals doppelte Präpositionen wie "im in", "in in", "in der in der"! 
+                                   - Formuliere Orte immer natürlich auf Deutsch, z.B. "in der dritten Schublade der Vitrine", "im Flurschrank", "in der Küche", "im Wohnzimmer".
                                 2. DAS WORT "PORTMONNAIE" / "GELDBEUTEL":
                                    - Niemals "Popmoney" oder "Popmannee"! Immer exakt "Portemonnaie".
                                 3. BESITZANZEIGENDE FÜRWÖRTER (ARTIKEL):
@@ -573,6 +589,8 @@
                     let cleanName = aiData.item_name.toLowerCase();
                     let cleanLoc = aiData.item_location;
                     
+                    // Bereinige doppelte Präpositionen (z.B. "im in", "in in", "in der in")
+                    cleanLoc = cleanLoc.replace(/\b(im|in der|in dem|auf dem|auf der)\s+(in|im|in der|in dem)\b/gi, '$1');
                     cleanLoc = cleanLoc.replace(/in der flur schrank/gi, 'im Flurschrank');
                     cleanLoc = cleanLoc.replace(/in der flur/gi, 'im Flur');
                     
