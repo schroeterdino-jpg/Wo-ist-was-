@@ -40,34 +40,25 @@
         <div class="container mx-auto max-w-md space-y-4">
             <div>
                 <label class="block text-sm font-bold text-amber-900 mb-1">Wie soll ich dich nennen?:</label>
-                <div class="flex gap-2">
-                    <input type="text" id="userNameInput" placeholder="Dein Name..." class="flex-grow p-2 border border-amber-300 rounded-lg text-base">
-                    <button onclick="saveUserNameSetting()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-base font-semibold">Speichern</button>
-                </div>
+                <input type="text" id="userNameInput" placeholder="Dein Name..." class="w-full p-2 border border-amber-300 rounded-lg text-base bg-white">
             </div>
 
             <div>
                 <label class="block text-sm font-bold text-amber-900 mb-1">Groq API-Key (gsk_...):</label>
-                <div class="flex gap-2">
-                    <input type="password" id="apiKeyInput" placeholder="gsk_..." class="flex-grow p-2 border border-amber-300 rounded-lg text-base">
-                    <button onclick="saveApiKey()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-base font-semibold">Speichern</button>
-                </div>
+                <input type="password" id="apiKeyInput" placeholder="gsk_..." class="w-full p-2 border border-amber-300 rounded-lg text-base bg-white">
             </div>
 
             <div>
                 <label class="block text-sm font-bold text-amber-900 mb-1">Google Client-ID:</label>
-                <div class="flex gap-2">
-                    <input type="text" id="googleClientIdInput" placeholder="Client ID..." class="flex-grow p-2 border border-amber-300 rounded-lg text-base">
-                    <button onclick="saveGoogleClientId()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-base font-semibold">Speichern</button>
-                </div>
+                <input type="text" id="googleClientIdInput" placeholder="Client ID..." class="w-full p-2 border border-amber-300 rounded-lg text-base bg-white">
             </div>
 
             <!-- Kontakte für Schnell-Anruf -->
             <div class="border-t border-amber-200 pt-3">
                 <label class="block text-sm font-bold text-amber-900 mb-1">📞 Schnell-Anruf Kontakte:</label>
                 <div class="flex gap-2 mb-2">
-                    <input type="text" id="contactNameInput" placeholder="Name (z.B. Simone)" class="w-1/2 p-2 border border-amber-300 rounded-lg text-base">
-                    <input type="text" id="contactPhoneInput" placeholder="Nummer..." class="w-1/2 p-2 border border-amber-300 rounded-lg text-base">
+                    <input type="text" id="contactNameInput" placeholder="Name (z.B. Simone)" class="w-1/2 p-2 border border-amber-300 rounded-lg text-base bg-white">
+                    <input type="text" id="contactPhoneInput" placeholder="Nummer..." class="w-1/2 p-2 border border-amber-300 rounded-lg text-base bg-white">
                 </div>
                 <button onclick="saveContact()" class="w-full bg-amber-600 hover:bg-amber-700 text-white py-2 rounded-lg text-base font-semibold">Kontakt hinzufügen</button>
                 <div id="contactListDisplay" class="mt-2 text-xs text-amber-900 space-y-1"></div>
@@ -138,7 +129,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.15</span>
+        <span>Version 4.16</span>
     </footer>
 
     <!-- JavaScript -->
@@ -150,6 +141,7 @@
         const todoList = document.getElementById('todoList');
         const categoryContainer = document.getElementById('categoryContainer');
         const settingsBox = document.getElementById('settingsBox');
+        
         const apiKeyInput = document.getElementById('apiKeyInput');
         const googleClientIdInput = document.getElementById('googleClientIdInput');
         const userNameInput = document.getElementById('userNameInput');
@@ -165,24 +157,37 @@
         const tabCalendarBtn = document.getElementById('tabCalendarBtn');
         const tabTodoBtn = document.getElementById('tabTodoBtn');
 
+        // --- Werte beim Start aus dem localStorage laden ---
         let currentUserName = localStorage.getItem('user_custom_name') || "Dino";
         userNameInput.value = currentUserName;
         updateUserGreeting();
 
+        const savedKey = localStorage.getItem('user_api_key');
+        if (savedKey) apiKeyInput.value = savedKey;
+
+        const savedClientId = localStorage.getItem('google_client_id') || "399573320370-qka01ghj0s88eoair7lla665cbj10o4g.apps.googleusercontent.com";
+        googleClientIdInput.value = savedClientId;
+        localStorage.setItem('google_client_id', savedClientId);
+
+        // --- Automatische Live-Speicherung bei jeder Änderung ---
+        userNameInput.addEventListener('input', () => {
+            currentUserName = userNameInput.value.trim() || "Dino";
+            localStorage.setItem('user_custom_name', currentUserName);
+            updateUserGreeting();
+        });
+
+        apiKeyInput.addEventListener('input', () => {
+            localStorage.setItem('user_api_key', apiKeyInput.value.trim());
+            connectionStatus.textContent = "API-Key automatisch gespeichert.";
+        });
+
+        googleClientIdInput.addEventListener('input', () => {
+            localStorage.setItem('google_client_id', googleClientIdInput.value.trim());
+            connectionStatus.textContent = "Client-ID automatisch gespeichert.";
+        });
+
         function updateUserGreeting() {
             userNameDisplay.textContent = `Hallo, ${currentUserName}!`;
-        }
-
-        function saveUserNameSetting() {
-            const newName = userNameInput.value.trim();
-            if (newName) {
-                currentUserName = newName;
-                localStorage.setItem('user_custom_name', currentUserName);
-                updateUserGreeting();
-                connectionStatus.textContent = `Name auf "${currentUserName}" geändert.`;
-            } else {
-                alert('Bitte gib einen Namen ein.');
-            }
         }
 
         let calendarEntries = JSON.parse(localStorage.getItem('helfer_calendar_entries')) || [];
@@ -242,38 +247,11 @@
             }
         }
 
-        const savedKey = localStorage.getItem('user_api_key');
-        if (savedKey) apiKeyInput.value = savedKey;
-
-        const savedClientId = localStorage.getItem('google_client_id') || "399573320370-qka01ghj0s88eoair7lla665cbj10o4g.apps.googleusercontent.com";
-        googleClientIdInput.value = savedClientId;
-        localStorage.setItem('google_client_id', savedClientId);
-
         let tokenClient;
         let accessToken = localStorage.getItem('google_access_token');
 
         function toggleSettings() {
             settingsBox.classList.toggle('hidden');
-        }
-
-        function saveApiKey() {
-            const key = apiKeyInput.value.trim();
-            if (key) {
-                localStorage.setItem('user_api_key', key);
-                connectionStatus.textContent = "Groq-Schlüssel gespeichert.";
-            } else {
-                alert('Bitte gib einen gültigen Schlüssel ein.');
-            }
-        }
-
-        function saveGoogleClientId() {
-            const clientId = googleClientIdInput.value.trim();
-            if (clientId) {
-                localStorage.setItem('google_client_id', clientId);
-                connectionStatus.textContent = "Google Client-ID gespeichert.";
-            } else {
-                alert('Bitte gib eine Client-ID ein.');
-            }
         }
 
         function loginWithGoogle() {
@@ -511,7 +489,7 @@
                 }
             });
 
-            if (relevantItems.length > *0*) {
+            if (relevantItems.length > 0) {
                 relevantItems.forEach((item) => {
                     briefingText += `Denk dran: ${item.name} ${item.loc}. `;
                 });
@@ -790,7 +768,7 @@
                 });
             }
 
-            if (todoEntries.length ===, 0) {
+            if (todoEntries.length === 0) {
                 todoList.innerHTML = '<li class="text-slate-500">Keine offenen To-Dos.</li>';
             } else {
                 todoList.innerHTML = '';
