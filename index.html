@@ -570,8 +570,8 @@
                                 Aktuelle To-Dos im System: ${todoContext}
                                 
                                 ABSOLUTE REGELN FÜR TERMIN- UND TO-DO-ERSTELLUNG:
-                                1. KEINE RÜCKFRAGEN BEI TO-DOS: Wenn der Nutzer eine Aufgabe nennt (z.B. "ich muss Isabelle abholen", "kauf Milch", "Erinnerung an X"), bei der **KEINE EXAKTE UHRZEIT** genannt wird, wandle sie **SOFORT** in ein To-Do ("type": "note") um. Frage niemals nach, ob eine Erinnerung oder ein Termin gewollt ist. Lege es direkt an!
-                                2. TERMIN NUR BEI UHRZEIT: Wähle "calendar" NUR DANN, wenn der Nutzer explizit eine feste Uhrzeit nennt (z.B. "um 14 Uhr").
+                                1. STRICT TO-DO RULE: Wähle "note" (To-Do), IMMER WENN der Nutzer eine Aufgabe, einen Erledigungswunsch oder eine Notiz äußert (z.B. "ich muss Isabelle abholen", "kauf Milch", "Erinnerung an X"), bei der **KEINE EXAKTE UHRZEIT** (z.B. "um 14 Uhr", "um 15:30 Uhr") genannt wird. Auch wenn Wörter wie "heute" oder "morgen" vorkommen, aber **keine Uhrzeit** dabeisteht, darf NIEMALS "calendar" gewählt werden! Es ist zu 100% ein To-Do ("type": "note").
+                                2. TERMIN NUR BEI UHRZEIT: Wähle "calendar" AUSSCHLIESSLICH DANN, wenn der Nutzer explizit eine feste Uhrzeit nennt.
                                 3. FRAGEN ZU TERMINEN: Wenn der Nutzer fragt, ob er Termine hat (heute/morgen), prüfe die Kalender-Liste. Existiert ein Termin für diesen Tag, nenne ihn im Feld "reply" exakt mit Inhalt und Zeit.
                                 
                                 ABSOLUTE GRAMMATIK- UND FORMULIERUNGSGESETZE:
@@ -605,6 +605,12 @@
                 const aiData = JSON.parse(data.choices[0].message.content);
 
                 let finalReply = aiData.reply;
+
+                // Zusätzliche Sicherheitsschleife: Falls keine Startzeit vorhanden ist, niemals als Kalender eintragen
+                if (aiData.type === 'calendar' && (!aiData.start_time || aiData.start_time === "" || aiData.start_time === "null")) {
+                    aiData.type = 'note';
+                    aiData.note_text = aiData.summary || text;
+                }
 
                 if (aiData.type === 'name_change' && aiData.new_name) {
                     currentUserName = aiData.new_name;
