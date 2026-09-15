@@ -314,16 +314,28 @@
                 utterance.rate = 0.95;
                 
                 utterance.onend = function() {
-                    if (onComplete) onComplete();
+                    if (onComplete) {
+                        setTimeout(() => {
+                            onComplete();
+                        }, 300);
+                    }
                 };
 
                 utterance.onerror = function() {
-                    if (onComplete) onComplete();
+                    if (onComplete) {
+                        setTimeout(() => {
+                            onComplete();
+                        }, 300);
+                    }
                 };
 
                 window.speechSynthesis.speak(utterance);
             } else {
-                if (onComplete) onComplete();
+                if (onComplete) {
+                    setTimeout(() => {
+                        onComplete();
+                    }, 300);
+                }
             }
         }
 
@@ -648,7 +660,6 @@
                         if (!isNaN(parsedDate)) {
                             fullFormattedDate = parsedDate.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Berlin' });
                             let timePart = parsedDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
-                            let datePart = parsedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' });
                             shortFormattedDate = `${datePart} um ${timePart} Uhr`;
                         }
                     }
