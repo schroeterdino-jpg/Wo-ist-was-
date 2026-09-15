@@ -82,17 +82,6 @@
             </button>
         </div>
 
-        <!-- Gemerkte Gegenstände (Kompakt mit Gesamt-Löschbutton) -->
-        <div id="memoryContainer" class="hidden bg-amber-50 p-4 rounded-2xl shadow-md border border-amber-200">
-            <div class="flex justify-between items-center mb-2">
-                <h2 class="text-lg font-bold text-amber-900">📌 Gemerkte Sachen:</h2>
-                <button onclick="clearAllMemory()" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm font-semibold shadow">
-                    Alles löschen
-                </button>
-            </div>
-            <p id="memoryTextDisplay" class="text-amber-800 text-base leading-relaxed"></p>
-        </div>
-
         <!-- Kalender & To-Dos -->
         <div class="grid grid-cols-1 gap-4">
             <!-- Kalender-Termine -->
@@ -115,8 +104,11 @@
     </main>
 
     <!-- Fußbereich -->
-    <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600">
-        Einfach bedienbare Web-App für den Alltag
+    <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
+        <span>Einfach bedienbare Web-App</span>
+        <button onclick="clearAllMemory()" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-semibold shadow">
+            🗑️ Gedächtnis löschen
+        </button>
     </footer>
 
     <!-- JavaScript -->
@@ -132,8 +124,6 @@
         const userNameInput = document.getElementById('userNameInput');
         const userNameDisplay = document.getElementById('userNameDisplay');
         const connectionStatus = document.getElementById('connectionStatus');
-        const memoryContainer = document.getElementById('memoryContainer');
-        const memoryTextDisplay = document.getElementById('memoryTextDisplay');
 
         let currentUserName = localStorage.getItem('user_custom_name') || "Dino";
         userNameInput.value = currentUserName;
@@ -536,25 +526,10 @@
         function clearAllMemory() {
             memoryItems = {};
             localStorage.removeItem('helfer_memory');
-            renderAllLists();
-            speak("Gemerkte Sachen komplett gelöscht.");
+            speak("Gedächtnis komplett gelöscht.");
         }
 
         function renderAllLists() {
-            // Gemerkte Sachen Kompakt-Anzeige
-            const memKeys = Object.keys(memoryItems);
-            if (memKeys.length === 0) {
-                memoryContainer.classList.add('hidden');
-            } else {
-                memoryContainer.classList.remove('hidden');
-                let summaryText = "";
-                memKeys.forEach(k => {
-                    const capitalizedKey = k.charAt(0).toUpperCase() + k.slice(1);
-                    summaryText += `• ${capitalizedKey}: ${memoryItems[k]}<br>`;
-                });
-                memoryTextDisplay.innerHTML = summaryText;
-            }
-
             // Kalender Liste
             if (calendarEntries.length === 0) {
                 calendarList.innerHTML = '<li class="text-slate-500">Keine Termine eingetragen.</li>';
