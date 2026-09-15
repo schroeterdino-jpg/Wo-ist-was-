@@ -41,7 +41,7 @@
 
         <!-- Großer Mikrofon-Button -->
         <div class="flex flex-col items-center">
-            <button id="recordBtn" onclick="toggleSpeechRecognition()" class="w-40 h-40 bg-red-600 hover:bg-red-700 text-white rounded-full flex flex-col items-center justify-center shadow-2xl transition transform active:scale-95 border-4 border-white">
+            <button id="recordBtn" onclick="toggleSpeechRecognition()" class="w-40 h-40 bg-red-600 hover:bg-red-700 text-white rounded-full flex flex-col items-center justify-center shadow-2xl transition transform active:scale-95 border-4 border-white cursor-pointer">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                 </svg>
@@ -133,9 +133,10 @@
             }
         }
 
-        // Web Speech API
+        // Web Speech API Steuerung
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        let recognition;
+        let recognition = null;
+        let isRecording = false;
 
         if (SpeechRecognition) {
             recognition = new SpeechRecognition();
@@ -144,6 +145,7 @@
             recognition.maxAlternatives = 1;
 
             recognition.onstart = function() {
+                isRecording = true;
                 statusMessage.textContent = "Höre zu... Bitte sprechen.";
                 recordBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
                 recordBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700', 'animate-pulse');
@@ -157,12 +159,12 @@
             };
 
             recognition.onerror = function(event) {
-                statusMessage.textContent = "Sprachfehler. Noch einmal versuchen.";
+                statusMessage.textContent = "Sprachfehler oder abgebrochen.";
                 resetButton();
             };
 
             recognition.onend = function() {
-                statusMessage.textContent = "Fertig.";
+                isRecording = false;
                 resetButton();
             };
         } else {
@@ -178,22 +180,32 @@
                 return;
             }
 
-            if (recognition) {
+            if (!recognition) {
+                alert('Spracherkennung wird von diesem Browser leider nicht unterstützt.');
+                return;
+            }
+
+            if (isRecording) {
+                recognition.stop();
+            } else {
                 try {
                     recognition.start();
                 } catch (e) {
+                    // Falls sie bereits lief, einmal stoppen und neu starten
                     recognition.stop();
+                    setTimeout(() => recognition.start(), 200);
                 }
             }
         }
 
         function resetButton() {
+            isRecording = false;
             recordBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700', 'animate-pulse');
             recordBtn.classList.add('bg-red-600', 'hover:bg-red-700');
             recordText.textContent = "SPRECHEN";
         }
 
-        // Anfrage an OpenAI senden (gpt-4o-mini ist schnell, extrem günstig und zuverlässig)
+        // Anfrage an OpenAI senden (gpt-4o-mini)
         async function sendToOpenAI(text) {
             const key = localStorage.getItem('openai_user_api_key');
             outputBox.textContent = "Verarbeite mit OpenAI...";
@@ -210,7 +222,7 @@
                         messages: [
                             {
                                 role: "system",
-                                content: "Du bist ein hilfreicher Assistent für ältere Menschen. Analysiere den gesprochenen Satz. Extrahiere, ob es sich um einen Termin oder einen verlegten Gegenstand handelt, und antworte kurz, freundlich und klar auf Deutsch mit einer Zusammenfassung."
+                                content: "Du bist ein hilfreicher Assistent für den Alltag. Analysiere den gesprochenen Satz, fasse das Wichtigste zusammen und antworte kurz, freundlich und klar auf Deutsch."
                             },
                             {
                                 role: "user",
