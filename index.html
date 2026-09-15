@@ -27,7 +27,7 @@
             <div></div>
             <div>
                 <h1 class="text-3xl font-bold">Mein Alltags-Helfer</h1>
-                <p id="userNameDisplay" class="text-lg text-blue-100 mt-1">Hallo, Silvia!</p>
+                <p id="userNameDisplay" class="text-lg text-blue-100 mt-1">Hallo, Dino!</p>
             </div>
             <button onclick="toggleSettings()" class="bg-blue-800 hover:bg-blue-900 text-white px-3 py-2 rounded-lg text-sm shadow">
                 ⚙️ Einstellungen
@@ -138,7 +138,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.12</span>
+        <span>Version 4.13</span>
     </footer>
 
     <!-- JavaScript -->
@@ -165,7 +165,7 @@
         const tabCalendarBtn = document.getElementById('tabCalendarBtn');
         const tabTodoBtn = document.getElementById('tabTodoBtn');
 
-        let currentUserName = localStorage.getItem('user_custom_name') || "Silvia";
+        let currentUserName = localStorage.getItem('user_custom_name') || "Dino";
         userNameInput.value = currentUserName;
         updateUserGreeting();
 
@@ -513,22 +513,7 @@
 
             if (relevantItems.length > 0) {
                 relevantItems.forEach((item) => {
-                    let art = "dein";
-                    let lowerName = item.name.toLowerCase();
-                    if (lowerName.endsWith('e') || lowerName.includes('brille') || lowerName.includes('tasche') || lowerName.includes('uhr') || lowerName.includes('schlüssel')) {
-                        art = "deine";
-                    }
-                    
-                    let locLower = item.loc.toLowerCase();
-                    let verb = "liegt";
-                    if (locLower.startsWith("hängt")) verb = "";
-                    else if (locLower.startsWith("steckt")) verb = "";
-
-                    if (verb === "") {
-                        briefingText += `Denk dran: ${art} ${item.name} ${item.loc}. `;
-                    } else {
-                        briefingText += `Denk dran: ${art} ${item.name} ${verb} ${item.loc}. `;
-                    }
+                    briefingText += `Denk dran: ${item.name} ${item.loc}. `;
                 });
             }
 
@@ -576,30 +561,27 @@
                         messages: [
                             {
                                 role: "system",
-                                content: `Du bist ein hochpräziser, fehlerfreier und sprachlich eleganter deutscher Alltags-Assistent für ${currentUserName} in Schwarzenbek. 
+                                content: `Du bist ${currentUserName}s smarter, absolut natürlicher und menschlicher Alltags-Assistent in Schwarzenbek. 
                                 Aktuelles Jahr ist 2026, heute ist ${todayStr} (${now.toLocaleDateString('de-DE', {weekday: 'long'})}), Uhrzeit ist exakt ${currentClockTime} Uhr, morgen ist ${tomorrowStr}.
                                 Bisheriges Gedächtnis über Gegenstände: ${memoryContext}
-                                Aktuelle Kalender-Termine im System: ${calendarContext}
-                                Aktuelle To-Dos im System: ${todoContext}
-                                
-                                ABSOLUTE REGELN FÜR DIE UHRZEIT-FRAGE:
-                                Wenn der Nutzer nach der Uhrzeit fragt, antworte im Feld "reply" IMMER exakt mit: "Es ist jetzt ${currentClockTime} Uhr."
+                                Kalender: ${calendarContext}
+                                To-Dos: ${todoContext}
 
-                                ABSOLUTE GRAMMATIK- UND VERB-REGELN (SEHR WICHTIG!):
-                                1. VERB EXAKT ÜBERNEHMEN: Achte genau darauf, welches Verb der Nutzer beim Abspeichern nutzt (z.B. "steckt in der Tür", "hängt an der Wand", "liegt auf dem Tisch"). Übernehme dieses exakte Verb ("steckt", "hängt", "liegt") in die Antwort, wenn danach gefragt wird! Erfinde keine falschen Verben.
-                                2. KEINE DOPPELTEN PRÄPOSITIONEN: Sätze wie "in an der Tür" oder "an Ende und an der Tür" sind verboten.
-                                3. KORREKTE ARTIKEL: Nutze korrekte Artikel ("dein Haustierschlüssel", "deine Brille").
+                                WICHTIGE SPRACH- UND WÖRTERBUCH-REGELn (WICHTIGSTE PRIORITÄT!):
+                                1. SPRICH WIE EIN MENSCH: Antworte absolut natürlich, flüssig und sympathisch auf Deutsch. Sag NIEMALS roboterhaft "ich habe gemerkt", sondern immer natürlich wie ein echter Mensch: "Ich habe mir das gemerkt...", "Alles klar, hab's mir aufgeschrieben...", "Mach ich, ...".
+                                2. VERBEN EXAKT BEIBEHALTEN: Wenn der Nutzer sagt "Der Haustürschlüssel steckt in der Tür", dann speichere dir den Ort genau so ab ("steckt in der Tür") und erfinde niemals ein falsches Verb wie "liegt". Wenn danach gefragt wird, antworte genau mit diesem Verb (z.B. "Dein Haustürschlüssel steckt in der Tür").
+                                3. ALLGEMEINES WISSEN & FREIHEIT: Du kannst dem Nutzer absolut jede Frage beantworten (zu Kochen, Geschichte, Alltag, Technik etc.) – du bist nicht nur auf Haushaltsdinge beschränkt. Nutze dafür den Typ "chat".
 
-                                Gib ein JSON-Objekt zurück mit:
-                                - "type": string ("chat", "name_change", "item_store", "item_query", "note", "calendar")
-                                - "new_name": string
-                                - "item_name": string
-                                - "item_location": string
-                                - "item_category": string
-                                - "note_text": string
-                                - "summary": string
-                                - "start_time": string
-                                - "reply": string`
+                                Gib ein JSON-Objekt zurück mit folgenden Feldern:
+                                - "type": string (Wähle aus: "chat", "name_change", "item_store", "item_query", "note", "calendar")
+                                - "new_name": string (Falls der Nutzer seinen Namen ändern will)
+                                - "item_name": string (Name des Gegenstands bei store/query)
+                                - "item_location": string (Der genaue Ort mit exaktem Verb, z.B. "steckt in der Tür" oder "liegt auf dem Tisch")
+                                - "item_category": string (Kategorie: "Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer", "Sonstiges")
+                                - "note_text": string (Bei To-Dos)
+                                - "summary": string (Titel für Kalender)
+                                - "start_time": string (ISO-Datum für Kalender)
+                                - "reply": string (Deine komplette, natürliche, menschliche Antwort, die per Sprachausgabe vorgelesen wird!)`
                             },
                             {
                                 role: "user",
@@ -614,7 +596,7 @@
                 const data = await response.json();
                 const aiData = JSON.parse(data.choices[0].message.content);
 
-                let finalReply = aiData.reply;
+                let finalReply = aiData.reply || "Alles klar!";
 
                 if (aiData.type === 'calendar' && (!aiData.start_time || aiData.start_time === "" || aiData.start_time === "null")) {
                     aiData.type = 'note';
@@ -648,7 +630,6 @@
                     };
                     calendarEntries.unshift(newCalEntry);
                     localStorage.setItem('helfer_calendar_entries', JSON.stringify(calendarEntries));
-                    finalReply = `Ich habe den Termin "${aiData.summary || text}" für den ${shortFormattedDate} eingetragen.`;
                 } else if (aiData.type === 'note') {
                     let noteContent = aiData.note_text || text;
                     noteContent = noteContent.replace(/\s+(am|um)\s+.*/gi, '').trim();
@@ -659,12 +640,11 @@
                     };
                     todoEntries.unshift(newTodoEntry);
                     localStorage.setItem('helfer_todo_entries', JSON.stringify(todoEntries));
-                    finalReply = `Ich habe "${noteContent}" als To-Do notiert.`;
                 } else if (aiData.type === 'item_store' && aiData.item_name && aiData.item_location) {
                     let cleanName = aiData.item_name.toLowerCase();
                     let cleanLoc = aiData.item_location;
                     
-                    // Bereinigung gegen doppelte Präpositionen
+                    // Saubere Verknüpfung ohne doppelte Präpositionen
                     cleanLoc = cleanLoc.replace(/\b(im|in der|in dem|auf dem|auf der|an der|am)\s+(in|im|in der|in dem|auf|an)\b/gi, '$1');
                     
                     let category = aiData.item_category || "Sonstiges";
@@ -675,7 +655,6 @@
                         category: category
                     };
                     localStorage.setItem('helfer_memory', JSON.stringify(memoryItems));
-                    finalReply = `Ich habe gemerkt: ${aiData.item_name} ${cleanLoc}.`;
                 }
 
                 if (aiData.type === 'name_change' && aiData.new_name) {
@@ -683,7 +662,6 @@
                     localStorage.setItem('user_custom_name', currentUserName);
                     userNameInput.value = currentUserName;
                     updateUserGreeting();
-                    finalReply = `Sehr gerne, ${currentUserName}. Ab sofort nenne ich dich so.`;
                 }
 
                 if (aiData.type === 'item_query' && aiData.item_name) {
@@ -700,33 +678,10 @@
                     }
 
                     if (foundItem) {
-                        let art = "Dein";
-                        let lowerStored = matchedName.toLowerCase();
-                        if (lowerStored.endsWith('e') || lowerStored.includes('brille') || lowerStored.includes('tasche')) {
-                            art = "Deine";
+                        // Wenn die KI kein eigenes reply geliefert hat, bauen wir einen Fallback der das genaue Verb enthält
+                        if (!aiData.reply || aiData.reply.includes("liegt")) {
+                            finalReply = `Dein ${matchedName} ${foundItem.location}.`;
                         }
-                        
-                        let diffDays = Math.floor((Date.now() - foundItem.timestamp) / (1000 * 60 * 60 * 24));
-                        let timeString = diffDays === 0 ? "heute" : (diffDays === 1 ? "vor 1 Tag" : `vor ${diffDays} Tagen`);
-                        
-                        let locLower = foundItem.location.toLowerCase();
-                        let verb = "liegt";
-                        if (locLower.startsWith("steckt") || locLower.startsWith("hängt") || locLower.startsWith("steht")) {
-                            verb = "";
-                        }
-
-                        if (verb === "") {
-                            finalReply = `${art} ${matchedName} ${foundItem.location}. Das hast du ${timeString} dort abgelegt.`;
-                        } else {
-                            finalReply = `${art} ${matchedName} ${verb} ${foundItem.location}. Das hast du ${timeString} dort abgelegt.`;
-                        }
-                    } else {
-                        let art = "dein";
-                        let lowerAi = aiData.item_name.toLowerCase();
-                        if (lowerAi.endsWith('e') || lowerAi.includes('brille') || lowerAi.includes('tasche')) {
-                            art = "deine";
-                        }
-                        finalReply = `Dazu habe ich keinen Eintrag, wo ${art} ${aiData.item_name} sein könnte.`;
                     }
                 }
 
@@ -736,7 +691,7 @@
 
             } catch (error) {
                 statusMessage.textContent = "❌ Fehler bei der Verarbeitung.";
-                speak(`Es ist ein Fehler aufgetreten.`);
+                speak(`Entschuldigung, da ist ein Fehler aufgetreten.`);
                 console.error(error);
             }
         }
