@@ -370,21 +370,7 @@
             recordBtn.disabled = true;
         }
 
-        function readTodoList() {
-            if (todoEntries.length === 0) {
-                speak("Deine To-Do-Liste ist aktuell leer.");
-                statusMessage.textContent = "To-Do-Liste ist leer.";
-                return;
-            }
-
-            // HIER KORRIGIERT: Es werden jetzt strikt NUR noch die reinen Aufgaben-Texte vorgelesen.
-            let textToSpeak = "Auf deiner To-Do-Liste steht: ";
-            todoEntries.forEach((entry) => {
-                textToSpeak += `${entry.text}. `;
-            });
-            statusMessage.textContent = "Lese To-Do-Liste vor...";
-            speak(textToSpeak);
-        }
+ readTodoList
 
         function handleCallCommand(text) {
             let foundContact = null;
