@@ -129,7 +129,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.22</span>
+        <span>Version 4.23</span>
     </footer>
 
     <!-- JavaScript -->
@@ -306,38 +306,54 @@
             }
         }
 
+        // --- NEUE, KOSTENLOSE AUDIO-SPRACHAUSGABE MIT GESCHWINDIGKEITS-KONTROLLE ---
+        let currentAudio = null;
+
         function speak(text, onComplete) {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+
+            const encodedText = encodeURIComponent(text);
+            const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=de&client=tw-ob`;
+            
+            currentAudio = new Audio(audioUrl);
+            
+            // HIER kannst du das Tempo anpassen: 1.0 ist normal, 1.25 ist flüssig & flott
+            currentAudio.playbackRate = 1.25; 
+
+            currentAudio.play().catch(err => {
+                console.log("Audio-Stream-Fallback aktiv:", err);
+                fallbackSpeak(text, onComplete);
+            });
+
+            currentAudio.onended = function() {
+                currentAudio = null;
+                if (onComplete) {
+                    setTimeout(() => { onComplete(); }, 300);
+                }
+            };
+
+            currentAudio.onerror = function() {
+                currentAudio = null;
+                fallbackSpeak(text, onComplete);
+            };
+        }
+
+        function fallbackSpeak(text, onComplete) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'de-DE';
-                utterance.rate = 0.95;
-                
-                utterance.onend = function() {
-                    if (onComplete) {
-                        setTimeout(() => {
-                            onComplete();
-                        }, 300);
-                    }
-                };
-
-                utterance.onerror = function() {
-                    if (onComplete) {
-                        setTimeout(() => {
-                            onComplete();
-                        }, 300);
-                    }
-                };
-
+                utterance.rate = 1.1;
+                utterance.onend = () => { if (onComplete) setTimeout(onComplete, 300); };
                 window.speechSynthesis.speak(utterance);
             } else {
-                if (onComplete) {
-                    setTimeout(() => {
-                        onComplete();
-                    }, 300);
-                }
+                if (onComplete) setTimeout(onComplete, 300);
             }
         }
+        // --------------------------------------------------------------------------
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition = null;
