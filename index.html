@@ -35,7 +35,7 @@
         </div>
     </header>
 
-    <!-- Einstellungs-Box (Inklusive des ausgelagerten Gedächtnisses) -->
+    <!-- Einstellungs-Box -->
     <div id="settingsBox" class="hidden bg-amber-50 border-b border-amber-200 p-4 shadow-inner">
         <div class="container mx-auto max-w-md space-y-4">
             <div>
@@ -73,7 +73,7 @@
                 <div id="contactListDisplay" class="mt-2 text-xs text-amber-900 space-y-1"></div>
             </div>
 
-            <!-- Gedächtnis (hierher verschoben) -->
+            <!-- Gedächtnis -->
             <div class="border-t border-amber-200 pt-3 space-y-2">
                 <div class="flex justify-between items-center">
                     <label class="block text-sm font-bold text-amber-900">🔍 Gespeicherte Gegenstände:</label>
@@ -111,7 +111,7 @@
             </button>
         </div>
 
-        <!-- Reiter-Navigation (nur noch Termine & To-Dos) -->
+        <!-- Reiter-Navigation -->
         <div class="flex bg-slate-200 p-1 rounded-xl">
             <button id="tabCalendarBtn" onclick="switchTab('calendar')" class="flex-1 py-2 rounded-lg font-bold text-sm bg-white text-blue-800 shadow-sm transition">📅 Termine</button>
             <button id="tabTodoBtn" onclick="switchTab('todo')" class="flex-1 py-2 rounded-lg font-bold text-sm text-slate-600 transition">📝 To-Dos</button>
@@ -138,7 +138,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.10</span>
+        <span>Version 4.12</span>
     </footer>
 
     <!-- JavaScript -->
@@ -469,8 +469,7 @@
             const currentTimeStr = nowBriefing.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
             let briefingText = `Guten Tag, ${currentUserName}. Es ist jetzt ${currentTimeStr} Uhr. Hier ist dein kurzer Überblick. ${weatherText} ${weatherAdvice}`;
 
-            // --- HIER ANGEPASST: Nur Termine filtern, die exakt auf den heutigen Tag fallen ---
-            const todayStr = nowBriefing.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+            const todayStr = nowBriefing.toLocaleDateString('en-CA');
             const todayCalendarEntries = calendarEntries.filter(e => {
                 if (!e.isoDate) return false;
                 return e.isoDate.startsWith(todayStr);
@@ -513,28 +512,23 @@
             });
 
             if (relevantItems.length > 0) {
-                const humanPhrases = [
-                    (art, name, loc) => `Ach ja, ${currentUserName}, denk dran: ${art} ${name} liegt ${loc}. `,
-                    (art, name, loc) => `Vergiss nicht, ${art} ${name} einzupacken – das liegt ${loc}. `,
-                    (art, name, loc) => `Möchtest du ${art} ${name} vielleicht mitnehmen? Die liegt ${loc}. `,
-                    (art, name, loc) => `Und schau mal, ${art} ${name} liegt ${loc}, brauchst du die heute? `,
-                    (art, name, loc) => `Hast du eigentlich ${art} ${name} eingepackt? Die liegt ja ${loc}. `,
-                    (art, name, loc) => `Schau lieber noch mal kurz nach, ${art} ${name} liegt doch ${loc}. `,
-                    (art, name, loc) => `Falls du sie brauchst: ${art} ${name} liegt drüben ${loc}. `,
-                    (art, name, loc) => `Ach, übrigens: ${art} ${name} liegt noch ${loc}, falls du sie mitnehmen möchtest. `,
-                    (art, name, loc) => `Nur ein kurzer Gedanke – denk an ${art} ${name}, die müsste ${loc} liegen. `,
-                    (art, name, loc) => `Nicht dass du sie vergisst: ${art} ${name} liegt ${loc}. `
-                ];
-
                 relevantItems.forEach((item) => {
                     let art = "dein";
                     let lowerName = item.name.toLowerCase();
-                    if (lowerName.endsWith('e') || lowerName.includes('brille') || lowerName.includes('tasche') || lowerName.includes('uhr')) {
+                    if (lowerName.endsWith('e') || lowerName.includes('brille') || lowerName.includes('tasche') || lowerName.includes('uhr') || lowerName.includes('schlüssel')) {
                         art = "deine";
                     }
                     
-                    let randomPhraseFunc = humanPhrases[Math.floor(Math.random() * humanPhrases.length)];
-                    briefingText += randomPhraseFunc(art, item.name, item.loc);
+                    let locLower = item.loc.toLowerCase();
+                    let verb = "liegt";
+                    if (locLower.startsWith("hängt")) verb = "";
+                    else if (locLower.startsWith("steckt")) verb = "";
+
+                    if (verb === "") {
+                        briefingText += `Denk dran: ${art} ${item.name} ${item.loc}. `;
+                    } else {
+                        briefingText += `Denk dran: ${art} ${item.name} ${verb} ${item.loc}. `;
+                    }
                 });
             }
 
@@ -589,17 +583,12 @@
                                 Aktuelle To-Dos im System: ${todoContext}
                                 
                                 ABSOLUTE REGELN FÜR DIE UHRZEIT-FRAGE:
-                                Wenn der Nutzer nach der Uhrzeit fragt ("wie spät ist es", "wieviel Uhr haben wir", "wie viel Uhr", "Uhrzeit"), setze den Typ auf "chat" und antworte im Feld "reply" IMMER exakt mit der aktuellen Uhrzeit: "Es ist jetzt ${currentClockTime} Uhr."
+                                Wenn der Nutzer nach der Uhrzeit fragt, antworte im Feld "reply" IMMER exakt mit: "Es ist jetzt ${currentClockTime} Uhr."
 
-                                ABSOLUTE REGELN FÜR TERMIN- UND TO-DO-ERSTELLUNG:
-                                1. STRICT TO-DO RULE: Wähle "note" (To-Do), IMMER WENN der Nutzer eine Aufgabe, einen Erledigungswunsch oder eine Notiz äußert, bei der **KEINE EXAKTE UHRZEIT** genannt wird.
-                                2. TERMIN NUR BEI UHRZEIT: Wähle "calendar" AUSSCHLIESSLICH DANN, wenn der Nutzer explizit eine feste Uhrzeit nennt.
-                                
-                                ABSOLUTE GRAMMATIK- UND FORMULIERUNGSGESETZE:
-                                1. KEINE DOPPELTEN PRÄPOSITIONEN.
-                                2. KORREKTE ARTIKEL FÜR GEGENSTÄNDE ("deine Brille", "dein Portemonnaie", etc.).
-                                3. SCHREIBWEISE VON "PORTMONNAIE".
-                                4. SPRACHLICHER STIL: Antworte extrem natürlich, freundlich, warmherzig und auf den Punkt.
+                                ABSOLUTE GRAMMATIK- UND VERB-REGELN (SEHR WICHTIG!):
+                                1. VERB EXAKT ÜBERNEHMEN: Achte genau darauf, welches Verb der Nutzer beim Abspeichern nutzt (z.B. "steckt in der Tür", "hängt an der Wand", "liegt auf dem Tisch"). Übernehme dieses exakte Verb ("steckt", "hängt", "liegt") in die Antwort, wenn danach gefragt wird! Erfinde keine falschen Verben.
+                                2. KEINE DOPPELTEN PRÄPOSITIONEN: Sätze wie "in an der Tür" oder "an Ende und an der Tür" sind verboten.
+                                3. KORREKTE ARTIKEL: Nutze korrekte Artikel ("dein Haustierschlüssel", "deine Brille").
 
                                 Gib ein JSON-Objekt zurück mit:
                                 - "type": string ("chat", "name_change", "item_store", "item_query", "note", "calendar")
@@ -675,13 +664,9 @@
                     let cleanName = aiData.item_name.toLowerCase();
                     let cleanLoc = aiData.item_location;
                     
-                    cleanLoc = cleanLoc.replace(/\b(im|in der|in dem|auf dem|auf der)\s+(in|im|in der|in dem)\b/gi, '$1');
-                    cleanLoc = cleanLoc.replace(/in der flur schrank/gi, 'im Flurschrank');
-                    cleanLoc = cleanLoc.replace(/in der flur/gi, 'im Flur');
+                    // Bereinigung gegen doppelte Präpositionen
+                    cleanLoc = cleanLoc.replace(/\b(im|in der|in dem|auf dem|auf der|an der|am)\s+(in|im|in der|in dem|auf|an)\b/gi, '$1');
                     
-                    if (!cleanLoc.startsWith("im") && !cleanLoc.startsWith("in der") && !cleanLoc.startsWith("auf") && !cleanLoc.startsWith("unter") && !cleanLoc.startsWith("neben")) {
-                        cleanLoc = "im " + cleanLoc;
-                    }
                     let category = aiData.item_category || "Sonstiges";
                     
                     memoryItems[cleanName] = {
@@ -690,7 +675,7 @@
                         category: category
                     };
                     localStorage.setItem('helfer_memory', JSON.stringify(memoryItems));
-                    finalReply = `Ich habe gemerkt: ${aiData.item_name} liegt ${cleanLoc}.`;
+                    finalReply = `Ich habe gemerkt: ${aiData.item_name} ${cleanLoc}.`;
                 }
 
                 if (aiData.type === 'name_change' && aiData.new_name) {
@@ -724,14 +709,24 @@
                         let diffDays = Math.floor((Date.now() - foundItem.timestamp) / (1000 * 60 * 60 * 24));
                         let timeString = diffDays === 0 ? "heute" : (diffDays === 1 ? "vor 1 Tag" : `vor ${diffDays} Tagen`);
                         
-                        finalReply = `${art} ${matchedName} liegt ${foundItem.location}. Das hast du ${timeString} dort abgelegt.`;
+                        let locLower = foundItem.location.toLowerCase();
+                        let verb = "liegt";
+                        if (locLower.startsWith("steckt") || locLower.startsWith("hängt") || locLower.startsWith("steht")) {
+                            verb = "";
+                        }
+
+                        if (verb === "") {
+                            finalReply = `${art} ${matchedName} ${foundItem.location}. Das hast du ${timeString} dort abgelegt.`;
+                        } else {
+                            finalReply = `${art} ${matchedName} ${verb} ${foundItem.location}. Das hast du ${timeString} dort abgelegt.`;
+                        }
                     } else {
                         let art = "dein";
                         let lowerAi = aiData.item_name.toLowerCase();
                         if (lowerAi.endsWith('e') || lowerAi.includes('brille') || lowerAi.includes('tasche')) {
                             art = "deine";
                         }
-                        finalReply = `Dazu habe ich keinen Eintrag, wo ${art} ${aiData.item_name} liegen könnte.`;
+                        finalReply = `Dazu habe ich keinen Eintrag, wo ${art} ${aiData.item_name} sein könnte.`;
                     }
                 }
 
