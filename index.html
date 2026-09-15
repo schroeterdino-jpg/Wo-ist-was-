@@ -31,7 +31,6 @@
     <!-- Einstellungs-Box -->
     <div id="settingsBox" class="hidden bg-amber-50 border-b border-amber-200 p-4 shadow-inner">
         <div class="container mx-auto max-w-md space-y-4">
-            <!-- Wie soll ich dich nennen? -->
             <div>
                 <label class="block text-sm font-bold text-amber-900 mb-1">Wie soll ich dich nennen?:</label>
                 <div class="flex gap-2">
@@ -40,7 +39,6 @@
                 </div>
             </div>
 
-            <!-- Groq API Key -->
             <div>
                 <label class="block text-sm font-bold text-amber-900 mb-1">Groq API-Key (gsk_...):</label>
                 <div class="flex gap-2">
@@ -49,11 +47,10 @@
                 </div>
             </div>
 
-            <!-- Google Client ID -->
             <div>
                 <label class="block text-sm font-bold text-amber-900 mb-1">Google Client-ID:</label>
                 <div class="flex gap-2">
-                    <input type="text" id="googleClientIdInput" placeholder="399573320370-..." class="flex-grow p-2 border border-amber-300 rounded-lg text-base">
+                    <input type="text" id="googleClientIdInput" placeholder="Client ID..." class="flex-grow p-2 border border-amber-300 rounded-lg text-base">
                     <button onclick="saveGoogleClientId()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-base font-semibold">Speichern</button>
                 </div>
             </div>
@@ -73,7 +70,7 @@
     <!-- Hauptbereich -->
     <main class="container mx-auto p-4 max-w-md flex-grow flex flex-col justify-center space-y-6">
 
-        <!-- Großer Mikrofon-Button & Tages-Briefing Button -->
+        <!-- Mikrofon-Button & Tages-Briefing -->
         <div class="flex flex-col items-center space-y-4">
             <button id="recordBtn" onclick="toggleSpeechRecognition()" class="w-40 h-40 bg-red-600 hover:bg-red-700 text-white rounded-full flex flex-col items-center justify-center shadow-2xl transition transform active:scale-95 border-4 border-white cursor-pointer">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -83,24 +80,34 @@
             </button>
             <p id="statusMessage" class="text-center font-medium text-slate-700 h-6">Drücken und sprechen...</p>
 
-            <!-- Button für "Was steht heute an?" -->
             <button onclick="triggerDailyBriefing()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-xl shadow-md font-bold text-lg flex items-center justify-center gap-2">
                 📋 Was steht heute an? (Briefing)
             </button>
         </div>
 
-        <!-- Ergebnis-Box -->
+        <!-- Antwort-Box -->
         <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200">
             <h2 class="text-xl font-bold text-blue-800 mb-2">Antwort des Assistenten:</h2>
             <p id="outputBox" class="text-slate-600 italic">Noch nichts eingegeben...</p>
         </div>
 
-        <!-- Echte Notizen & Aufgaben (Ohne Gegenstände) -->
-        <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200">
-            <h2 class="text-xl font-bold text-blue-800 mb-3">To-Dos & Notizen:</h2>
-            <ul id="entryList" class="space-y-2 text-lg">
-                <li class="text-slate-500">Keine offenen To-Dos.</li>
-            </ul>
+        <!-- Getrennte Listen: Termine & To-Dos -->
+        <div class="grid grid-cols-1 gap-4">
+            <!-- Termine Liste -->
+            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200">
+                <h2 class="text-xl font-bold text-blue-800 mb-3">📅 Kalender-Termine:</h2>
+                <ul id="calendarList" class="space-y-2 text-lg">
+                    <li class="text-slate-500">Keine Termine eingetragen.</li>
+                </ul>
+            </div>
+
+            <!-- To-Dos & Notizen Liste -->
+            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200">
+                <h2 class="text-xl font-bold text-blue-800 mb-3">📝 To-Dos & Notizen:</h2>
+                <ul id="todoList" class="space-y-2 text-lg">
+                    <li class="text-slate-500">Keine offenen To-Dos.</li>
+                </ul>
+            </div>
         </div>
 
     </main>
@@ -116,7 +123,8 @@
         const recordText = document.getElementById('recordText');
         const statusMessage = document.getElementById('statusMessage');
         const outputBox = document.getElementById('outputBox');
-        const entryList = document.getElementById('entryList');
+        const calendarList = document.getElementById('calendarList');
+        const todoList = document.getElementById('todoList');
         const settingsBox = document.getElementById('settingsBox');
         const apiKeyInput = document.getElementById('apiKeyInput');
         const googleClientIdInput = document.getElementById('googleClientIdInput');
@@ -144,8 +152,9 @@
             }
         }
 
-        let entries = JSON.parse(localStorage.getItem('helfer_entries')) || [];
-        renderEntries();
+        let calendarEntries = JSON.parse(localStorage.getItem('helfer_calendar_entries')) || [];
+        let todoEntries = JSON.parse(localStorage.getItem('helfer_todo_entries')) || [];
+        renderAllLists();
 
         let memoryItems = JSON.parse(localStorage.getItem('helfer_memory')) || {};
 
@@ -242,7 +251,6 @@
                 const speechResult = event.results[0][0].transcript;
                 outputBox.textContent = `"${speechResult}"`;
                 
-                // Prüfen ob nach dem Tages-Briefing gefragt wurde
                 const lower = speechResult.toLowerCase();
                 if (lower.includes("was steht heute an") || lower.includes("was liegt heute an") || lower.includes("bevor ich das haus verlasse")) {
                     triggerDailyBriefing();
@@ -297,25 +305,35 @@
             recordText.textContent = "SPRECHEN";
         }
 
-        // Funktion für das Tages-Briefing (Haus verlassen / Was steht an)
+        // Briefing beim Haus Verlassen (Filtert NUR wichtige Gegenstände, keine Kuscheltiere/Bananen)
         function triggerDailyBriefing() {
             let briefingText = `Guten Tag, ${currentUserName}! Hier ist dein Überblick für heute. `;
 
-            // Offene Notizen / To-Dos hinzufügen
-            if (entries.length > 0) {
-                briefingText += "Deine To-Dos: ";
-                entries.forEach(e => {
+            if (calendarEntries.length > 0) {
+                briefingText += "Deine Termine heute: ";
+                calendarEntries.forEach(e => {
                     briefingText += `${e.text}. `;
                 });
-            } else {
-                briefingText += "Du hast keine offenen Notizen. ";
             }
 
-            // Wichtige Gegenstände aus dem Hintergrund-Gedächtnis einbauen (Schlüssel, Portemonnaie, etc.)
+            if (todoEntries.length > 0) {
+                briefingText += "Deine To-Dos: ";
+                todoEntries.forEach(e => {
+                    briefingText += `${e.text}. `;
+                });
+            }
+
+            if (calendarEntries.length === 0 && todoEntries.length === 0) {
+                briefingText += "Du hast heute keine offenen Termine oder To-Dos. ";
+            }
+
+            // Strikte Filterung: Nur WICHTIGE Gegenstände (Schlüssel, Portemonnaie, Papiere, etc.)
             let importantItems = [];
+            const allowedKeywords = ['schlüssel', 'portemonnaie', 'geldbörse', 'popmaney', 'popmoney', 'zahnprothese', 'papiere', 'bankkarte', 'zigarettenetui'];
+
             for (let key in memoryItems) {
-                // Unwichtige Sachen wie Bananen oder Essen werden automatisch ignoriert
-                if (!key.includes('banane') && !key.includes('apfel') && !key.includes('suppe') && !key.includes('essen')) {
+                let isImportant = allowedKeywords.some(kw => key.includes(kw));
+                if (isImportant) {
                     importantItems.push(`Dein ${key.charAt(0).toUpperCase() + key.slice(1)} liegt ${memoryItems[key]}`);
                 }
             }
@@ -347,19 +365,19 @@
                         messages: [
                             {
                                 role: "system",
-                                content: `Du bist ein sehr freundlicher, herzlicher und hilfsbereiter deutscher Alltags-Assistent für ${currentUserName}.
+                                content: `Du bist ein sehr freundlicher und präziser deutscher Alltags-Assistent für ${currentUserName}.
                                 Aktuelles Jahr ist 2026, heute ist ${new Date().toISOString().split('T')[0]}.
-                                Bisheriges unsichtbares Gedächtnis über Gegenstände: ${memoryContext}
+                                Bisheriges Gedächtnis über Gegenstände: ${memoryContext}
                                 
-                                UNTERSCHEIDUNG VON BEFEHLEN:
-                                1. "name_change": Wenn der Benutzer seinen Namen ändern möchte (z.B. "Nenne mich Chef").
-                                2. "item_store": Wenn der Benutzer sagt, er legt einen Gegenstand irgendwo hin (z.B. "Schlüssel liegt auf dem Tisch"). Das passiert UNSICHTBAR.
-                                3. "item_query": Wenn der Benutzer fragt, wo ein Gegenstand ist (z.B. "Wo ist mein Portemonnaie?").
-                                4. "note": To-Dos oder Erinnerungen OHNE feste Uhrzeit (z.B. "Ich muss Isabel heute noch abholen", "Nicht vergessen einkaufen zu gehen"). Diese landen in der Notizen-Liste!
-                                5. "calendar": NUR wenn eine EXAKTE Uhrzeit genannt wird (z.B. "Termin um 14 Uhr").
+                                KANN-BESTIMMUNGEN & TRENNUNG:
+                                1. "name_change": Namensänderung.
+                                2. "item_store": Wenn der Benutzer sagt, er legt einen Gegenstand irgendwo hin (z.B. "Schlüssel liegt auf dem Tisch").
+                                3. "item_query": Wenn der Benutzer fragt, wo ein Gegenstand ist.
+                                4. "note": To-Dos oder Erinnerungen OHNE feste Uhrzeit (z.B. "Ich muss Isabel heute noch abholen"). Diese sind KEINE Termine und gehören in die To-Do-Liste!
+                                5. "calendar": NUR WENN eine EXAKTE Uhrzeit genannt wird (z.B. "Termin um 14 Uhr").
 
-                                GRAMMATIK & TON:
-                                - Antworte immer absolut fehlerfrei auf Deutsch im besten Hochdeutsch.
+                                TON:
+                                - Antworte absolut fehlerfrei auf Deutsch.
                                 - Sprich den Benutzer freundlich mit "${currentUserName}" an.
                                 
                                 Gib ein JSON-Objekt zurück mit:
@@ -367,11 +385,10 @@
                                 - "new_name": string
                                 - "item_name": string
                                 - "item_location": string
-                                - "note_text": string (der saubere Text für das To-Do, z.B. "Isabel abholen")
-                                - "is_event": boolean
-                                - "summary": string
-                                - "start_time": string
-                                - "reply": string (Deine herzliche Antwort mit Namen)`
+                                - "note_text": string (sauberer Text für To-Do)
+                                - "summary": string (für Kalendertermin)
+                                - "start_time": string (ISO Datum/Uhrzeit für Kalender)
+                                - "reply": string`
                             },
                             {
                                 role: "user",
@@ -388,7 +405,6 @@
 
                 let finalReply = aiData.reply;
 
-                // 1. Namensänderung
                 if (aiData.type === 'name_change' && aiData.new_name) {
                     currentUserName = aiData.new_name;
                     localStorage.setItem('user_custom_name', currentUserName);
@@ -397,14 +413,12 @@
                     finalReply = `Alles klar, ab jetzt nenne ich dich ${currentUserName}!`;
                 }
 
-                // 2. Gegenstand unsichtbar speichern
                 if (aiData.type === 'item_store' && aiData.item_name && aiData.item_location) {
                     let cleanName = aiData.item_name.toLowerCase();
                     memoryItems[cleanName] = aiData.item_location;
                     localStorage.setItem('helfer_memory', JSON.stringify(memoryItems));
                 }
 
-                // 3. Gegenstand abfragen
                 if (aiData.type === 'item_query' && aiData.item_name) {
                     let cleanQuery = aiData.item_name.toLowerCase();
                     let foundLocation = null;
@@ -428,29 +442,35 @@
                 outputBox.textContent = finalReply;
                 speak(finalReply);
 
-                // 4. Echte Notizen / To-Dos ohne Uhrzeit (wie "Isabel abholen") in die Liste eintragen
-                if (aiData.type === 'note' || aiData.type === 'calendar') {
+                // Speicherung in getrennte Listen
+                if (aiData.type === 'calendar') {
                     let calendarEventId = null;
-                    if (aiData.is_event) {
-                        calendarEventId = await createGoogleCalendarEvent(aiData.summary, aiData.start_time);
+                    if (aiData.start_time) {
+                        calendarEventId = await createGoogleCalendarEvent(aiData.summary || text, aiData.start_time);
                         if (calendarEventId) {
-                            finalReply += " In Kalender eingetragen.";
+                            finalReply += " Im Google Kalender eingetragen.";
                         }
                     }
 
-                    const newEntry = {
+                    const newCalEntry = {
                         id: Date.now(),
                         calendarId: calendarEventId,
-                        text: aiData.note_text || aiData.summary || finalReply,
-                        day: new Date().toLocaleDateString('de-DE'),
+                        text: aiData.summary || text,
                         date: new Date().toLocaleDateString('de-DE', { hour: '2-digit', minute: '2-digit' })
                     };
-
-                    entries.unshift(newEntry);
-                    if (entries.length > 10) entries.pop();
-                    localStorage.setItem('helfer_entries', JSON.stringify(entries));
-                    renderEntries();
+                    calendarEntries.unshift(newCalEntry);
+                    localStorage.setItem('helfer_calendar_entries', JSON.stringify(calendarEntries));
+                } else if (aiData.type === 'note') {
+                    const newTodoEntry = {
+                        id: Date.now(),
+                        text: aiData.note_text || text,
+                        date: new Date().toLocaleDateString('de-DE', { hour: '2-digit', minute: '2-digit' })
+                    };
+                    todoEntries.unshift(newTodoEntry);
+                    localStorage.setItem('helfer_todo_entries', JSON.stringify(todoEntries));
                 }
+
+                renderAllLists();
 
             } catch (error) {
                 outputBox.textContent = `❌ Fehler bei der Verarbeitung.`;
@@ -491,45 +511,74 @@
             return null;
         }
 
-        async function deleteEntry(id, calendarId) {
+        // Korrigierte Funktion zum Löschen (löscht nun auch im Google Kalender mit korrektem Token)
+        async function deleteCalendarEntry(id, calendarId) {
             if (calendarId && accessToken) {
                 try {
                     await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${calendarId}`, {
                         method: 'DELETE',
-                        headers: { 'Authorization': `Bearer *` } // Korrektur Authorization Header
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
                     });
                 } catch (e) {
-                    console.error("Fehler beim Löschen im Kalender:", e);
+                    console.error("Fehler beim Löschen im Google Kalender:", e);
                 }
             }
 
-            entries = entries.filter(e => e.id !== id);
-            localStorage.setItem('helfer_entries', JSON.stringify(entries));
-            renderEntries();
-            speak("Eintrag gelöscht.");
+            calendarEntries = calendarEntries.filter(e => e.id !== id);
+            localStorage.setItem('helfer_calendar_entries', JSON.stringify(calendarEntries));
+            renderAllLists();
+            speak("Termin aus Kalender gelöscht.");
         }
 
-        function renderEntries() {
-            if (entries.length === 0) {
-                entryList.innerHTML = '<li class="text-slate-500">Keine offenen To-Dos.</li>';
-                return;
+        function deleteTodoEntry(id) {
+            todoEntries = todoEntries.filter(e => e.id !== id);
+            localStorage.setItem('helfer_todo_entries', JSON.stringify(todoEntries));
+            renderAllLists();
+            speak("To-Do erledigt.");
+        }
+
+        function renderAllLists() {
+            // Kalender Liste rendern
+            if (calendarEntries.length === 0) {
+                calendarList.innerHTML = '<li class="text-slate-500">Keine Termine eingetragen.</li>';
+            } else {
+                calendarList.innerHTML = '';
+                calendarEntries.forEach(entry => {
+                    const li = document.createElement('li');
+                    li.className = "bg-slate-50 p-3 rounded-xl border border-slate-100 flex justify-between items-center text-base";
+                    li.innerHTML = `
+                        <div>
+                            <span>📅 ${entry.text}</span>
+                            <div class="text-xs text-slate-400">${entry.date}</div>
+                        </div>
+                        <button onclick="deleteCalendarEntry(${entry.id}, '${entry.calendarId || ''}')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm font-semibold ml-2">
+                            Löschen
+                        </button>
+                    `;
+                    calendarList.appendChild(li);
+                });
             }
 
-            entryList.innerHTML = '';
-            entries.forEach(entry => {
-                const li = document.createElement('li');
-                li.className = "bg-slate-50 p-3 rounded-xl border border-slate-100 flex justify-between items-center text-base";
-                li.innerHTML = `
-                    <div>
-                        <span>${entry.text}</span>
-                        <div class="text-xs text-slate-400">${entry.date}</div>
-                    </div>
-                    <button onclick="deleteEntry(${entry.id}, '${entry.calendarId || ''}')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm font-semibold ml-2">
-                        Erledigt
-                    </button>
-                `;
-                entryList.appendChild(li);
-            });
+            // To-Do Liste rendern
+            if (todoEntries.length === 0) {
+                todoList.innerHTML = '<li class="text-slate-500">Keine offenen To-Dos.</li>';
+            } else {
+                todoList.innerHTML = '';
+                todoEntries.forEach(entry => {
+                    const li = document.createElement('li');
+                    li.className = "bg-slate-50 p-3 rounded-xl border border-slate-100 flex justify-between items-center text-base";
+                    li.innerHTML = `
+                        <div>
+                            <span>📝 ${entry.text}</span>
+                            <div class="text-xs text-slate-400">${entry.date}</div>
+                        </div>
+                        <button onclick="deleteTodoEntry(${entry.id})" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1 rounded-lg text-sm font-semibold ml-2">
+                            Erledigt
+                        </button>
+                    `;
+                    todoList.appendChild(li);
+                });
+            }
         }
     </script>
 </body>
