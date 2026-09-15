@@ -4,22 +4,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mein Helfer – Sprachassistent</title>
-    <!-- Tailwind CSS für schnelles, sauberes Design -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Große, seniorenfreundliche Schriftgröße als Basis */
-        body {
-            font-size: 1.25rem;
-        }
+        body { font-size: 1.25rem; }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-900 min-h-screen flex flex-col justify-between">
 
     <!-- Kopfbereich -->
-    <header class="bg-blue-700 text-white p-6 text-center shadow-md">
+    <header class="bg-blue-700 text-white p-6 text-center shadow-md relative">
         <h1 class="text-3xl font-bold">Mein Alltags-Helfer</h1>
         <p class="text-lg text-blue-100 mt-1">Sprechen Sie einfach mit der App</p>
+        <!-- Button für Einstellungen (API-Key) -->
+        <button onclick="toggleSettings()" class="absolute top-4 right-4 bg-blue-800 hover:bg-blue-900 text-white px-3 py-1 rounded-lg text-sm">
+            ⚙️ Schlüssel
+        </button>
     </header>
+
+    <!-- Einstellungs-Box für den API-Key (standardmäßig versteckt) -->
+    <div id="settingsBox" class="hidden bg-amber-50 border-b border-amber-200 p-4 shadow-inner">
+        <div class="container mx-auto max-w-md">
+            <label class="block text-sm font-bold text-amber-900 mb-1">API-Key sicher auf diesem Gerät speichern:</label>
+            <div class="flex gap-2">
+                <input type="password" id="apiKeyInput" placeholder="Dein API-Key..." class="flex-grow p-2 border border-amber-300 rounded-lg text-base">
+                <button onclick="saveApiKey()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-base font-semibold">Speichern</button>
+            </div>
+            <p class="text-xs text-amber-700 mt-1">Wird nur lokal auf deinem Gerät gesichert und nie im Code angezeigt.</p>
+        </div>
+    </div>
 
     <!-- Hauptbereich -->
     <main class="container mx-auto p-4 max-w-md flex-grow flex flex-col justify-center space-y-6">
@@ -56,16 +69,39 @@
         Einfach bedienbare Web-App für den Alltag
     </footer>
 
-    <!-- JavaScript für Spracherkennung und Logik -->
+    <!-- JavaScript -->
     <script>
         const recordBtn = document.getElementById('recordBtn');
         const recordText = document.getElementById('recordText');
         const statusMessage = document.getElementById('statusMessage');
         const outputBox = document.getElementById('outputBox');
         const entryList = document.getElementById('entryList');
+        const settingsBox = document.getElementById('settingsBox');
+        const apiKeyInput = document.getElementById('apiKeyInput');
 
         let entries = JSON.parse(localStorage.getItem('helfer_entries')) || [];
         renderEntries();
+
+        // Prüfen, ob schon ein Key hinterlegt ist
+        const savedKey = localStorage.getItem('user_api_key');
+        if (savedKey) {
+            apiKeyInput.value = savedKey;
+        }
+
+        function toggleSettings() {
+            settingsBox.classList.toggle('hidden');
+        }
+
+        function saveApiKey() {
+            const key = apiKeyInput.value.trim();
+            if (key) {
+                localStorage.setItem('user_api_key', key);
+                alert('API-Key sicher auf diesem Gerät gespeichert!');
+                toggleSettings();
+            } else {
+                alert('Bitte gib einen gültigen Schlüssel ein.');
+            }
+        }
 
         // Web Speech API initialisieren
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -105,6 +141,13 @@
         }
 
         function toggleSpeechRecognition() {
+            const currentKey = localStorage.getItem('user_api_key');
+            if (!currentKey) {
+                alert('Bitte hinterlege zuerst deinen API-Key über das Zahnrad-Symbol oben rechts!');
+                settingsBox.classList.remove('hidden');
+                return;
+            }
+
             if (recognition) {
                 try {
                     recognition.start();
@@ -121,14 +164,16 @@
         }
 
         function processInput(text) {
-            // Einfache lokale Erkennung (können wir später durch deine KI / Vercel API ersetzen)
+            // Hier greifen wir später mit dem Key auf deine API zu
+            const currentKey = localStorage.getItem('user_api_key');
+            
             const newEntry = {
                 text: text,
                 date: new Date().toLocaleDateString('de-DE', { hour: '2-digit', minute: '2-digit' })
             };
 
             entries.unshift(newEntry);
-            if (entries.length > 5) entries.pop(); // Max 5 Einträge behalten
+            if (entries.length > 5) entries.pop();
             localStorage.setItem('helfer_entries', JSON.stringify(entries));
             renderEntries();
         }
