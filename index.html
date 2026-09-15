@@ -306,7 +306,7 @@
             }
         }
 
-        // --- NEUE, KOSTENLOSE AUDIO-SPRACHAUSGABE MIT GESCHWINDIGKEITS-KONTROLLE ---
+        // --- AUDIO-SPRACHAUSGABE MIT GESCHWINDIGKEITS-KONTROLLE ---
         let currentAudio = null;
 
         function speak(text, onComplete) {
@@ -319,8 +319,6 @@
             const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=de&client=tw-ob`;
             
             currentAudio = new Audio(audioUrl);
-            
-            // HIER kannst du das Tempo anpassen: 1.0 ist normal, 1.25 ist flüssig & flott
             currentAudio.playbackRate = 1.35; 
 
             currentAudio.play().catch(err => {
@@ -353,7 +351,6 @@
                 if (onComplete) setTimeout(onComplete, 300);
             }
         }
-        // --------------------------------------------------------------------------
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition = null;
@@ -607,7 +604,7 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: "qwen-3.6-27b",
+                        model: "llama-3.3-70b-versatile", // Stabilisiertes Standardmodell
                         response_format: { type: "json_object" },
                         messages: [
                             {
@@ -676,7 +673,7 @@
                         if (!isNaN(parsedDate)) {
                             fullFormattedDate = parsedDate.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Berlin' });
                             let timePart = parsedDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
-                            shortFormattedDate = `${datePart} um ${timePart} Uhr`;
+                            shortFormattedDate = `${parsedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' })} um ${timePart} Uhr`;
                         }
                     }
 
