@@ -378,7 +378,7 @@
             }
 
             let textToSpeak = "Auf deiner To-Do-Liste steht: ";
-            todoEntries.forEach((entry, index) => {
+            todoEntries.forEach((entry) => {
                 textToSpeak += `${entry.text}. `;
             });
             statusMessage.textContent = "Lese To-Do-Liste vor...";
@@ -662,7 +662,10 @@
                     localStorage.setItem('helfer_calendar_entries', JSON.stringify(calendarEntries));
                     finalReply = `Ich habe den Termin "${aiData.summary || text}" für den ${shortFormattedDate} eingetragen.`;
                 } else if (aiData.type === 'note') {
-                    const noteContent = aiData.note_text || text;
+                    let noteContent = aiData.note_text || text;
+                    // Eventuelle Datums- oder Uhrzeitanhänge sicher entfernen, damit es ein reines To-Do bleibt
+                    noteContent = noteContent.replace(/\s+(am|um)\s+.*/gi, '').trim();
+
                     const newTodoEntry = {
                         id: Date.now(),
                         text: noteContent
@@ -903,7 +906,8 @@
                 categoryContainer.innerHTML = '<p class="text-slate-500">Keine Gegenstände gespeichert.</p>';
             } else {
                 categoryContainer.innerHTML = catHtml;
-            }ૅ}
+            }
+        }
     </script>
 </body>
 </html>
