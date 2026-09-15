@@ -138,7 +138,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.13</span>
+        <span>Version 4.14</span>
     </footer>
 
     <!-- JavaScript -->
@@ -567,21 +567,22 @@
                                 Kalender: ${calendarContext}
                                 To-Dos: ${todoContext}
 
-                                WICHTIGE SPRACH- UND WÖRTERBUCH-REGELn (WICHTIGSTE PRIORITÄT!):
-                                1. SPRICH WIE EIN MENSCH: Antworte absolut natürlich, flüssig und sympathisch auf Deutsch. Sag NIEMALS roboterhaft "ich habe gemerkt", sondern immer natürlich wie ein echter Mensch: "Ich habe mir das gemerkt...", "Alles klar, hab's mir aufgeschrieben...", "Mach ich, ...".
-                                2. VERBEN EXAKT BEIBEHALTEN: Wenn der Nutzer sagt "Der Haustürschlüssel steckt in der Tür", dann speichere dir den Ort genau so ab ("steckt in der Tür") und erfinde niemals ein falsches Verb wie "liegt". Wenn danach gefragt wird, antworte genau mit diesem Verb (z.B. "Dein Haustürschlüssel steckt in der Tür").
-                                3. ALLGEMEINES WISSEN & FREIHEIT: Du kannst dem Nutzer absolut jede Frage beantworten (zu Kochen, Geschichte, Alltag, Technik etc.) – du bist nicht nur auf Haushaltsdinge beschränkt. Nutze dafür den Typ "chat".
+                                ABSOLUT STRENGE SPRACH-REGELN (WICHTIGSTE PRIORITÄT!):
+                                1. VERBOTEN: Sag NIEMALS roboterhaft oder grammatikalisch falsch "Ich habe gemerkt..." oder "Ich habe gemerkt, [Gegenstand]". Das ist absolutes Frack-Deutsch und klingt furchtbar.
+                                2. RICHTIG SPRECHEN: Verwende immer astreines, natürliches Deutsch, z.B. "Alles klar, hab's mir aufgeschrieben...", "Mach ich, ist gespeichert...", "Alles klar, ...".
+                                3. VERBEN EXAKT BEIBEHALTEN: Wenn der Nutzer sagt "Ich lege meinen Schlüssel auf die Küchenablage", dann speichere dir den Ort exakt mit diesem Verb ab (z.B. "liegt auf der Küchenablage" oder "steckt in der Tür"). Erfinde niemals falsche Verben. Wenn danach gefragt wird, antworte genau damit (z.B. "Dein Schlüssel liegt auf der Küchenablage").
+                                4. FREIHEIT: Du kannst dem Nutzer absolut jede Frage beantworten (zu Kochen, Geschichte, Alltag, Technik etc.) – wähle dann den Typ "chat".
 
                                 Gib ein JSON-Objekt zurück mit folgenden Feldern:
                                 - "type": string (Wähle aus: "chat", "name_change", "item_store", "item_query", "note", "calendar")
                                 - "new_name": string (Falls der Nutzer seinen Namen ändern will)
                                 - "item_name": string (Name des Gegenstands bei store/query)
-                                - "item_location": string (Der genaue Ort mit exaktem Verb, z.B. "steckt in der Tür" oder "liegt auf dem Tisch")
+                                - "item_location": string (Der genaue Ort mit exaktem Verb, z.B. "liegt auf der Küchenablage" oder "steckt in der Tür")
                                 - "item_category": string (Kategorie: "Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer", "Sonstiges")
                                 - "note_text": string (Bei To-Dos)
                                 - "summary": string (Titel für Kalender)
                                 - "start_time": string (ISO-Datum für Kalender)
-                                - "reply": string (Deine komplette, natürliche, menschliche Antwort, die per Sprachausgabe vorgelesen wird!)`
+                                - "reply": string (Deine komplette, natürliche, astreine Antwort auf Deutsch, die per Sprachausgabe vorgelesen wird!)`
                             },
                             {
                                 role: "user",
@@ -678,8 +679,8 @@
                     }
 
                     if (foundItem) {
-                        // Wenn die KI kein eigenes reply geliefert hat, bauen wir einen Fallback der das genaue Verb enthält
-                        if (!aiData.reply || aiData.reply.includes("liegt")) {
+                        // Automatischer Fallback falls die KI ein schlechtes reply baut
+                        if (!aiData.reply || aiData.reply.includes("habe gemerkt")) {
                             finalReply = `Dein ${matchedName} ${foundItem.location}.`;
                         }
                     }
