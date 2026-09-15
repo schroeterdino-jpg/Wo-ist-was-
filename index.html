@@ -16,21 +16,23 @@
     <header class="bg-blue-700 text-white p-6 text-center shadow-md relative">
         <h1 class="text-3xl font-bold">Mein Alltags-Helfer</h1>
         <p class="text-lg text-blue-100 mt-1">Sprechen Sie einfach mit der App</p>
-        <!-- Button für Einstellungen (API-Key) -->
         <button onclick="toggleSettings()" class="absolute top-4 right-4 bg-blue-800 hover:bg-blue-900 text-white px-3 py-1 rounded-lg text-sm">
-            ⚙️ Schlüssel
+            ⚙️ Schlüssel & Test
         </button>
     </header>
 
-    <!-- Einstellungs-Box für den API-Key (standardmäßig versteckt) -->
+    <!-- Einstellungs-Box -->
     <div id="settingsBox" class="hidden bg-amber-50 border-b border-amber-200 p-4 shadow-inner">
         <div class="container mx-auto max-w-md">
-            <label class="block text-sm font-bold text-amber-900 mb-1">API-Key sicher auf diesem Gerät speichern:</label>
-            <div class="flex gap-2">
-                <input type="password" id="apiKeyInput" placeholder="Dein API-Key..." class="flex-grow p-2 border border-amber-300 rounded-lg text-base">
+            <label class="block text-sm font-bold text-amber-900 mb-1">Groq API-Key (gsk_...):</label>
+            <div class="flex gap-2 mb-2">
+                <input type="password" id="apiKeyInput" placeholder="gsk_..." class="flex-grow p-2 border border-amber-300 rounded-lg text-base">
                 <button onclick="saveApiKey()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-base font-semibold">Speichern</button>
             </div>
-            <p class="text-xs text-amber-700 mt-1">Wird nur lokal auf deinem Gerät gesichert und nie im Code angezeigt.</p>
+            <button onclick="checkGroqConnection()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium">
+                🔍 Verbindung & Modelle prüfen
+            </button>
+            <p id="connectionStatus" class="text-xs text-amber-800 mt-2 font-medium"></p>
         </div>
     </div>
 
@@ -48,13 +50,13 @@
             <p id="statusMessage" class="mt-4 text-center font-medium text-slate-700 h-8">Drücken und sprechen...</p>
         </div>
 
-        <!-- Letzter erkannter Text / Ergebnis -->
+        <!-- Ergebnis-Box -->
         <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200">
-            <h2 class="text-xl font-bold text-blue-800 mb-2">Letzte Notiz / Befehl:</h2>
+            <h2 class="text-xl font-bold text-blue-800 mb-2">Erkannter Befehl / KI-Antwort:</h2>
             <p id="outputBox" class="text-slate-600 italic">Noch nichts eingegeben...</p>
         </div>
 
-        <!-- Gespeicherte Einträge / Übersicht -->
+        <!-- Gespeicherte Einträge -->
         <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200">
             <h2 class="text-xl font-bold text-blue-800 mb-3">Das Wichtigste für heute:</h2>
             <ul id="entryList" class="space-y-2 text-lg">
@@ -78,11 +80,11 @@
         const entryList = document.getElementById('entryList');
         const settingsBox = document.getElementById('settingsBox');
         const apiKeyInput = document.getElementById('apiKeyInput');
+        const connectionStatus = document.getElementById('connectionStatus');
 
         let entries = JSON.parse(localStorage.getItem('helfer_entries')) || [];
         renderEntries();
 
-        // Prüfen, ob schon ein Key hinterlegt ist
         const savedKey = localStorage.getItem('user_api_key');
         if (savedKey) {
             apiKeyInput.value = savedKey;
@@ -96,14 +98,50 @@
             const key = apiKeyInput.value.trim();
             if (key) {
                 localStorage.setItem('user_api_key', key);
-                alert('API-Key sicher auf diesem Gerät gespeichert!');
-                toggleSettings();
+                connectionStatus.textContent = "Schlüssel gespeichert. Teste Verbindung...";
+                checkGroqConnection();
             } else {
                 alert('Bitte gib einen gültigen Schlüssel ein.');
             }
         }
 
-        // Web Speech API initialisieren
+        // Funktion zum Prüfen, ob der Key gültig ist und welche Modelle bereitstehen
+        async function checkGroqConnection() {
+            const key = localStorage.getItem('user_api_key');
+            if (!key) {
+                connectionStatus.textContent = "⚠️ Kein Schlüssel hinterlegt.";
+                return;
+            }
+
+            connectionStatus.textContent = "Prüfe Verbindung zu Groq...";
+            try {
+                const response = await fetch('https://api.groq.com/openai/v1/models', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${key}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const models = data.data.map(m => m.id);
+                    console.log("Verfügbare Groq-Modelle:", models);
+                    
+                    // Wir suchen nach einem passenden Standardmodell (z.B. Llama)
+                    let activeModel = models.find(m => m.includes('llama')) || models[0];
+                    localStorage.setItem('active_groq_model', activeModel);
+
+                    connectionStatus.textContent = `✅ Verbindung erfolgreich! Aktives Modell: ${activeModel}`;
+                } else {
+                    connectionStatus.textContent = "❌ Fehler: Ungültiger API-Key oder Zugriff verweigert.";
+                }
+            } catch (error) {
+                connectionStatus.textContent = "❌ Netzwerkfehler beim Prüfen.";
+                console.error(error);
+            }
+        }
+
+        // Web Speech API
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition;
 
@@ -123,11 +161,11 @@
             recognition.onresult = function(event) {
                 const speechResult = event.results[0][0].transcript;
                 outputBox.textContent = `"${speechResult}"`;
-                processInput(speechResult);
+                sendToGroqAI(speechResult);
             };
 
             recognition.onerror = function(event) {
-                statusMessage.textContent = "Fehler bei der Spracherkennung. Noch einmal versuchen.";
+                statusMessage.textContent = "Sprachfehler. Noch einmal versuchen.";
                 resetButton();
             };
 
@@ -136,14 +174,14 @@
                 resetButton();
             };
         } else {
-            statusMessage.textContent = "Ihr Browser unterstützt leider keine Spracherkennung.";
+            statusMessage.textContent = "Keine Spracherkennung im Browser.";
             recordBtn.disabled = true;
         }
 
         function toggleSpeechRecognition() {
             const currentKey = localStorage.getItem('user_api_key');
             if (!currentKey) {
-                alert('Bitte hinterlege zuerst deinen API-Key über das Zahnrad-Symbol oben rechts!');
+                alert('Bitte hinterlege zuerst deinen Groq API-Key oben über "⚙️ Schlüssel & Test"!');
                 settingsBox.classList.remove('hidden');
                 return;
             }
@@ -163,19 +201,60 @@
             recordText.textContent = "SPRECHEN";
         }
 
-        function processInput(text) {
-            // Hier greifen wir später mit dem Key auf deine API zu
-            const currentKey = localStorage.getItem('user_api_key');
-            
-            const newEntry = {
-                text: text,
-                date: new Date().toLocaleDateString('de-DE', { hour: '2-digit', minute: '2-digit' })
-            };
+        // Verbindung zu Groq herstellen und gesprochenen Text verarbeiten
+        async function sendToGroqAI(text) {
+            const key = localStorage.getItem('user_api_key');
+            // Fallback auf ein sicheres Standardmodell, falls keins ermittelt wurde
+            const model = localStorage.getItem('active_groq_model') || 'llama-3.1-8b-instant';
 
-            entries.unshift(newEntry);
-            if (entries.length > 5) entries.pop();
-            localStorage.setItem('helfer_entries', JSON.stringify(entries));
-            renderEntries();
+            outputBox.textContent = "Verarbeite mit KI...";
+
+            try {
+                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${key}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: [
+                            {
+                                role: "system",
+                                content: "Du bist ein hilfreicher Assistent für ältere Menschen. Analysiere den gesprochenen Satz. Extrahiere, ob es sich um einen Termin oder einen verlegten Gegenstand handelt, und antworte kurz, freundlich und klar auf Deutsch mit einer Zusammenfassung."
+                            },
+                            {
+                                role: "user",
+                                content: text
+                            }
+                        ]
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error("API-Anfrage fehlgeschlagen");
+                }
+
+                const data = await response.json();
+                const aiReply = data.choices[0].message.content;
+
+                outputBox.textContent = aiReply;
+
+                // In die lokale Liste eintragen
+                const newEntry = {
+                    text: aiReply,
+                    date: new Date().toLocaleDateString('de-DE', { hour: '2-digit', minute: '2-digit' })
+                };
+
+                entries.unshift(newEntry);
+                if (entries.length > 5) entries.pop();
+                localStorage.setItem('helfer_entries', JSON.stringify(entries));
+                renderEntries();
+
+            } catch (error) {
+                outputBox.textContent = "Fehler bei der KI-Verarbeitung. Prüfe den API-Key.";
+                console.error(error);
+            }
         }
 
         function renderEntries() {
@@ -187,7 +266,7 @@
             entryList.innerHTML = '';
             entries.forEach(entry => {
                 const li = document.createElement('li');
-                li.className = "bg-slate-50 p-3 rounded-xl border border-slate-100 flex justify-between items-center";
+                li.className = "bg-slate-50 p-3 rounded-xl border border-slate-100 flex justify-between items-center text-base";
                 li.innerHTML = `<span>${entry.text}</span> <span class="text-xs text-slate-400">${entry.date}</span>`;
                 entryList.appendChild(li);
             });
