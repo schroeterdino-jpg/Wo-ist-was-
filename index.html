@@ -139,7 +139,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.0</span>
+        <span>Version 4.1</span>
     </footer>
 
     <!-- JavaScript -->
@@ -457,10 +457,10 @@
 
             let briefingText = `Guten Tag, ${currentUserName}. Hier ist dein kurzer Überblick. ${weatherText} ${weatherAdvice}`;
 
-            // NUR Heutige Termine filtern!
+            // Hier filtern wir nur die heutigen Termine für das Morgen-Briefing
             const todayStr = new Date().toISOString().split('T')[0];
             const todayCalendarEntries = calendarEntries.filter(e => {
-                if (!e.isoDate) return true; // Fallback für ältere Einträge
+                if (!e.isoDate) return true;
                 return e.isoDate.startsWith(todayStr);
             });
 
@@ -530,6 +530,12 @@
             statusMessage.textContent = "Verarbeite...";
 
             const now = new Date();
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            const todayStr = now.toISOString().split('T')[0];
+            const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
             const memoryWithDetails = {};
             for (let k in memoryItems) {
                 let item = memoryItems[k];
@@ -559,13 +565,15 @@
                             {
                                 role: "system",
                                 content: `Du bist ein hochpräziser, fehlerfreier und sprachlich eleganter deutscher Alltags-Assistent für ${currentUserName} in Schwarzenbek. 
-                                Aktuelles Jahr is 2026, heute ist ${now.toISOString().split('T')[0]}.
+                                Aktuelles Jahr ist 2026, heute ist ${todayStr}, morgen ist ${tomorrowStr}.
                                 Bisheriges Gedächtnis über Gegenstände: ${memoryContext}
                                 Aktuelle Kalender-Termine im System: ${calendarContext}
                                 Aktuelle To-Dos im System: ${todoContext}
                                 
                                 ABSOLUTE REGELN FÜR FRAGEN ZU TERMINEN & TO-DOS:
-                                - Wenn der Nutzer fragt, ob er Termine hat (heute, morgen, etc.), schaue in die "Aktuelle Kalender-Termine im System" und antworte präzise darauf in deinem "reply". Erfinde nichts und sage niemals, dass keine Termine da sind, wenn welche in der Liste stehen!
+                                - Wenn der Nutzer fragt, ob er Termine hat (z. B. "heute", "morgen", "habe ich Termine?"), prüfe exakt das Datum in den "Aktuelle Kalender-Termine im System" (jedes Event hat ein "isoDate" im Format YYYY-MM-DD...).
+                                - Gleiche die Frage des Nutzers (heute = ${todayStr}, morgen = ${tomorrowStr}) mit den Eintragsdaten ab. 
+                                - Wenn ein Termin für den angefragten Tag im System existiert, antworte im "reply" unbedingt mit dem genauen Inhalt und der Zeit des Termins! Erfinde niemals, dass keine Termine da sind, wenn passende in der Liste stehen.
                                 
                                 ABSOLUTE REGELN FÜR TERMINE VS. TO-DOS:
                                 1. STRIKTE TRENNUNG VON TERMINEN UND TO-DOS:
