@@ -139,7 +139,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.4</span>
+        <span>Version 4.5</span>
     </footer>
 
     <!-- JavaScript -->
@@ -348,7 +348,8 @@
                 if ((lower.includes("ruf") || lower.includes("anrufen")) && lower.includes("an")) {
                     handleCallCommand(lower);
                 } else if (lower.includes("wie spät ist es") || lower.includes("wieviel uhr") || lower.includes("wie viel uhr")) {
-                    const timeStr = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                    const now = new Date();
+                    const timeStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
                     const replyText = `Es ist jetzt ${timeStr} Uhr.`;
                     statusMessage.textContent = replyText;
                     speak(replyText);
@@ -460,10 +461,11 @@
                 console.error("Wetterfehler:", e);
             }
 
-            const currentTimeStr = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+            const nowBriefing = new Date();
+            const currentTimeStr = nowBriefing.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
             let briefingText = `Guten Tag, ${currentUserName}. Es ist jetzt ${currentTimeStr} Uhr. Hier ist dein kurzer Überblick. ${weatherText} ${weatherAdvice}`;
 
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = nowBriefing.toISOString().split('T')[0];
             const todayCalendarEntries = calendarEntries.filter(e => {
                 if (!e.isoDate) return true;
                 return e.isoDate.startsWith(todayStr);
@@ -538,9 +540,10 @@
             const tomorrow = new Date(now);
             tomorrow.setDate(tomorrow.getDate() + 1);
             
-            const todayStr = now.toISOString().split('T')[0];
-            const tomorrowStr = tomorrow.toISOString().split('T')[0];
-            const currentClockTime = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+            const todayStr = now.toLocaleDateString('en-CA'); // YYYY-MM-DD format based on local time
+            const tomorrowTomorrow = new Date(tomorrow);
+            const tomorrowStr = tomorrowTomorrow.toLocaleDateString('en-CA');
+            const currentClockTime = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
 
             const memoryWithDetails = {};
             for (let k in memoryItems) {
@@ -571,13 +574,13 @@
                             {
                                 role: "system",
                                 content: `Du bist ein hochpräziser, fehlerfreier und sprachlich eleganter deutscher Alltags-Assistent für ${currentUserName} in Schwarzenbek. 
-                                Aktuelles Jahr ist 2026, heute ist ${todayStr} (${now.toLocaleDateString('de-DE', {weekday: 'long'})}), Uhrzeit ist ${currentClockTime} Uhr, morgen ist ${tomorrowStr}.
+                                Aktuelles Jahr ist 2026, heute ist ${todayStr} (${now.toLocaleDateString('de-DE', {weekday: 'long'})}), Uhrzeit ist exakt ${currentClockTime} Uhr, morgen ist ${tomorrowStr}.
                                 Bisheriges Gedächtnis über Gegenstände: ${memoryContext}
                                 Aktuelle Kalender-Termine im System: ${calendarContext}
                                 Aktuelle To-Dos im System: ${todoContext}
                                 
                                 ABSOLUTE REGELN FÜR TERMIN- UND TO-DO-ERSTELLUNG:
-                                1. STRICT TO-DO RULE: Wähle "note" (To-Do), IMMER WENN der Nutzer eine Aufgabe, einen Erledigungswunsch oder eine Notiz äußert (z.B. "ich muss Isabelle abholen", "kauf Milch", "Erinnerung an X"), bei der **KEINE EXAKTE UHRZEIT** (z.B. "um 14 Uhr", "um 15:30 Uhr") genannt wird. Auch wenn Wörter wie "heute" oder "morgen" vorkommen, aber **keine Uhrzeit** dabeisteht, darf NIEMALS "calendar" gewählt werden! Es ist zu 100% ein To-Do ("type": "note").
+                                1. STRICT TO-DO RULE: Wähle "note" (To-Do), IMMER WENN der Nutzer eine Aufgabe, einen Erledigungswunsch oder eine Notiz äußert (z.B. "ich muss Isabelle abholen", "kauf Milch", "Erinnerung an X"), bei der **KEINE EXAKTE UHRZEIT** (z.B. "um 14 Uhr", "um 15:30 Uhr") genannt wird. Auch wenn Wörter wie "heute" oder "morgen" vorkommen, aber **keine Uhrzeit** dabeisteht, darf NIEMALS "calendar" gewählt werden! Es ist zu 100% ansonsten ein To-Do ("type": "note").
                                 2. TERMIN NUR BEI UHRZEIT: Wähle "calendar" AUSSCHLIESSLICH DANN, wenn der Nutzer explizit eine feste Uhrzeit nennt.
                                 3. FRAGEN ZU TERMINEN: Wenn der Nutzer fragt, ob er Termine hat (heute/morgen), prüfe die Kalender-Liste. Existiert ein Termin für diesen Tag, nenne ihn im Feld "reply" exakt mit Inhalt und Zeit.
                                 
@@ -622,7 +625,7 @@
                 // Erzwinge immer eine eindeutige akustische Bestätigung
                 if (aiData.type === 'calendar') {
                     let calendarEventId = null;
-                    let fullFormattedDate = new Date().toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
+                    let fullFormattedDate = new Date().toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Berlin' });
                     let shortFormattedDate = new Date().toLocaleDateString('de-DE', { day: 'numeric', month: 'long' });
                     let rawIsoTime = aiData.start_time || new Date().toISOString();
                     
@@ -630,8 +633,8 @@
                         calendarEventId = await createGoogleCalendarEvent(aiData.summary || text, aiData.start_time);
                         const parsedDate = new Date(aiData.start_time);
                         if (!isNaN(parsedDate)) {
-                            fullFormattedDate = parsedDate.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
-                            let timePart = parsedDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                            fullFormattedDate = parsedDate.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Berlin' });
+                            let timePart = parsedDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
                             let datePart = parsedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' });
                             shortFormattedDate = `${datePart} um ${timePart} Uhr`;
                         }
@@ -653,7 +656,7 @@
                     const newTodoEntry = {
                         id: Date.now(),
                         text: noteContent,
-                        date: new Date().toLocaleDateString('de-DE', { hour: '2-digit', minute: '2-digit' })
+                        date: new Date().toLocaleDateString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' })
                     };
                     todoEntries.unshift(newTodoEntry);
                     localStorage.setItem('helfer_todo_entries', JSON.stringify(todoEntries));
