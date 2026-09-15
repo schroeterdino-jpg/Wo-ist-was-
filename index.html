@@ -129,7 +129,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.20</span>
+        <span>Version 4.21</span>
     </footer>
 
     <!-- JavaScript -->
@@ -501,7 +501,6 @@
                 });
             }
 
-            // FILTER FÜR WICHTIGE GEGENSTÄNDE BEIM BRIEFING
             const importantKeywords = ["schlüssel", "brille", "portemonnaie", "geldbeutel", "beutel", "geld", "ausweis", "unterlage", "unterlagen", "dokument", "dokumente", "medikament", "medikamente", "tablette", "tabletten", "karte", "karten"];
             const memKeys = Object.keys(memoryItems);
             let relevantItems = [];
@@ -520,7 +519,6 @@
             if (relevantItems.length > 0) {
                 relevantItems.forEach((item) => {
                     let capitalizedName = item.name.charAt(0).toUpperCase() + item.name.slice(1);
-                    // FORMULIERUNG: "Denk dran: Dein [Gegenstand] [Ort]" (z.B. hängt am Schlüsselbrett)
                     briefingText += `Denk dran: Dein ${capitalizedName} ${item.loc}. `;
                 });
             }
@@ -595,7 +593,10 @@
                     })
                 });
 
-                if (!response.ok) throw new Error("API-Anfrage fehlgeschlagen");
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(`HTTP Error ${response.status}: ${errText}`);
+                }
 
                 const data = await response.json();
                 const aiData = JSON.parse(data.choices[0].message.content);
@@ -699,9 +700,19 @@
                 renderAllLists();
 
             } catch (error) {
-                statusMessage.textContent = "❌ Fehler bei der Verarbeitung.";
-                speak(`Entschuldigung, da ist ein Fehler aufgetreten.`);
                 console.error(error);
+                let errorMessage = "❌ Fehler bei der Verarbeitung.";
+                
+                if (error.message.includes("401") || error.message.includes("Unauthorized")) {
+                    errorMessage = "❌ Ungültiger API-Key! Bitte prüfen.";
+                } else if (error.message.includes("429") || error.message.includes("Too Many Requests")) {
+                    errorMessage = "⏳ Limit erreicht! Bitte warte 1-2 Minuten.";
+                } else if (error.message.includes("Failed to fetch")) {
+                    errorMessage = "🌐 Keine Internetverbindung.";
+                }
+
+                statusMessage.textContent = errorMessage;
+                speak("Entschuldigung, das Limit ist kurzzeitig erreicht oder es gab ein Verbindungsproblem.");
             }
         }
 
@@ -826,7 +837,7 @@
 
             const categories = ["Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer", "Sonstiges"];
             const grouped = {};
-            categories.items = categories.forEach(c => grouped[c] = []);
+            categories.forEach(c => grouped[c] = []);
 
             for (let key in memoryItems) {
                 let item = memoryItems[key];
