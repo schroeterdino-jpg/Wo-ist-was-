@@ -82,11 +82,25 @@
             </button>
         </div>
 
-        <!-- Kalender-Termine -->
-        <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200">
+        <!-- Reiter-Navigation -->
+        <div class="flex bg-slate-200 p-1 rounded-xl">
+            <button id="tabCalendarBtn" onclick="switchTab('calendar')" class="flex-1 py-2 rounded-lg font-bold text-base bg-white text-blue-800 shadow-sm transition">📅 Termine</button>
+            <button id="tabTodoBtn" onclick="switchTab('todo')" class="flex-1 py-2 rounded-lg font-bold text-base text-slate-600 transition">📝 To-Dos</button>
+        </div>
+
+        <!-- Ansicht: Kalender-Termine -->
+        <div id="calendarView" class="bg-white p-5 rounded-2xl shadow-md border border-slate-200">
             <h2 class="text-xl font-bold text-blue-800 mb-3">📅 Kalender-Termine:</h2>
             <ul id="calendarList" class="space-y-2 text-lg">
                 <li class="text-slate-500">Keine Termine eingetragen.</li>
+            </ul>
+        </div>
+
+        <!-- Ansicht: To-Dos & Notizen -->
+        <div id="todoView" class="hidden bg-white p-5 rounded-2xl shadow-md border border-slate-200">
+            <h2 class="text-xl font-bold text-blue-800 mb-3">📝 To-Dos & Notizen:</h2>
+            <ul id="todoList" class="space-y-2 text-lg">
+                <li class="text-slate-500">Keine offenen To-Dos.</li>
             </ul>
         </div>
 
@@ -106,12 +120,18 @@
         const recordText = document.getElementById('recordText');
         const statusMessage = document.getElementById('statusMessage');
         const calendarList = document.getElementById('calendarList');
+        const todoList = document.getElementById('todoList');
         const settingsBox = document.getElementById('settingsBox');
         const apiKeyInput = document.getElementById('apiKeyInput');
         const googleClientIdInput = document.getElementById('googleClientIdInput');
         const userNameInput = document.getElementById('userNameInput');
         const userNameDisplay = document.getElementById('userNameDisplay');
         const connectionStatus = document.getElementById('connectionStatus');
+        
+        const calendarView = document.getElementById('calendarView');
+        const todoView = document.getElementById('todoView');
+        const tabCalendarBtn = document.getElementById('tabCalendarBtn');
+        const tabTodoBtn = document.getElementById('tabTodoBtn');
 
         let currentUserName = localStorage.getItem('user_custom_name') || "Dino";
         userNameInput.value = currentUserName;
@@ -136,7 +156,21 @@
         let calendarEntries = JSON.parse(localStorage.getItem('helfer_calendar_entries')) || [];
         let todoEntries = JSON.parse(localStorage.getItem('helfer_todo_entries')) || [];
         let memoryItems = JSON.parse(localStorage.getItem('helfer_memory')) || {};
-        renderCalendarList();
+        renderAllLists();
+
+        function switchTab(tab) {
+            if (tab === 'calendar') {
+                calendarView.classList.remove('hidden');
+                todoView.classList.add('hidden');
+                tabCalendarBtn.className = "flex-1 py-2 rounded-lg font-bold text-base bg-white text-blue-800 shadow-sm transition";
+                tabTodoBtn.className = "flex-1 py-2 rounded-lg font-bold text-base text-slate-600 transition";
+            } else {
+                todoView.classList.remove('hidden');
+                calendarView.classList.add('hidden');
+                tabTodoBtn.className = "flex-1 py-2 rounded-lg font-bold text-base bg-white text-blue-800 shadow-sm transition";
+                tabCalendarBtn.className = "flex-1 py-2 rounded-lg font-bold text-base text-slate-600 transition";
+            }
+        }
 
         const savedKey = localStorage.getItem('user_api_key');
         if (savedKey) apiKeyInput.value = savedKey;
@@ -291,7 +325,7 @@
             if (calendarEntries.length > 0) {
                 briefingText += "Deine Termine: ";
                 calendarEntries.forEach(e => {
-                    briefingText += `${e.text}. `;
+                    briefingText += `${e.text}, am ${e.date}. `;
                 });
             }
 
@@ -350,14 +384,14 @@
                                    - Orte und Ablageorte müssen immer mit korrekter Präposition und Artikel stehen (Beispiele: "in der Vitrine", "auf dem Tisch", "im Küchenschrank", "unter der Bank", "neben dem Fernseher"). Niemals "in Vitrine" oder "auf Tisch" ohne Artikel!
                                 3. SPRACHLICHER STIL:
                                    - Antworte immer auf natürlichstes, fehlerfreies Deutsch. Keine Roboter-Sprache, sondern locker, herzlich und direkt.
-                                   - Wenn ${currentUserName} nach einem Gegenstand fragst ("Wo ist mein..."), antworte präzise mit dem genauen Speicherort aus deinem Gedächtnis.
+                                   - Wenn ${currentUserName} nach einem Gegenstand fragst ("Wo isser?", "Wo ist mein..."), antworte präzise mit dem genauen Speicherort aus deinem Gedächtnis.
                                 
                                 KLASSIFIZIERUNG DER TYPEN:
                                 1. "chat": Smalltalk, Unterhaltung, Fragen.
                                 2. "name_change": Namensänderung.
                                 3. "item_store": Gegenstand ablegen (z.B. "Portemonnaie liegt in der Vitrine").
                                 4. "item_query": Nach einem Gegenstand fragen.
-                                5. "note": To-Dos oder Notizen ohne feste Uhrzeit (wird im Hintergrund gespeichert).
+                                5. "note": To-Dos oder Notizen ohne feste Uhrzeit.
                                 6. "calendar": Termine mit fester Uhrzeit.
 
                                 Gib ein JSON-Objekt zurück mit:
@@ -367,7 +401,7 @@
                                 - "item_location": string (vollständiger Satz mit Präposition und Artikel, z.B. "in der Vitrine")
                                 - "note_text": string
                                 - "summary": string
-                                - "start_time": string
+                                - "start_time": string (ISO-Format für Kalendertermine, z.B. 2026-09-15T14:30:00)
                                 - "reply": string (Deine sehr menschliche, herzliche Antwort auf Deutsch mit absolut fehlerfreier Grammatik und korrekter Portemonnaie-Schreibweise)`
                             },
                             {
@@ -428,15 +462,21 @@
 
                 if (aiData.type === 'calendar') {
                     let calendarEventId = null;
+                    let formattedDate = new Date().toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
+                    
                     if (aiData.start_time) {
                         calendarEventId = await createGoogleCalendarEvent(aiData.summary || text, aiData.start_time);
+                        const parsedDate = new Date(aiData.start_time);
+                        if (!isNaN(parsedDate)) {
+                            formattedDate = parsedDate.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
+                        }
                     }
 
                     const newCalEntry = {
                         id: Date.now(),
                         calendarId: calendarEventId,
                         text: aiData.summary || text,
-                        date: new Date().toLocaleDateString('de-DE', { hour: '2-digit', minute: '2-digit' })
+                        date: formattedDate
                     };
                     calendarEntries.unshift(newCalEntry);
                     localStorage.setItem('helfer_calendar_entries', JSON.stringify(calendarEntries));
@@ -450,7 +490,7 @@
                     localStorage.setItem('helfer_todo_entries', JSON.stringify(todoEntries));
                 }
 
-                renderCalendarList();
+                renderAllLists();
 
             } catch (error) {
                 statusMessage.textContent = "❌ Fehler bei der Verarbeitung.";
@@ -505,8 +545,15 @@
 
             calendarEntries = calendarEntries.filter(e => e.id !== id);
             localStorage.setItem('helfer_calendar_entries', JSON.stringify(calendarEntries));
-            renderCalendarList();
+            renderAllLists();
             speak("Termin gelöscht.");
+        }
+
+        function deleteTodoEntry(id) {
+            todoEntries = todoEntries.filter(e => e.id !== id);
+            localStorage.setItem('helfer_todo_entries', JSON.stringify(todoEntries));
+            renderAllLists();
+            speak("To-Do erledigt.");
         }
 
         function clearAllMemory() {
@@ -515,7 +562,8 @@
             speak("Gedächtnis komplett gelöscht.");
         }
 
-        function renderCalendarList() {
+        function renderAllLists() {
+            // Kalender Liste
             if (calendarEntries.length === 0) {
                 calendarList.innerHTML = '<li class="text-slate-500">Keine Termine eingetragen.</li>';
             } else {
@@ -533,6 +581,27 @@
                         </button>
                     `;
                     calendarList.appendChild(li);
+                });
+            }
+
+            // To-Do Liste
+            if (todoEntries.length === 0) {
+                todoList.innerHTML = '<li class="text-slate-500">Keine offenen To-Dos.</li>';
+            } else {
+                todoList.innerHTML = '';
+                todoEntries.forEach(entry => {
+                    const li = document.createElement('li');
+                    li.className = "bg-slate-50 p-3 rounded-xl border border-slate-100 flex justify-between items-center text-base";
+                    li.innerHTML = `
+                        <div>
+                            <span>📝 ${entry.text}</span>
+                            <div class="text-xs text-slate-400">${entry.date}</div>
+                        </div>
+                        <button onclick="deleteTodoEntry(${entry.id})" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1 rounded-lg text-sm font-semibold ml-2">
+                            Erledigt
+                        </button>
+                    `;
+                    todoList.appendChild(li);
                 });
             }
         }
