@@ -129,7 +129,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.16</span>
+        <span>Version 4.18</span>
     </footer>
 
     <!-- JavaScript -->
@@ -157,43 +157,68 @@
         const tabCalendarBtn = document.getElementById('tabCalendarBtn');
         const tabTodoBtn = document.getElementById('tabTodoBtn');
 
-        // --- Werte beim Start aus dem localStorage laden ---
-        let currentUserName = localStorage.getItem('user_custom_name') || "Dino";
+        function getPersistentData(key, defaultValue) {
+            let val = localStorage.getItem(key);
+            if (!val || val === "null" || val === "undefined") {
+                val = sessionStorage.getItem(key);
+            }
+            if (!val || val === "null" || val === "undefined") {
+                return defaultValue;
+            }
+            return val;
+        }
+
+        function setPersistentData(key, value) {
+            try { localStorage.setItem(key, value); } catch (e) {}
+            try { sessionStorage.setItem(key, value); } catch (e) {}
+        }
+
+        let currentUserName = getPersistentData('user_custom_name', 'Dino');
         userNameInput.value = currentUserName;
         updateUserGreeting();
 
-        const savedKey = localStorage.getItem('user_api_key');
+        let savedKey = getPersistentData('user_api_key', '');
         if (savedKey) apiKeyInput.value = savedKey;
 
-        const savedClientId = localStorage.getItem('google_client_id') || "399573320370-qka01ghj0s88eoair7lla665cbj10o4g.apps.googleusercontent.com";
+        let savedClientId = getPersistentData('google_client_id', '399573320370-qka01ghj0s88eoair7lla665cbj10o4g.apps.googleusercontent.com');
         googleClientIdInput.value = savedClientId;
-        localStorage.setItem('google_client_id', savedClientId);
+        setPersistentData('google_client_id', savedClientId);
 
-        // --- Automatische Live-Speicherung bei jeder Änderung ---
         userNameInput.addEventListener('input', () => {
             currentUserName = userNameInput.value.trim() || "Dino";
-            localStorage.setItem('user_custom_name', currentUserName);
+            setPersistentData('user_custom_name', currentUserName);
+            updateUserGreeting();
+        });
+        userNameInput.addEventListener('change', () => {
+            currentUserName = userNameInput.value.trim() || "Dino";
+            setPersistentData('user_custom_name', currentUserName);
             updateUserGreeting();
         });
 
         apiKeyInput.addEventListener('input', () => {
-            localStorage.setItem('user_api_key', apiKeyInput.value.trim());
-            connectionStatus.textContent = "API-Key automatisch gespeichert.";
+            setPersistentData('user_api_key', apiKeyInput.value.trim());
+            connectionStatus.textContent = "API-Key gespeichert.";
+        });
+        apiKeyInput.addEventListener('change', () => {
+            setPersistentData('user_api_key', apiKeyInput.value.trim());
         });
 
         googleClientIdInput.addEventListener('input', () => {
-            localStorage.setItem('google_client_id', googleClientIdInput.value.trim());
-            connectionStatus.textContent = "Client-ID automatisch gespeichert.";
+            setPersistentData('google_client_id', googleClientIdInput.value.trim());
+            connectionStatus.textContent = "Client-ID gespeichert.";
+        });
+        googleClientIdInput.addEventListener('change', () => {
+            setPersistentData('google_client_id', googleClientIdInput.value.trim());
         });
 
         function updateUserGreeting() {
             userNameDisplay.textContent = `Hallo, ${currentUserName}!`;
         }
 
-        let calendarEntries = JSON.parse(localStorage.getItem('helfer_calendar_entries')) || [];
-        let todoEntries = JSON.parse(localStorage.getItem('helfer_todo_entries')) || [];
-        let memoryItems = JSON.parse(localStorage.getItem('helfer_memory')) || {};
-        let savedContacts = JSON.parse(localStorage.getItem('helfer_contacts')) || {};
+        let calendarEntries = JSON.parse(getPersistentData('helfer_calendar_entries', '[]')) || [];
+        let todoEntries = JSON.parse(getPersistentData('helfer_todo_entries', '[]')) || [];
+        let memoryItems = JSON.parse(getPersistentData('helfer_memory', '{}')) || {};
+        let savedContacts = JSON.parse(getPersistentData('helfer_contacts', '{}')) || {};
 
         renderAllLists();
         renderContactList();
@@ -203,7 +228,7 @@
             const phone = contactPhoneInput.value.trim();
             if (name && phone) {
                 savedContacts[name.toLowerCase()] = { originalName: name, phone: phone };
-                localStorage.setItem('helfer_contacts', JSON.stringify(savedContacts));
+                setPersistentData('helfer_contacts', JSON.stringify(savedContacts));
                 contactNameInput.value = '';
                 contactPhoneInput.value = '';
                 renderContactList();
@@ -215,7 +240,7 @@
 
         function deleteContact(key) {
             delete savedContacts[key];
-            localStorage.setItem('helfer_contacts', JSON.stringify(savedContacts));
+            setPersistentData('helfer_contacts', JSON.stringify(savedContacts));
             renderContactList();
         }
 
@@ -248,14 +273,14 @@
         }
 
         let tokenClient;
-        let accessToken = localStorage.getItem('google_access_token');
+        let accessToken = getPersistentData('google_access_token', '');
 
         function toggleSettings() {
             settingsBox.classList.toggle('hidden');
         }
 
         function loginWithGoogle() {
-            const clientId = localStorage.getItem('google_client_id');
+            const clientId = getPersistentData('google_client_id', '');
             if (!clientId) {
                 alert('Bitte zuerst die Google Client-ID eintragen!');
                 return;
@@ -271,7 +296,7 @@
                             return;
                         }
                         accessToken = response.access_token;
-                        localStorage.setItem('google_access_token', accessToken);
+                        setPersistentData('google_access_token', accessToken);
                         connectionStatus.textContent = "✅ Mit Google Kalender verbunden!";
                     },
                 });
@@ -374,7 +399,7 @@
         }
 
         function toggleSpeechRecognition() {
-            const currentKey = localStorage.getItem('user_api_key');
+            const currentKey = getPersistentData('user_api_key', '');
             if (!currentKey) {
                 alert('Bitte hinterlege zuerst deinen Groq API-Key oben über "⚙️ Einstellungen"!');
                 settingsBox.classList.remove('hidden');
@@ -500,7 +525,7 @@
         }
 
         async function sendToGroqSmart(text) {
-            const key = localStorage.getItem('user_api_key');
+            const key = getPersistentData('user_api_key', '');
             statusMessage.textContent = "Verarbeite...";
 
             const now = new Date();
@@ -541,11 +566,10 @@
                                 Kalender: ${calendarContext}
                                 To-Dos: ${todoContext}
 
-                                ABSOLUT STRENGE DATUMS- & KALENDER-REGELN (WICHTIGSTE PRIORITÄT!):
-                                1. EXAKTES DATUM BEACHTEN: Achte penibel auf das genaue Datum, das der Nutzer nennt (z.B. "am 17."). Verwechsle ein genanntes Datum NIEMALS mit "morgen" oder "heute", es sei denn, der Nutzer sagt explizit "morgen". Wenn heute der 15. ist und der Nutzer einen Termin auf den 17. legt, liegt der Termin am 17. und NICHT am nächsten Tag!
-                                2. TERMINE & FRAGEN ABGLEICHEN: Wenn der Nutzer fragt, was für Termine anstehen, schaue in die Kalender-Daten und beantworte das tagesgenau. Wenn ein Termin für den 17. hinterlegt ist und der Nutzer fragt allgemein nach Terminen oder für heute, darfst du den Termin vom 17. NICHT als "morgen" oder "heute" ankündigen!
-                                3. SPRACH-STIL: Sag NIEMALS "Ich habe gemerkt...". Antworte immer natürlich und flüssig (z.B. "Alles klar, hab's mir aufgeschrieben...", "Der Termin am 17. ist eingetragen...").
-                                4. FREIHEIT: Du kannst dem Nutzer absolut jede Frage beantworten (zu Kochen, Geschichte, Alltag, Technik etc.) – wähle dann den Typ "chat".
+                                ABSOLUT STRENGE REGELN (WICHTIGSTE PRIORITÄT!):
+                                1. KEINE FRAGEN ALS TO-DO SPEICHERN: Wenn der Nutzer fragt "Welche Termine habe ich?", "Was habe ich vor?", "Wo ist mein Schlüssel?" oder allgemeine Fragen stellt, darfst du NIEMALS den Typ "note" wählen! Das ist eine reine Informationsabfrage (Typ "chat" oder "item_query"). Speichere niemals die Frage des Nutzers als To-Do!
+                                2. EXAKTES DATUM BEACHTEN: Achte penibel auf das genaue Datum, das der Nutzer nennt (z.B. "am 17."). Verwechsle ein genanntes Datum NIEMALS mit "morgen" oder "heute", es sei denn, der Nutzer sagt explizit "morgen".
+                                3. SPRACH-STIL: Sag NIEMALS "Ich habe gemerkt...". Antworte immer natürlich und flüssig.
 
                                 Gib ein JSON-Objekt zurück mit folgenden Feldern:
                                 - "type": string (Wähle aus: "chat", "name_change", "item_store", "item_query", "note", "calendar")
@@ -553,9 +577,9 @@
                                 - "item_name": string (Name des Gegenstands bei store/query)
                                 - "item_location": string (Der genaue Ort mit exaktem Verb)
                                 - "item_category": string (Kategorie: "Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer", "Sonstiges")
-                                - "note_text": string (Bei To-Dos)
+                                - "note_text": string (Nur bei echten To-Dos oder Notizen, die der Nutzer explizit aufschreiben will – NIEMALS bei Fragen!)
                                 - "summary": string (Titel für Kalender)
-                                - "start_time": string (Exaktes ISO-Datum im Format YYYY-MM-DDTHH:mm:ss für Kalender – achte strikt auf das vom Nutzer genannte Datum!)
+                                - "start_time": string (Exaktes ISO-Datum im Format YYYY-MM-DDTHH:mm:ss für Kalender)
                                 - "reply": string (Deine komplette, natürliche, fehlerfreie Antwort auf Deutsch, die per Sprachausgabe vorgelesen wird!)`
                             },
                             {
@@ -572,6 +596,15 @@
                 const aiData = JSON.parse(data.choices[0].message.content);
 
                 let finalReply = aiData.reply || "Alles klar!";
+
+                // SICHERHEITSSPERRE IM CODE: 
+                // Wenn der Nutzer nach Terminen oder Fragen fragt, erzwinge IMMER Typ 'chat', selbst wenn die KI 'note' gewählt hat!
+                const lowerText = text.toLowerCase();
+                if (lowerText.includes("termin") || lowerText.includes("was habe ich") || lowerText.includes("was steht") || lowerText.includes("wo ist")) {
+                    if (aiData.type === 'note') {
+                        aiData.type = 'chat';
+                    }
+                }
 
                 if (aiData.type === 'calendar' && (!aiData.start_time || aiData.start_time === "" || aiData.start_time === "null")) {
                     aiData.type = 'note';
@@ -604,7 +637,7 @@
                         isoDate: rawIsoTime
                     };
                     calendarEntries.unshift(newCalEntry);
-                    localStorage.setItem('helfer_calendar_entries', JSON.stringify(calendarEntries));
+                    setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
                 } else if (aiData.type === 'note') {
                     let noteContent = aiData.note_text || text;
                     noteContent = noteContent.replace(/\s+(am|um)\s+.*/gi, '').trim();
@@ -614,7 +647,7 @@
                         text: noteContent
                     };
                     todoEntries.unshift(newTodoEntry);
-                    localStorage.setItem('helfer_todo_entries', JSON.stringify(todoEntries));
+                    setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
                 } else if (aiData.type === 'item_store' && aiData.item_name && aiData.item_location) {
                     let cleanName = aiData.item_name.toLowerCase();
                     let cleanLoc = aiData.item_location;
@@ -628,12 +661,12 @@
                         timestamp: Date.now(),
                         category: category
                     };
-                    localStorage.setItem('helfer_memory', JSON.stringify(memoryItems));
+                    setPersistentData('helfer_memory', JSON.stringify(memoryItems));
                 }
 
                 if (aiData.type === 'name_change' && aiData.new_name) {
                     currentUserName = aiData.new_name;
-                    localStorage.setItem('user_custom_name', currentUserName);
+                    setPersistentData('user_custom_name', currentUserName);
                     userNameInput.value = currentUserName;
                     updateUserGreeting();
                 }
@@ -721,21 +754,21 @@
             }
 
             calendarEntries = calendarEntries.filter(e => e.id !== id);
-            localStorage.setItem('helfer_calendar_entries', JSON.stringify(calendarEntries));
+            setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
             renderAllLists();
             speak("Termin gelöscht.");
         }
 
         function deleteTodoEntry(id) {
             todoEntries = todoEntries.filter(e => e.id !== id);
-            localStorage.setItem('helfer_todo_entries', JSON.stringify(todoEntries));
+            setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
             renderAllLists();
             speak("Erledigt.");
         }
 
         function deleteMemoryItem(key) {
             delete memoryItems[key];
-            localStorage.setItem('helfer_memory', JSON.stringify(memoryItems));
+            setPersistentData('helfer_memory', JSON.stringify(memoryItems));
             renderAllLists();
             speak("Gelöscht.");
         }
@@ -743,6 +776,7 @@
         function clearAllMemory() {
             memoryItems = {};
             localStorage.removeItem('helfer_memory');
+            sessionStorage.removeItem('helfer_memory');
             renderAllLists();
             speak("Gedächtnis geleert.");
         }
