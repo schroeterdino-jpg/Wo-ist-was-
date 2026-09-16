@@ -609,7 +609,7 @@
 
         async function sendToGroqSmart(text) {
             const key = getPersistentData('user_api_key', '');
-            const modelName = getPersistentData('user_model_name', 'llama-3.3-70b-versatile');
+            const modelName = getPersistentData('user_model_name: "llama-3.3-70b-versatile');
             statusMessage.textContent = "Verarbeite...";
 
             const now = new Date();
