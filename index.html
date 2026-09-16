@@ -97,14 +97,14 @@
             </button>
             <p id="statusMessage" class="text-center font-medium text-slate-700 h-6">Drücken und sprechen...</p>
 
-            <!-- NEU: Nochmal vorlesen & Text-Fallback -->
-            <div class="w-full flex gap-2">
-                <button onclick="repeatLastSpeech()" class="bg-slate-300 hover:bg-slate-400 text-slate-800 py-2 px-3 rounded-xl text-sm font-semibold shadow-sm flex items-center justify-center gap-1">
+            <!-- Korrigiertes Text-Fallback & Nochmal-Button (sauber platziert, verdeckt nichts) -->
+            <div class="w-full flex items-center gap-2 mt-1">
+                <button onclick="repeatLastSpeech()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 py-2.5 px-3 rounded-xl text-sm font-semibold shadow-sm flex items-center justify-center gap-1 shrink-0">
                     🔁 Nochmal
                 </button>
                 <div class="flex-grow flex gap-1">
                     <input type="text" id="textFallbackInput" placeholder="Oder Text tippen..." class="w-full p-2 border border-slate-300 rounded-xl text-sm bg-white focus:outline-none focus:border-blue-500" onkeydown="if(event.key==='Enter') submitTextFallback()">
-                    <button onclick="submitTextFallback()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl text-sm font-semibold shadow-sm">Senden</button>
+                    <button onclick="submitTextFallback()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl text-sm font-semibold shadow-sm shrink-0">Senden</button>
                 </div>
             </div>
 
@@ -137,7 +137,7 @@
 
     </main>
 
-    <!-- NEU: Bestätigungs-Modal -->
+    <!-- Bestätigungs-Modal -->
     <div id="confirmModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4 text-center">
             <h3 id="confirmModalText" class="text-lg font-bold text-slate-800">Bist du sicher?</h3>
@@ -151,7 +151,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.30</span>
+        <span>Version 4.31</span>
     </footer>
 
     <!-- JavaScript -->
@@ -531,20 +531,15 @@
             recordText.textContent = "SPRECHEN";
         }
 
-        // --- GEOLOCATION HELFER ---
         async function getCoordinates() {
             return new Promise((resolve) => {
                 if (!navigator.geolocation) {
-                    resolve({ lat: 53.5135, lon: 10.4182 }); // Fallback Schwarzenbek
+                    resolve({ lat: 53.5135, lon: 10.4182 });
                     return;
                 }
                 navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        resolve({ lat: position.coords.latitude, lon: position.coords.longitude });
-                    },
-                    (error) => {
-                        resolve({ lat: 53.5135, lon: 10.4182 }); // Fallback bei Ablehnung
-                    },
+                    (position) => { resolve({ lat: position.coords.latitude, lon: position.coords.longitude }); },
+                    (error) => { resolve({ lat: 53.5135, lon: 10.4182 }); },
                     { timeout: 5000 }
                 );
             });
@@ -552,7 +547,6 @@
 
         async function triggerDailyBriefing() {
             statusMessage.textContent = "Lade Wetter & Briefing...";
-            
             const coords = await getCoordinates();
             let weatherText = "";
             let weatherAdvice = "";
@@ -572,22 +566,13 @@
                     else if (code >= 95) condition = "Gewitter";
 
                     weatherText = `Das aktuelle Wetter an deinem Standort ist ${condition} bei ${temp} Grad. `;
-
-                    if (code >= 51 && code <= 67) {
-                        weatherAdvice = "Es ist regnerisch, nimm bitte einen Regenschirm mit! ";
-                    } else if (temp < 12) {
-                        weatherAdvice = "Es ist ziemlich frisch draußen, zieh dir am besten eine Jacke an. ";
-                    } else if (temp > 24) {
-                        weatherAdvice = "Heute wird es schön warm! ";
-                    } else if (wind > 30) {
-                        weatherAdvice = "Es ist windig, nimm lieber eine Jacke mit. ";
-                    } else {
-                        weatherAdvice = "Das Wetter ist ganz angenehm. ";
-                    }
+                    if (code >= 51 && code <= 67) weatherAdvice = "Es ist regnerisch, nimm bitte einen Regenschirm mit! ";
+                    else if (temp < 12) weatherAdvice = "Es ist ziemlich frisch draußen, zieh dir am besten eine Jacke an. ";
+                    else if (temp > 24) weatherAdvice = "Heute wird es schön warm! ";
+                    else if (wind > 30) weatherAdvice = "Es ist windig, nimm lieber eine Jacke mit. ";
+                    else weatherAdvice = "Das Wetter ist ganz angenehm. ";
                 }
-            } catch (e) {
-                console.error("Wetterfehler:", e);
-            }
+            } catch (e) {}
 
             const nowBriefing = new Date();
             const currentTimeStr = nowBriefing.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
@@ -614,9 +599,7 @@
 
             if (todoEntries.length > 0) {
                 briefingText += "Offene To-Dos: ";
-                todoEntries.forEach(e => {
-                    briefingText += `${e.text}. `;
-                });
+                todoEntries.forEach(e => { briefingText += `${e.text}. `; });
             }
 
             statusMessage.textContent = "Fertig.";
@@ -638,7 +621,6 @@
                 let ts = typeof item === 'object' ? item.timestamp : now.getTime();
                 let diffDays = Math.floor((now.getTime() - ts) / (1000 * 60 * 60 * 24));
                 let timeDesc = diffDays === 0 ? "heute" : (diffDays === 1 ? "vor 1 Tag" : `vor ${diffDays} Tagen`);
-                
                 memoryWithDetails[k] = { location: loc, abgelegt: timeDesc };
             }
 
@@ -657,14 +639,14 @@
                                 role: "system",
                                 content: `Du bist ${currentUserName}s smarter, absolut natürlicher und menschlicher Alltags-Assistent in Schwarzenbek. 
                                 Aktuelles exaktes Datum heute ist ${todayStr}, Uhrzeit ist exakt ${currentClockTime} Uhr.
-                                Bisheriges Gedächtnis über Gegenstände & Passwörter: ${JSON.stringify(memoryWithDetails)}
+                                Bisheriges Gedächtnis: ${JSON.stringify(memoryWithDetails)}
                                 Kalender: ${JSON.stringify(calendarEntries)}
                                 To-Dos: ${JSON.stringify(todoEntries)}
 
-                                REGELN:
-                                1. Wenn der Nutzer nach Passwörtern oder Zugangsdaten fragt (z.B. "Wie ist mein Passwort von Amazon?"), behandle es als Gegenstand bzw. Passwort und antworte im Feld "reply" direkt mit dem gespeicherten Passwort/Ort.
-                                2. Wenn der Nutzer ein Passwort speichern will (z.B. "Mein Amazon Passwort ist XYZ"), speichere es als item_store mit Kategorie "Passwörter".
-                                3. Gib ein JSON-Objekt zurück mit Feldern: "type" ("chat", "name_change", "item_store", "item_query", "note", "calendar", "calendar_delete"), "new_name", "item_name", "item_location", "item_category" (nutze "Passwörter" für Passwörter!), "note_text", "summary", "start_time", "calendar_delete_query", "reply".`
+                                WICHTIG FÜR LÖSCH-BEFEHLE (calendar_delete):
+                                Wenn der Nutzer einen Termin löschen will (z.B. "Lösche meinen Friseurtermin" oder "Friseurtermin absagen"), setze "type" unbedingt auf "calendar_delete" und extrahiere im Feld "calendar_delete_query" den Kernbegriff (z.B. "friseur" oder "friseurtermin").
+
+                                Gib ein JSON-Objekt zurück mit Feldern: "type" ("chat", "name_change", "item_store", "item_query", "note", "calendar", "calendar_delete"), "new_name", "item_name", "item_location", "item_category", "note_text", "summary", "start_time", "calendar_delete_query", "reply".`
                             },
                             {
                                 role: "user",
@@ -683,8 +665,16 @@
 
                 if (aiData.type === 'calendar_delete') {
                     let searchQuery = (aiData.calendar_delete_query || text).toLowerCase();
-                    searchQuery = searchQuery.replace(/lösche|termin|den|das|für|am/gi, "").trim();
-                    let matchedEntry = calendarEntries.find(e => e.text.toLowerCase().includes(searchQuery));
+                    searchQuery = searchQuery.replace(/lösche|termin|den|das|für|am|meinen|meine|bitte/gi, "").trim();
+                    
+                    let matchedEntry = calendarEntries.find(e => e.text.toLowerCase().includes(searchQuery) || searchQuery.includes(e.text.toLowerCase()));
+
+                    if (!matchedEntry && searchQuery.length > 2) {
+                        matchedEntry = calendarEntries.find(e => {
+                            let words = e.text.toLowerCase().split(/\s+/);
+                            return words.some(w => w.length > 2 && searchQuery.includes(w));
+                        });
+                    }
 
                     if (matchedEntry) {
                         confirmAction(`Möchtest du den Termin "${matchedEntry.text}" wirklich löschen?`, async () => {
@@ -699,11 +689,11 @@
                             calendarEntries = calendarEntries.filter(e => e.id !== matchedEntry.id);
                             setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
                             renderAllLists();
-                            speak(`Ich habe den Termin gelöscht.`);
+                            speak("Termin gelöscht.");
                         });
                         finalReply = `Soll ich den Termin ${matchedEntry.text} wirklich löschen?`;
                     } else {
-                        finalReply = "Ich habe keinen passenden Termin dazu gefunden.";
+                        finalReply = "Ich habe keinen passenden Termin dazu in deiner Liste gefunden.";
                     }
                 }
                 else if (aiData.type === 'calendar') {
