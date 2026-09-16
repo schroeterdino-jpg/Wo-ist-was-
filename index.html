@@ -129,7 +129,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.37</span>
+        <span>Version 4.33</span>
     </footer>
 
     <!-- JavaScript -->
@@ -181,7 +181,9 @@
         if (savedKey) apiKeyInput.value = savedKey;
 
         let savedClientId = getPersistentData('google_client_id', '399573320370-qka01ghj0s88eoair7lla665cbj10o4g.apps.googleusercontent.com');
-        googleClientIdInput.value = savedClientId;
+        if (savedClientId) {
+            googleClientIdInput.value = savedClientId;
+        }
         setPersistentData('google_client_id', savedClientId);
 
         userNameInput.addEventListener('input', () => {
@@ -204,7 +206,18 @@
             userNameDisplay.textContent = `Hallo, ${currentUserName}!`;
         }
 
-        let calendarEntries = JSON.parse(getPersistentData('helfer_calendar_entries', '[]')) || [];
+        let rawCalendarEntries = JSON.parse(getPersistentData('helfer_calendar_entries', '[]')) || [];
+        const maxAllowedDate = new Date();
+        maxAllowedDate.setMonth(maxAllowedDate.getMonth() + 6);
+
+        let calendarEntries = rawCalendarEntries.filter(entry => {
+            if (!entry.isoDate) return true;
+            const entryDate = new Date(entry.isoDate);
+            if (isNaN(entryDate)) return true;
+            return entryDate <= maxAllowedDate;
+        });
+        setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
+
         let todoEntries = JSON.parse(getPersistentData('helfer_todo_entries', '[]')) || [];
         let memoryItems = JSON.parse(getPersistentData('helfer_memory', '{}')) || {};
         let savedContacts = JSON.parse(getPersistentData('helfer_contacts', '{}')) || {};
@@ -265,10 +278,6 @@
         let accessToken = getPersistentData('google_access_token', '');
 
         window.addEventListener('load', () => {
-            const clientId = getPersistentData('google_client_id', '');
-            if (clientId) {
-                initGoogleClient(clientId, accessToken ? true : false);
-            }
             if (accessToken) {
                 connectionStatus.textContent = "✅ Mit Google Kalender verbunden!";
                 fetchGoogleCalendarEvents();
@@ -279,7 +288,13 @@
             settingsBox.classList.toggle('hidden');
         }
 
-        function initGoogleClient(clientId, autoRun = false) {
+        function loginWithGoogle() {
+            const clientId = getPersistentData('google_client_id', '');
+            if (!clientId) {
+                alert('Bitte zuerst die Google Client-ID eintragen!');
+                return;
+            }
+
             try {
                 tokenClient = google.accounts.oauth2.initTokenClient({
                     client_id: clientId,
@@ -295,27 +310,6 @@
                         fetchGoogleCalendarEvents();
                     },
                 });
-
-                if (autoRun && accessToken) {
-                    tokenClient.requestAccessToken({ prompt: 'none' });
-                }
-            } catch (error) {
-                console.error("Fehler bei Google Initialisierung:", error);
-            }
-        }
-
-        function loginWithGoogle() {
-            const clientId = getPersistentData('google_client_id', '');
-            if (!clientId) {
-                alert('Bitte zuerst die Google Client-ID eintragen!');
-                return;
-            }
-
-            if (!tokenClient) {
-                initGoogleClient(clientId, false);
-            }
-
-            try {
                 tokenClient.requestAccessToken({ prompt: 'consent' });
             } catch (error) {
                 connectionStatus.textContent = `❌ Fehler: ${error.message}`;
@@ -351,7 +345,7 @@
                     const data = await response.json();
                     const googleItems = data.items || [];
 
-                    let existingCalendarIds = new Set(calendarEntries.map(e => e.calendarId).filter(Boolean));
+                    let existingCalendarIds = new Set(calendarEntries.map(e => e.calendarId));
                     let seenSignatures = new Set(calendarEntries.map(e => `${e.text}_${e.isoDate}`.toLowerCase()));
 
                     googleItems.forEach(item => {
@@ -366,13 +360,7 @@
                         const title = item.summary || "Kein Titel";
                         const signature = `${title}_${startRaw}`.toLowerCase();
 
-                        if (existingCalendarIds.has(item.id)) {
-                            let existing = calendarEntries.find(e => e.calendarId === item.id);
-                            if (existing) {
-                                existing.text = title;
-                                existing.isoDate = startRaw;
-                            }
-                        } else if (!seenSignatures.has(signature)) {
+                        if (!existingCalendarIds.has(item.id) && !seenSignatures.has(signature)) {
                             let fullFormattedDate = "Ganztägig";
                             let shortFormattedDate = "Ganztägig";
                             
@@ -581,10 +569,11 @@
             recordText.textContent = "SPRECHEN";
         }
 
+        // Hilfsfunktion: Aktuelle GPS-Position ermitteln (mit Fallback auf Schwarzenbek)
         function getCurrentPositionAsync() {
             return new Promise((resolve) => {
                 if (!navigator.geolocation) {
-                    resolve({ latitude: 53.5135, longitude: 10.4182 });
+                    resolve({ latitude: 53.5135, longitude: 10.4182 }); // Fallback Schwarzenbek
                     return;
                 }
                 navigator.geolocation.getCurrentPosition(
@@ -595,13 +584,15 @@
                         });
                     },
                     (error) => {
-                        resolve({ latitude: 53.5135, longitude: 10.4182 });
+                        console.warn("Geolocation fehlgeschlagen, nutze Standard-Koordinaten:", error);
+                        resolve({ latitude: 53.5135, longitude: 10.4182 }); // Fallback Schwarzenbek
                     },
                     { timeout: 5000, maximumAge: 60000 }
                 );
             });
         }
 
+        // Standort-Abfrage Befehl ("Wo bin ich?")
         async function handleLocationQuery() {
             statusMessage.textContent = "Ermittle genauen Standort...";
             const coords = await getCurrentPositionAsync();
@@ -821,9 +812,7 @@
                                 To-Dos: ${todoContext}
 
                                 ABSOLUT STRENGE REGELN (WICHTIGSTE PRIORITÄT!):
-                                1. TERMIN VS. TO-DO UNTERSCHEIDUNG (STRENG!): 
-                                - Erstelle einen Kalender-Eintrag (Typ "calendar") NUR dann, wenn der Nutzer eine konkrete UHRZEIT genannt hat (z.B. "morgen um 15 Uhr", "am Freitag um 10 Uhr").
-                                - Wenn der Nutzer eine Aufgabe oder Absicht mit einem Datum oder Frist (wie "morgen", "am Dienstag", "nächste Woche"), aber OHNE konkrete Uhrzeit äußert (z.B. "Ich muss morgen einkaufen gehen" oder "Ich muss morgen meine Tochter abholen"), ist das ZWINGEND eine Notiz/To-Do (Typ "note"). Das genannte Datum/Frist (z.B. "Morgen") MUSS zwingend im Text bei "note_text" erhalten bleiben! Erfinde niemals eigenmächtig eine Uhrzeit oder einen Kalendereintrag, wenn keine Uhrzeit genannt wurde!
+                                1. KALENDER-ERSTELLUNG (WICHTIG): Wenn der Nutzer einen Termin anlegt (z.B. "Trage Termin X am [Datum/Uhrzeit] ein"), musst du zwingend den Typ "calendar" wählen und das Feld "start_time" als exaktes ISO-Datum (YYYY-MM-DDTHH:mm:ss) im Jahr 2026 ausfüllen! Wenn keine Uhrzeit genannt wird, setze standardmäßig 09:00:00 ein (z.B. 2026-09-17T09:00:00).
                                 2. KEINE FRAGEN ALS TO-DO SPEICHERN: Wenn der Nutzer fragt "Welche Termine habe ich?", "Brauche ich einen Regenschirm?" oder allgemeine Fragen stellt, wähle niemals den Typ "note"!
                                 3. SPRACH-STIL: Sag NIEMALS "Ich habe gemerkt...". Antworte immer natürlich und flüssig.
                                 4. GRAMMATIK: Achte bei Gegenständen streng auf die deutsche Grammatik.
@@ -834,9 +823,9 @@
                                 - "item_name": string (Name des Gegenstands bei store/query)
                                 - "item_location": string (Der genaue Ort im Zustand)
                                 - "item_category": string (Kategorie: "Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer", "Sonstiges")
-                                - "note_text": string (Der vollständige To-Do-Text inklusive Frist/Datum wie "Morgen einkaufen gehen")
+                                - "note_text": string (Nur bei echten To-Dos oder Notizen)
                                 - "summary": string (Titel für Kalender)
-                                - "start_time": string (Exaktes ISO-Datum im Format YYYY-MM-DDTHH:mm:ss für Kalender, nur bei explizitem Zeitbezug mit Uhrzeit)
+                                - "start_time": string (Exaktes ISO-Datum im Format YYYY-MM-DDTHH:mm:ss für Kalender, z.B. 2026-09-17T14:00:00)
                                 - "calendar_delete_query": string (Suchbegriff des zu löschenden Termins bei Typ calendar_delete)
                                 - "reply": string (Deine komplette, natürliche, fehlerfreie Antwort auf Deutsch, die per Sprachausgabe vorgelesen wird!)`
                             },
@@ -916,18 +905,13 @@
                     calendarEntries.unshift(newCalEntry);
                     calendarEntries.sort((a, b) => new Date(a.isoDate) - new Date(b.isoDate));
                     setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
-                    renderAllLists();
                 } else if (aiData.type === 'note') {
                     let noteContent = aiData.note_text || text;
-                    noteContent = noteContent.charAt(0).toUpperCase() + noteContent.slice(1);
-
-                    // Erstellungsdatum generieren (z.B. "Erstellt am 16.09.2026")
-                    const creationDateStr = `Erstellt am ${now.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+                    noteContent = noteContent.replace(/\s+(am|um)\s+.*/gi, '').trim();
 
                     const newTodoEntry = {
                         id: Date.now(),
-                        text: noteContent,
-                        createdDate: creationDateStr
+                        text: noteContent
                     };
                     todoEntries.unshift(newTodoEntry);
                     setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
@@ -1099,15 +1083,11 @@
             } else {
                 todoList.innerHTML = '';
                 todoEntries.forEach(entry => {
-                    // Falls ein älteres To-Do noch kein Erstellungsdatum hat, fangen wir das ab
-                    const dateDisplay = entry.createdDate ? `<div class="text-xs text-slate-400 mt-0.5">${entry.createdDate}</div>` : '';
-
                     const li = document.createElement('li');
                     li.className = "bg-slate-50 p-3 rounded-xl border border-slate-100 flex justify-between items-center text-base";
                     li.innerHTML = `
                         <div>
                             <span>📝 ${entry.text}</span>
-                            ${dateDisplay}
                         </div>
                         <button onclick="deleteTodoEntry(${entry.id})" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1 rounded-lg text-sm font-semibold ml-2">
                             Erledigt
