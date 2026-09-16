@@ -565,7 +565,19 @@
             if (relevantItems.length > 0) {
                 relevantItems.forEach((item) => {
                     let capitalizedName = item.name.charAt(0).toUpperCase() + item.name.slice(1);
-                    briefingText += `Denk dran: Dein ${capitalizedName} ${item.loc}. `;
+                    let lowerName = item.name.toLowerCase();
+                    let article = "Dein";
+                    let verbLoc = item.loc;
+                    
+                    if (lowerName.endsWith('e') && lowerName !== "schlüssele") {
+                        article = "Deine";
+                    }
+                    
+                    verbLoc = verbLoc.replace(/^auf den\b/i, "auf dem")
+                                     .replace(/^in den\b/i, "im")
+                                     .replace(/^an den\b/i, "am");
+
+                    briefingText += `Denk dran: ${article} ${capitalizedName} ${verbLoc}. `;
                 });
             }
 
@@ -619,6 +631,7 @@
                                 1. KEINE FRAGEN ALS TO-DO SPEICHERN: Wenn der Nutzer fragt "Welche Termine habe ich?", "Was habe ich vor?", "Wo ist mein Schlüssel?" oder allgemeine Fragen stellt, darfst du NIEMALS den Typ "note" wählen! Das ist eine reine Informationsabfrage (Typ "chat" oder "item_query"). Speichere niemals die Frage des Nutzers als To-Do!
                                 2. EXAKTES DATUM BEACHTEN: Achte penibel auf das genaue Datum, das der Nutzer nennt (z.B. "am 17."). Verwechsle ein genanntes Datum NIEMALS mit "morgen" oder "heute", es sei denn, der Nutzer sagt explizit "morgen".
                                 3. SPRACH-STIL: Sag NIEMALS "Ich habe gemerkt...". Antworte immer natürlich und flüssig.
+                                4. GRAMMATIK: Achte bei Gegenständen streng auf die deutsche Grammatik (z.B. "Deine Brille liegt auf dem Tisch", nicht "Dein Brille liegt auf den Tisch").
 
                                 Gib ein JSON-Objekt zurück mit folgenden Feldern:
                                 - "type": string (Wähle aus: "chat", "name_change", "item_store", "item_query", "note", "calendar")
@@ -735,7 +748,19 @@
 
                     if (foundItem) {
                         if (!aiData.reply || aiData.reply.includes("habe gemerkt")) {
-                            finalReply = `Dein ${matchedName} ${foundItem.location}.`;
+                            let article = "Dein";
+                            let lowerMatched = matchedName.toLowerCase();
+                            let cleanLoc = foundItem.location;
+                            
+                            if (lowerMatched.endsWith('e') && lowerMatched !== "schlüssele") {
+                                article = "Deine";
+                            }
+                            
+                            cleanLoc = cleanLoc.replace(/^auf den\b/i, "auf dem")
+                                             .replace(/^in den\b/i, "im")
+                                             .replace(/^an den\b/i, "am");
+
+                            finalReply = `${article} ${matchedName} ${cleanLoc}.`;
                         }
                     }
                 }
