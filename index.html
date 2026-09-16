@@ -129,7 +129,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.33</span>
+        <span>Version 4.34</span>
     </footer>
 
     <!-- JavaScript -->
@@ -569,11 +569,10 @@
             recordText.textContent = "SPRECHEN";
         }
 
-        // Hilfsfunktion: Aktuelle GPS-Position ermitteln (mit Fallback auf Schwarzenbek)
         function getCurrentPositionAsync() {
             return new Promise((resolve) => {
                 if (!navigator.geolocation) {
-                    resolve({ latitude: 53.5135, longitude: 10.4182 }); // Fallback Schwarzenbek
+                    resolve({ latitude: 53.5135, longitude: 10.4182 });
                     return;
                 }
                 navigator.geolocation.getCurrentPosition(
@@ -584,15 +583,13 @@
                         });
                     },
                     (error) => {
-                        console.warn("Geolocation fehlgeschlagen, nutze Standard-Koordinaten:", error);
-                        resolve({ latitude: 53.5135, longitude: 10.4182 }); // Fallback Schwarzenbek
+                        resolve({ latitude: 53.5135, longitude: 10.4182 });
                     },
                     { timeout: 5000, maximumAge: 60000 }
                 );
             });
         }
 
-        // Standort-Abfrage Befehl ("Wo bin ich?")
         async function handleLocationQuery() {
             statusMessage.textContent = "Ermittle genauen Standort...";
             const coords = await getCurrentPositionAsync();
@@ -615,9 +612,7 @@
                     speak(locationText);
                     return;
                 }
-            } catch (e) {
-                console.error("Standort-Auflösung Fehler:", e);
-            }
+            } catch (e) {}
 
             let fallbackText = `Deine aktuellen Koordinaten sind Breitengrad ${coords.latitude.toFixed(4)}, Längengrad ${coords.longitude.toFixed(4)}.`;
             statusMessage.textContent = fallbackText;
@@ -626,7 +621,6 @@
 
         async function triggerDailyBriefing() {
             statusMessage.textContent = "Ermittle Standort & Wetter...";
-            
             const coords = await getCurrentPositionAsync();
 
             let weatherText = "";
@@ -660,9 +654,7 @@
                         weatherAdvice = "Das Wetter ist ganz angenehm. ";
                     }
                 }
-            } catch (e) {
-                console.error("Wetterfehler:", e);
-            }
+            } catch (e) {}
 
             const nowBriefing = new Date();
             const currentTimeStr = nowBriefing.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
@@ -694,40 +686,6 @@
                 briefingText += "Offene To-Dos: ";
                 todoEntries.forEach(e => {
                     briefingText += `${e.text}. `;
-                });
-            }
-
-            const importantKeywords = ["schlüssel", "brille", "portemonnaie", "geldbeutel", "beutel", "geld", "ausweis", "unterlage", "unterlagen", "dokument", "dokumente", "medikament", "medikamente", "tablette", "tabletten", "karte", "karten"];
-            const memKeys = Object.keys(memoryItems);
-            let relevantItems = [];
-
-            memKeys.forEach(k => {
-                let itemObj = memoryItems[k];
-                let loc = typeof itemObj === 'object' ? itemObj.location : itemObj;
-                let lowerKey = k.toLowerCase();
-                
-                let isImportant = importantKeywords.some(keyword => lowerKey.includes(keyword));
-                if (isImportant) {
-                    relevantItems.push({ name: k, loc: loc });
-                }
-            });
-
-            if (relevantItems.length > 0) {
-                relevantItems.forEach((item) => {
-                    let capitalizedName = item.name.charAt(0).toUpperCase() + item.name.slice(1);
-                    let lowerName = item.name.toLowerCase();
-                    let article = "Dein";
-                    let verbLoc = item.loc;
-                    
-                    if (lowerName.endsWith('e') && lowerName !== "schlüssele") {
-                        article = "Deine";
-                    }
-                    
-                    verbLoc = verbLoc.replace(/^auf den\b/i, "auf dem")
-                                     .replace(/^in den\b/i, "im")
-                                     .replace(/^an den\b/i, "am");
-
-                    briefingText += `Denk dran: ${article} ${capitalizedName} ${verbLoc}. `;
                 });
             }
 
@@ -763,17 +721,8 @@
                         else if (code >= 95) condition = "Gewitter";
 
                         weatherContext = `Aktuelles Live-Wetter am aktuellen Standort: ${condition}, ${temp} Grad.`;
-                        if (code >= 51 && code <= 67) {
-                            weatherContext += " Es regnet, ein Regenschirm wird dringend empfohlen!";
-                        } else if (temp < 12) {
-                            weatherContext += " Es ist frisch, eine Jacke wird empfohlen.";
-                        } else {
-                            weatherContext += " Regen ist aktuell keiner zu erwarten.";
-                        }
                     }
-                } catch (e) {
-                    console.error("Wetter-Abruf Fehler:", e);
-                }
+                } catch (e) {}
             }
 
             const memoryWithDetails = {};
@@ -781,10 +730,8 @@
                 let item = memoryItems[k];
                 let loc = typeof item === 'object' ? item.location : item;
                 let ts = typeof item === 'object' ? item.timestamp : now.getTime();
-                
                 let diffDays = Math.floor((now.getTime() - ts) / (1000 * 60 * 60 * 24));
                 let timeDesc = diffDays === 0 ? "heute" : (diffDays === 1 ? "vor 1 Tag" : `vor ${diffDays} Tagen`);
-                
                 memoryWithDetails[k] = { location: loc, abgelegt: timeDesc };
             }
             const memoryContext = JSON.stringify(memoryWithDetails);
@@ -811,11 +758,10 @@
                                 Kalender: ${calendarContext}
                                 To-Dos: ${todoContext}
 
-                                ABSOLUT STRENGE REGELN (WICHTIGSTE PRIORITÄT!):
-                                1. KALENDER-ERSTELLUNG (WICHTIG): Wenn der Nutzer einen Termin anlegt (z.B. "Trage Termin X am [Datum/Uhrzeit] ein"), musst du zwingend den Typ "calendar" wählen und das Feld "start_time" als exaktes ISO-Datum (YYYY-MM-DDTHH:mm:ss) im Jahr 2026 ausfüllen! Wenn keine Uhrzeit genannt wird, setze standardmäßig 09:00:00 ein (z.B. 2026-09-17T09:00:00).
-                                2. KEINE FRAGEN ALS TO-DO SPEICHERN: Wenn der Nutzer fragt "Welche Termine habe ich?", "Brauche ich einen Regenschirm?" oder allgemeine Fragen stellt, wähle niemals den Typ "note"!
+                                ABSOLUT STRENGE REGELN FÜR TERMINE & TO-DOS (WICHTIGSTE PRIORITÄT!):
+                                1. KALENDER-ERSTELLUNG (NUR BEI DATUM + UHRZEIT): Ein Eintrag wird NUR DANN ein Termin ("calendar"), wenn eine konkrete Uhrzeit genannt wird (z.B. "um 14 Uhr", "um 15:30 Uhr"). Wenn Jemand sagt "Ich muss Isabelle morgen abholen" oder "Ich muss übermorgen einkaufen", ist das KEIN Termin, sondern IMMER eine To-Do-Notiz ("note"), da keine genaue Uhrzeit genannt wurde!
+                                2. TO-DOS: Ausagen wie "ich muss X machen", "ich muss einkaufen", "wir müssen X erledigen" oder Aufgaben ohne feste Uhrzeit gehören zwingend in den Typ "note".
                                 3. SPRACH-STIL: Sag NIEMALS "Ich habe gemerkt...". Antworte immer natürlich und flüssig.
-                                4. GRAMMATIK: Achte bei Gegenständen streng auf die deutsche Grammatik.
 
                                 Gib ein JSON-Objekt zurück mit folgenden Feldern:
                                 - "type": string (Wähle aus: "chat", "name_change", "item_store", "item_query", "note", "calendar", "calendar_delete")
@@ -823,9 +769,9 @@
                                 - "item_name": string (Name des Gegenstands bei store/query)
                                 - "item_location": string (Der genaue Ort im Zustand)
                                 - "item_category": string (Kategorie: "Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer", "Sonstiges")
-                                - "note_text": string (Nur bei echten To-Dos oder Notizen)
+                                - "note_text": string (Nur bei To-Dos oder Notizen)
                                 - "summary": string (Titel für Kalender)
-                                - "start_time": string (Exaktes ISO-Datum im Format YYYY-MM-DDTHH:mm:ss für Kalender, z.B. 2026-09-17T14:00:00)
+                                - "start_time": string (Exaktes ISO-Datum im Format YYYY-MM-DDTHH:mm:ss NUR WENN EINE UHRZEIT VORHANDEN IST)
                                 - "calendar_delete_query": string (Suchbegriff des zu löschenden Termins bei Typ calendar_delete)
                                 - "reply": string (Deine komplette, natürliche, fehlerfreie Antwort auf Deutsch, die per Sprachausgabe vorgelesen wird!)`
                             },
@@ -846,13 +792,6 @@
                 const aiData = JSON.parse(data.choices[0].message.content);
 
                 let finalReply = aiData.reply || "Alles klar!";
-
-                const lowerText = text.toLowerCase();
-                if (lowerText.includes("termin") || lowerText.includes("was habe ich") || lowerText.includes("was steht") || lowerText.includes("wo ist")) {
-                    if (aiData.type === 'note') {
-                        aiData.type = 'chat';
-                    }
-                }
 
                 if (aiData.type === 'calendar_delete') {
                     let searchQuery = (aiData.calendar_delete_query || text).toLowerCase();
@@ -907,11 +846,16 @@
                     setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
                 } else if (aiData.type === 'note') {
                     let noteContent = aiData.note_text || text;
-                    noteContent = noteContent.replace(/\s+(am|um)\s+.*/gi, '').trim();
+                    
+                    // Erstellungsdatum formatiern (z.B. "17.09.2026, 12:20 Uhr" oder "Heute, 12:20 Uhr")
+                    const creationDateStr = now.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' });
+                    const creationTimeStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
+                    const fullCreationStamp = `Eingetragen am ${creationDateStr} um ${creationTimeStr} Uhr`;
 
                     const newTodoEntry = {
                         id: Date.now(),
-                        text: noteContent
+                        text: noteContent,
+                        createdDate: fullCreationStamp
                     };
                     todoEntries.unshift(newTodoEntry);
                     setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
@@ -1013,9 +957,7 @@
                     const data = await res.json();
                     return data.id;
                 }
-            } catch (e) {
-                console.error(e);
-            }
+            } catch (e) {}
             return null;
         }
 
@@ -1088,6 +1030,7 @@
                     li.innerHTML = `
                         <div>
                             <span>📝 ${entry.text}</span>
+                            <div class="text-xs text-slate-400">${entry.createdDate || 'Eingetragen'}</div>
                         </div>
                         <button onclick="deleteTodoEntry(${entry.id})" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1 rounded-lg text-sm font-semibold ml-2">
                             Erledigt
