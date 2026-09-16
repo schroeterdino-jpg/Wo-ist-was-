@@ -129,7 +129,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.36</span>
+        <span>Version 4.37</span>
     </footer>
 
     <!-- JavaScript -->
@@ -918,13 +918,16 @@
                     setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
                     renderAllLists();
                 } else if (aiData.type === 'note') {
-                    // Das Datum/Morgen bleibt nun im To-Do Text erhalten!
                     let noteContent = aiData.note_text || text;
                     noteContent = noteContent.charAt(0).toUpperCase() + noteContent.slice(1);
 
+                    // Erstellungsdatum generieren (z.B. "Erstellt am 16.09.2026")
+                    const creationDateStr = `Erstellt am ${now.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+
                     const newTodoEntry = {
                         id: Date.now(),
-                        text: noteContent
+                        text: noteContent,
+                        createdDate: creationDateStr
                     };
                     todoEntries.unshift(newTodoEntry);
                     setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
@@ -1096,11 +1099,15 @@
             } else {
                 todoList.innerHTML = '';
                 todoEntries.forEach(entry => {
+                    // Falls ein älteres To-Do noch kein Erstellungsdatum hat, fangen wir das ab
+                    const dateDisplay = entry.createdDate ? `<div class="text-xs text-slate-400 mt-0.5">${entry.createdDate}</div>` : '';
+
                     const li = document.createElement('li');
                     li.className = "bg-slate-50 p-3 rounded-xl border border-slate-100 flex justify-between items-center text-base";
                     li.innerHTML = `
                         <div>
                             <span>📝 ${entry.text}</span>
+                            ${dateDisplay}
                         </div>
                         <button onclick="deleteTodoEntry(${entry.id})" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1 rounded-lg text-sm font-semibold ml-2">
                             Erledigt
