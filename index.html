@@ -129,7 +129,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.37</span>
+        <span>Version 4.38</span>
     </footer>
 
     <!-- JavaScript -->
@@ -205,6 +205,26 @@
         }
 
         let calendarEntries = JSON.parse(getPersistentData('helfer_calendar_entries', '[]')) || [];
+        
+        // Sofortiger Bereinigungs-Durchlauf gegen bereits im Speicher befindliche Feiertage
+        const ignoreKeywordsCleanup = [
+            "weltfrauentag", "weltkindertag", "feiertag", "gesetzlicher", "holiday", 
+            "muttertag", "vatertag", "sommerzeit", "winterzeit", "daylight", "saving", 
+            "ostern", "pfingsten", "weihnachten", "neujahr", "karfreitag", "himmelfahrt", 
+            "arbeit", "einheit", "reformationstag", "könige", "valentinstag", "halloween", 
+            "silvester", "fasching", "karneval", "children's", "unity", "good friday", 
+            "easter", "christmas", "new year", "ascension", "pentecost", "corpus christi", 
+            "assumption", "all saints", "boxing day", "palmsonntag", "palm sunday",
+            "ostermontag", "easter monday", "may day", "mother's day", "father's day",
+            "pfingstmontag", "whit monday", "aschermittwoch", "fronleichnam",
+            "buß- und bettag", "allerheiligen", "erntedankfest", "martini", "nikolaus"
+        ];
+        calendarEntries = calendarEntries.filter(e => {
+            const lower = e.text.toLowerCase();
+            return !ignoreKeywordsCleanup.some(kw => lower.includes(kw));
+        });
+        setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
+
         let todoEntries = JSON.parse(getPersistentData('helfer_todo_entries', '[]')) || [];
         let memoryItems = JSON.parse(getPersistentData('helfer_memory', '{}')) || {};
         let savedContacts = JSON.parse(getPersistentData('helfer_contacts', '{}')) || {};
@@ -332,7 +352,6 @@
             maxDate.setFullYear(maxDate.getFullYear() + 2);
             const maxIso = maxDate.toISOString();
 
-            // Nur den primären Google-Kalender abfragen
             const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${nowIso}&timeMax=${maxIso}&singleEvents=true&orderBy=startTime`;
 
             try {
@@ -355,7 +374,7 @@
                     let existingCalendarIds = new Set(calendarEntries.map(e => e.calendarId).filter(Boolean));
                     let seenSignatures = new Set(calendarEntries.map(e => `${e.text}_${e.isoDate}`.toLowerCase()));
 
-                    // Ausschlussliste für unerwünschte Feiertage/Systemeinträge im Hauptkalender
+                    // Umfassende Ausschlussliste gegen Feiertage, Dubletten & Jahreskreistage
                     const ignoreKeywords = [
                         "weltfrauentag", "weltkindertag", "feiertag", "gesetzlicher", "holiday", 
                         "muttertag", "vatertag", "sommerzeit", "winterzeit", "daylight", "saving", 
@@ -363,10 +382,13 @@
                         "arbeit", "einheit", "reformationstag", "könige", "valentinstag", "halloween", 
                         "silvester", "fasching", "karneval", "children's", "unity", "good friday", 
                         "easter", "christmas", "new year", "ascension", "pentecost", "corpus christi", 
-                        "assumption", "all saints", "boxing day"
+                        "assumption", "all saints", "boxing day", "palmsonntag", "palm sunday",
+                        "ostermontag", "easter monday", "may day", "mother's day", "father's day",
+                        "pfingstmontag", "whit monday", "aschermittwoch", "fronleichnam",
+                        "buß- und bettag", "allerheiligen", "erntedankfest", "martini", "nikolaus"
                     ];
 
-                    // Vorherige Feiertage aus dem lokalen Cache direkt löschen
+                    // Lokale Feiertage sofort rausfiltern
                     calendarEntries = calendarEntries.filter(e => {
                         const lower = e.text.toLowerCase();
                         return !ignoreKeywords.some(kw => lower.includes(kw));
