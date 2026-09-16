@@ -129,7 +129,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.29</span>
+        <span>Version 4.30</span>
     </footer>
 
     <!-- JavaScript -->
@@ -189,36 +189,24 @@
             setPersistentData('user_custom_name', currentUserName);
             updateUserGreeting();
         });
-        userNameInput.addEventListener('change', () => {
-            currentUserName = userNameInput.value.trim() || "Dino";
-            setPersistentData('user_custom_name', currentUserName);
-            updateUserGreeting();
-        });
 
         apiKeyInput.addEventListener('input', () => {
             setPersistentData('user_api_key', apiKeyInput.value.trim());
             connectionStatus.textContent = "API-Key gespeichert.";
-        });
-        apiKeyInput.addEventListener('change', () => {
-            setPersistentData('user_api_key', apiKeyInput.value.trim());
         });
 
         googleClientIdInput.addEventListener('input', () => {
             setPersistentData('google_client_id', googleClientIdInput.value.trim());
             connectionStatus.textContent = "Client-ID gespeichert.";
         });
-        googleClientIdInput.addEventListener('change', () => {
-            setPersistentData('google_client_id', googleClientIdInput.value.trim());
-        });
 
         function updateUserGreeting() {
             userNameDisplay.textContent = `Hallo, ${currentUserName}!`;
         }
 
-        // --- HINGESCHAUT: Alte, ferne Termine aus dem Speicher direkt beim Laden radikal rauswerfen ---
         let rawCalendarEntries = JSON.parse(getPersistentData('helfer_calendar_entries', '[]')) || [];
         const maxAllowedDate = new Date();
-        maxAllowedDate.setMonth(maxAllowedDate.getMonth() + 6); // Max 6 Monate in die Zukunft
+        maxAllowedDate.setMonth(maxAllowedDate.getMonth() + 6);
 
         let calendarEntries = rawCalendarEntries.filter(entry => {
             if (!entry.isoDate) return true;
@@ -226,7 +214,6 @@
             if (isNaN(entryDate)) return true;
             return entryDate <= maxAllowedDate;
         });
-        // Direkt bereinigte Liste wieder sichern
         setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
 
         let todoEntries = JSON.parse(getPersistentData('helfer_todo_entries', '[]')) || [];
@@ -288,9 +275,13 @@
         let tokenClient;
         let accessToken = getPersistentData('google_access_token', '');
 
-        if (accessToken) {
-            fetchGoogleCalendarEvents();
-        }
+        // Automatischer Check beim Start: Wenn Token vorhanden, direkt Kalender abrufen
+        window.addEventListener('load', () => {
+            if (accessToken) {
+                connectionStatus.textContent = "✅ Mit Google Kalender verbunden!";
+                fetchGoogleCalendarEvents();
+            }
+        });
 
         function toggleSettings() {
             settingsBox.classList.toggle('hidden');
@@ -315,11 +306,10 @@
                         accessToken = response.access_token;
                         setPersistentData('google_access_token', accessToken);
                         connectionStatus.textContent = "✅ Mit Google Kalender verbunden!";
-                        
                         fetchGoogleCalendarEvents();
                     },
                 });
-                tokenClient.requestAccessToken();
+                tokenClient.requestAccessToken({ prompt: 'consent' });
             } catch (error) {
                 connectionStatus.textContent = `❌ Fehler: ${error.message}`;
             }
@@ -342,6 +332,15 @@
                     headers: { 'Authorization': `Bearer ${accessToken}` }
                 });
 
+                if (response.status === 401) {
+                    // Token abgelaufen
+                    accessToken = '';
+                    localStorage.removeItem('google_access_token');
+                    sessionStorage.removeItem('google_access_token');
+                    connectionStatus.textContent = "⚠️ Google-Sitzung abgelaufen. Bitte neu verbinden.";
+                    return;
+                }
+
                 if (response.ok) {
                     const data = await response.json();
                     const googleItems = data.items || [];
@@ -353,7 +352,6 @@
                         const startRaw = item.start.dateTime || item.start.date;
                         if (!startRaw) return;
 
-                        // Zusätzlicher Schutz: Termine außerhalb des 6-Monatsfensters ignorieren
                         const itemDate = new Date(startRaw);
                         if (!isNaN(itemDate) && (itemDate < now || itemDate > maxDate)) {
                             return;
@@ -392,7 +390,6 @@
                         }
                     });
 
-                    // Erneut filtern und sortieren
                     calendarEntries = calendarEntries.filter(e => {
                         if (!e.isoDate) return true;
                         const d = new Date(e.isoDate);
@@ -425,7 +422,6 @@
             currentAudio.playbackRate = 1.35; 
 
             currentAudio.play().catch(err => {
-                console.log("Audio-Stream-Fallback aktiv:", err);
                 fallbackSpeak(text, onComplete);
             });
 
@@ -614,6 +610,7 @@
             const currentTimeStr = nowBriefing.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
             let briefingText = `Guten Tag, ${currentUserName}. Es ist jetzt ${currentTimeStr} Uhr. Hier ist dein kurzer Überblick. ${weatherText} ${weatherAdvice}`;
 
+            // NUR Termine für diesen Tag (heute)
             const todayStr = nowBriefing.toLocaleDateString('en-CA');
             const todayCalendarEntries = calendarEntries.filter(e => {
                 if (!e.isoDate) return false;
@@ -626,7 +623,7 @@
                     let timeOnly = "ganztägig";
                     try {
                         const parsedDate = new Date(e.isoDate);
-                        if (!isNaN(parsedDate)) {
+                        if (!isNaN(parsedDate) && e.isoDate.includes('T')) {
                             timeOnly = parsedDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' }) + " Uhr";
                         }
                     } catch (err) {}
@@ -724,21 +721,21 @@
                                 To-Dos: ${todoContext}
 
                                 ABSOLUT STRENGE REGELN (WICHTIGSTE PRIORITÄT!):
-                                1. KEINE FRAGEN ALS TO-DO SPEICHERN: Wenn der Nutzer fragt "Welche Termine habe ich?", "Was habe ich vor?", "Wo ist mein Schlüssel?" oder allgemeine Fragen stellt, darfst du NIEMALS den Typ "note" wählen! Das ist eine reine Informationsabfrage (Typ "chat" oder "item_query"). Speichere niemals die Frage des Nutzers als To-Do!
-                                2. EXAKTES DATUM BEACHTEN: Achte penibel auf das genaue Datum, das der Nutzer nennt (z.B. "am 17."). Verwechsle ein genanntes Datum NIEMALS mit "morgen" oder "heute", es sei denn, der Nutzer sagt explizit "morgen".
+                                1. KALENDER-ERSTELLUNG (WICHTIG): Wenn der Nutzer einen Termin anlegt (z.B. "Trage Termin X am [Datum/Uhrzeit] ein"), musst du zwingend den Typ "calendar" wählen und das Feld "start_time" als exaktes ISO-Datum (YYYY-MM-DDTHH:mm:ss) im Jahr 2026 ausfüllen! Wenn keine Uhrzeit genannt wird, setze standardmäßig 09:00:00 ein (z.B. 2026-09-17T09:00:00).
+                                2. KEINE FRAGEN ALS TO-DO SPEICHERN: Wenn der Nutzer fragt "Welche Termine habe ich?", "Was habe ich vor?" oder allgemeine Fragen stellt, wähle niemals den Typ "note"!
                                 3. SPRACH-STIL: Sag NIEMALS "Ich habe gemerkt...". Antworte immer natürlich und flüssig.
-                                4. GRAMMATIK: Achte bei Gegenständen streng auf die deutsche Grammatik (z.B. "Deine Brille liegt auf dem Tisch", nicht "Dein Brille liegt auf den Tisch").
+                                4. GRAMMATIK: Achte bei Gegenständen streng auf die deutsche Grammatik.
 
                                 Gib ein JSON-Objekt zurück mit folgenden Feldern:
                                 - "type": string (Wähle aus: "chat", "name_change", "item_store", "item_query", "note", "calendar", "calendar_delete")
                                 - "new_name": string (Falls er seinen Namen ändern will)
                                 - "item_name": string (Name des Gegenstands bei store/query)
-                                - "item_location": string (Der genaue Ort im Zustand, z.B. "hängt am Schlüsselbrett" oder "liegt auf dem Tisch")
+                                - "item_location": string (Der genaue Ort im Zustand)
                                 - "item_category": string (Kategorie: "Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer", "Sonstiges")
-                                - "note_text": string (Nur bei echten To-Dos oder Notizen – NIEMALS bei Fragen!)
+                                - "note_text": string (Nur bei echten To-Dos oder Notizen)
                                 - "summary": string (Titel für Kalender)
-                                - "start_time": string (Exaktes ISO-Datum im Format YYYY-MM-DDTHH:mm:ss für Kalender)
-                                - "calendar_delete_query": string (Suchbegriff oder Titel des zu löschenden Termins bei Typ calendar_delete)
+                                - "start_time": string (Exaktes ISO-Datum im Format YYYY-MM-DDTHH:mm:ss für Kalender, z.B. 2026-09-17T14:00:00)
+                                - "calendar_delete_query": string (Suchbegriff des zu löschenden Termins bei Typ calendar_delete)
                                 - "reply": string (Deine komplette, natürliche, fehlerfreie Antwort auf Deutsch, die per Sprachausgabe vorgelesen wird!)`
                             },
                             {
@@ -764,11 +761,6 @@
                     if (aiData.type === 'note') {
                         aiData.type = 'chat';
                     }
-                }
-
-                if (aiData.type === 'calendar' && (!aiData.start_time || aiData.start_time === "" || aiData.start_time === "null")) {
-                    aiData.type = 'note';
-                    aiData.note_text = aiData.summary || text;
                 }
 
                 if (aiData.type === 'calendar_delete') {
@@ -820,6 +812,7 @@
                         isoDate: rawIsoTime
                     };
                     calendarEntries.unshift(newCalEntry);
+                    calendarEntries.sort((a, b) => new Date(a.isoDate) - new Date(b.isoDate));
                     setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
                 } else if (aiData.type === 'note') {
                     let noteContent = aiData.note_text || text;
@@ -836,7 +829,6 @@
                     let cleanLoc = aiData.item_location;
                     
                     cleanLoc = cleanLoc.replace(/\b(im|in der|in dem|auf dem|auf der|an der|am)\s+(in|im|in der|in dem|auf|an)\b/gi, '$1');
-                    
                     let category = aiData.item_category || "Sonstiges";
                     
                     memoryItems[cleanName] = {
@@ -917,7 +909,7 @@
             };
 
             try {
-                const res = await fetch('https://api.googleapis.com/calendar/v3/calendars/primary/events', {
+                const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${accessToken}`,
@@ -943,9 +935,7 @@
                         method: 'DELETE',
                         headers: { 'Authorization': `Bearer ${accessToken}` }
                     });
-                } catch (e) {
-                    console.error("Fehler beim Löschen im Google Kalender:", e);
-                }
+                } catch (e) {}
             }
 
             calendarEntries = calendarEntries.filter(e => e.id !== id);
@@ -1003,8 +993,7 @@
                 todoList.innerHTML = '';
                 todoEntries.forEach(entry => {
                     const li = document.createElement('li');
-                    li.className = "bg-slate-50 p-3 rounded-xl border border-slate-100 flex justify-between items-center text-base";
-                    li.innerHTML = `
+                    li.className = "bg-slate-50 p-3 නොව p-3 rounded-xl border border-slate-100 flex justify-between items-center text-base">
                         <div>
                             <span>📝 ${entry.text}</span>
                         </div>
