@@ -151,7 +151,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.34</span>
+        <span>Version 4.36</span>
     </footer>
 
     <!-- JavaScript -->
@@ -188,6 +188,22 @@
         let lastSpokenText = "";
         let visiblePasswords = {};
 
+        // Zustand für schrittweise Passwort-Eingabe
+        let passwordWizard = {
+            active: false,
+            step: 0, // 1: wartet auf Dienst-Name, 2: wartet auf Benutzername/E-Mail, 3: wartet auf Passwort
+            service: "",
+            username: ""
+        };
+
+        // Automatische Korrektur für "Schröder" zu "Schroeder"
+        function correctNameSpelling(text) {
+            if (!text) return "";
+            return text
+                .replace(/Schröder/g, "Schroeder")
+                .replace(/schröder/g, "schroeder");
+        }
+
         function confirmAction(question, onConfirm) {
             confirmModalText.textContent = question;
             confirmModal.classList.remove('hidden');
@@ -214,15 +230,16 @@
             if (!val || val === "null" || val === "undefined") {
                 return defaultValue;
             }
-            return val;
+            return correctNameSpelling(val);
         }
 
         function setPersistentData(key, value) {
-            try { localStorage.setItem(key, value); } catch (e) {}
-            try { sessionStorage.setItem(key, value); } catch (e) {}
+            const correctedValue = correctNameSpelling(value);
+            try { localStorage.setItem(key, correctedValue); } catch (e) {}
+            try { sessionStorage.setItem(key, correctedValue); } catch (e) {}
         }
 
-        let currentUserName = getPersistentData('user_custom_name', 'Dino');
+        let currentUserName = correctNameSpelling(getPersistentData('user_custom_name', 'Dino'));
         userNameInput.value = currentUserName;
         updateUserGreeting();
 
@@ -234,7 +251,7 @@
         setPersistentData('google_client_id', savedClientId);
 
         userNameInput.addEventListener('input', () => {
-            currentUserName = userNameInput.value.trim() || "Dino";
+            currentUserName = correctNameSpelling(userNameInput.value.trim() || "Dino");
             setPersistentData('user_custom_name', currentUserName);
             updateUserGreeting();
         });
@@ -262,7 +279,7 @@
         renderContactList();
 
         function saveContact() {
-            const name = contactNameInput.value.trim();
+            const name = correctNameSpelling(contactNameInput.value.trim());
             const phone = contactPhoneInput.value.trim();
             if (name && phone) {
                 savedContacts[name.toLowerCase()] = { originalName: name, phone: phone };
@@ -397,11 +414,6 @@
             }
         }
 
-        // Keine automatischen Ersetzungen mehr – gesprochener Text wird exakt 1:1 durchgereicht
-        function formatSpokenPunctuations(text) {
-            return text;
-        }
-
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition = null;
         let isRecording = false;
@@ -414,7 +426,7 @@
 
             recognition.onstart = function() {
                 isRecording = true;
-                statusMessage.textContent = "Höre zu... Bitte sprechen.";
+                statusMessage.textContent = passwordWizard.active ? "Modus aktiv: Bitte antworten..." : "Höre zu... Bitte sprechen.";
                 recordBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
                 recordBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700', 'animate-pulse');
                 recordText.textContent = "HÖRE...";
@@ -433,10 +445,10 @@
                 }
 
                 if (finalTranscript) {
-                    const cleanedSpeech = formatSpokenPunctuations(finalTranscript);
+                    const cleanedSpeech = correctNameSpelling(finalTranscript);
                     processUserCommand(cleanedSpeech);
                 } else if (interimTranscript) {
-                    statusMessage.textContent = `Höre: "${interimTranscript}"`;
+                    statusMessage.textContent = `Höre: "${correctNameSpelling(interimTranscript)}"`;
                 }
             };
 
@@ -455,15 +467,38 @@
         }
 
         function submitTextFallback() {
-            const text = textFallbackInput.value.trim();
+            const text = correctNameSpelling(textFallbackInput.value.trim());
             if (!text) return;
             textFallbackInput.value = '';
             processUserCommand(text);
         }
 
         function processUserCommand(speechResult) {
-            statusMessage.textContent = `Erkannt: "${speechResult}"`;
-            const lower = speechResult.toLowerCase();
+            const cleanedSpeech = correctNameSpelling(speechResult);
+            statusMessage.textContent = `Erkannt: "${cleanedSpeech}"`;
+            const lower = cleanedSpeech.toLowerCase();
+
+            // SCHRITT-FÜR-SCHRITT WIZARD FÜR PASSWÖRTER
+            if (passwordWizard.active) {
+                handlePasswordWizard(cleanedSpeech);
+                return;
+            }
+
+            // Prüfen, ob der Nutzer Zugangsdaten speichern möchte
+            if (lower.includes("zugangsdaten") || (lower.includes("passwort") && (lower.includes("speichern") || lower.includes("neu"))) || lower.includes("anmeldedaten")) {
+                let serviceName = lower.replace(/speichern|passwort|für|zugangsdaten|anmeldedaten|neues|mein|meine/gi, "").trim();
+                if (serviceName.length > 1) {
+                    passwordWizard.active = true;
+                    passwordWizard.step = 2; // Wir haben den Dienst, frage nach Benutzername/E-Mail
+                    passwordWizard.service = serviceName.charAt(0).toUpperCase() + serviceName.slice(1);
+                    speak(`Alles klar, ${passwordWizard.service}. Wie lautet dein Benutzername oder deine E-Mail-Adresse?`, () => startListeningAuto());
+                } else {
+                    passwordWizard.active = true;
+                    passwordWizard.step = 1; // Frage nach dem Dienst
+                    speak("Für welchen Dienst möchtest du Zugangsdaten speichern?", () => startListeningAuto());
+                }
+                return;
+            }
             
             if ((lower.includes("ruf") || lower.includes("anrufen")) && lower.includes("an")) {
                 handleCallCommand(lower);
@@ -472,7 +507,39 @@
             } else if (lower.includes("was steht auf meiner to-do-liste") || lower.includes("to do liste") || lower.includes("was habe ich auf der liste")) {
                 readTodoList();
             } else {
-                sendToGroqSmart(speechResult);
+                sendToGroqSmart(cleanedSpeech);
+            }
+        }
+
+        function handlePasswordWizard(text) {
+            const cleanText = correctNameSpelling(text.trim());
+            if (passwordWizard.step === 1) {
+                passwordWizard.service = cleanText.charAt(0).toUpperCase() + cleanText.slice(1);
+                passwordWizard.step = 2;
+                speak(`Wie lautet dein Benutzername oder deine E-Mail-Adresse für ${passwordWizard.service}?`, () => startListeningAuto());
+            } else if (passwordWizard.step === 2) {
+                passwordWizard.username = cleanText;
+                passwordWizard.step = 3;
+                speak("Und wie lautet das Passwort dazu?", () => startListeningAuto());
+            } else if (passwordWizard.step === 3) {
+                let password = cleanText;
+                let finalValue = `Benutzer: ${passwordWizard.username} | Passwort: ${password}`;
+                let cleanKey = passwordWizard.service.toLowerCase();
+
+                memoryItems[cleanKey] = {
+                    location: finalValue,
+                    timestamp: Date.now(),
+                    category: "Passwörter"
+                };
+                setPersistentData('helfer_memory', JSON.stringify(memoryItems));
+                renderAllLists();
+
+                passwordWizard.active = false;
+                passwordWizard.step = 0;
+                passwordWizard.service = "";
+                passwordWizard.username = "";
+
+                speak("Zugangsdaten sind gespeichert!", () => startListeningAuto());
             }
         }
 
@@ -627,6 +694,7 @@
         }
 
         async function sendToGroqSmart(text) {
+            const cleanedText = correctNameSpelling(text);
             const key = getPersistentData('user_api_key', '');
             statusMessage.textContent = "Verarbeite...";
 
@@ -658,21 +726,17 @@
                             {
                                 role: "system",
                                 content: `Du bist ${currentUserName}s smarter, absolut natürlicher und menschlicher Alltags-Assistent in Schwarzenbek. 
+                                WICHTIG: Der Nachname des Nutzers wird immer mit "oe" geschrieben ("Schroeder"), niemals mit "ö". 
                                 Aktuelles exaktes Datum heute ist ${todayStr}, Uhrzeit ist exakt ${currentClockTime} Uhr.
                                 Bisheriges Gedächtnis: ${JSON.stringify(memoryWithDetails)}
                                 Kalender: ${JSON.stringify(calendarEntries)}
                                 To-Dos: ${JSON.stringify(todoEntries)}
 
-                                WICHTIG FÜR PASSWÖRTER, E-MAILS & ZUGANGSDATEN:
-                                - Wenn der Nutzer Zugangsdaten, Benutzername, E-Mail-Adresse oder Passwörter speichert (z.B. "speichere meine Zugangsdaten für Google...", "Meine E-Mail ist...", "Passwort für..."), setze "type" auf "item_store", "item_category" auf "Passwörter", "item_name" auf den Dienst/Namen und "item_location" auf die exakten Daten (z.B. Benutzername + Passwort oder E-Mail-Adresse).
-                                - Achte extrem darauf, Zeichen in E-Mail-Adressen und Passwörtern (wie das At-Zeichen "@", Punkte ".", Bindestriche "-", Unterstriche "_") **exakt** so zu übernehmen, wie sie genannt wurden (z.B. schröterdino@googlemail.com). Erfinde keine Leerzeichen.
-                                - Die KI soll den Wert bei der Bestätigung ("reply") normal und kurz bestätigen (z.B. "Ist gespeichert!"), ohne den Code oder Punkte mühsam vorzulesen.
-
                                 Gib ein JSON-Objekt zurück mit Feldern: "type" ("chat", "name_change", "item_store", "item_query", "note", "calendar", "calendar_delete"), "new_name", "item_name", "item_location", "item_category", "note_text", "summary", "start_time", "calendar_delete_query", "reply".`
                             },
                             {
                                 role: "user",
-                                content: text
+                                content: cleanedText
                             }
                         ]
                     })
@@ -683,10 +747,10 @@
                 const data = await response.json();
                 const aiData = JSON.parse(data.choices[0].message.content);
 
-                let finalReply = aiData.reply || "Alles klar!";
+                let finalReply = correctNameSpelling(aiData.reply || "Alles klar!");
 
                 if (aiData.type === 'calendar_delete') {
-                    let searchQuery = (aiData.calendar_delete_query || text).toLowerCase();
+                    let searchQuery = correctNameSpelling(aiData.calendar_delete_query || cleanedText).toLowerCase();
                     searchQuery = searchQuery.replace(/lösche|termin|den|das|für|am|meinen|meine|bitte/gi, "").trim();
                     
                     let matchedEntry = calendarEntries.find(e => e.text.toLowerCase().includes(searchQuery) || searchQuery.includes(e.text.toLowerCase()));
@@ -725,7 +789,7 @@
                     let rawIsoTime = aiData.start_time || new Date().toISOString();
                     
                     if (aiData.start_time) {
-                        calendarEventId = await createGoogleCalendarEvent(aiData.summary || text, aiData.start_time);
+                        calendarEventId = await createGoogleCalendarEvent(correctNameSpelling(aiData.summary || cleanedText), aiData.start_time);
                         const parsedDate = new Date(aiData.start_time);
                         if (!isNaN(parsedDate)) {
                             fullFormattedDate = parsedDate.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Berlin' });
@@ -737,19 +801,19 @@
                     calendarEntries.unshift({
                         id: Date.now(),
                         calendarId: calendarEventId,
-                        text: aiData.summary || text,
+                        text: correctNameSpelling(aiData.summary || cleanedText),
                         date: fullFormattedDate,
                         shortDate: shortFormattedDate,
                         isoDate: rawIsoTime
                     });
                     setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
                 } else if (aiData.type === 'note') {
-                    todoEntries.unshift({ id: Date.now(), text: (aiData.note_text || text).replace(/\s+(am|um)\s+.*/gi, '').trim() });
+                    todoEntries.unshift({ id: Date.now(), text: correctNameSpelling((aiData.note_text || cleanedText).replace(/\s+(am|um)\s+.*/gi, '').trim()) });
                     setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
                 } else if (aiData.type === 'item_store' && aiData.item_name && aiData.item_location) {
-                    let cleanName = aiData.item_name.toLowerCase();
+                    let cleanName = correctNameSpelling(aiData.item_name).toLowerCase();
                     memoryItems[cleanName] = {
-                        location: aiData.item_location,
+                        location: correctNameSpelling(aiData.item_location),
                         timestamp: Date.now(),
                         category: aiData.item_category || "Sonstiges"
                     };
@@ -757,14 +821,14 @@
                 }
 
                 if (aiData.type === 'name_change' && aiData.new_name) {
-                    currentUserName = aiData.new_name;
+                    currentUserName = correctNameSpelling(aiData.new_name);
                     setPersistentData('user_custom_name', currentUserName);
                     userNameInput.value = currentUserName;
                     updateUserGreeting();
                 }
 
                 if (aiData.type === 'item_query' && aiData.item_name) {
-                    let cleanQuery = aiData.item_name.toLowerCase();
+                    let cleanQuery = correctNameSpelling(aiData.item_name).toLowerCase();
                     for (let storedKey in memoryItems) {
                         if (cleanQuery.includes(storedKey) || storedKey.includes(cleanQuery)) {
                             let item = memoryItems[storedKey];
@@ -793,7 +857,7 @@
             const startDate = new Date(startTimeStr);
             const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
             const event = {
-                summary: summary,
+                summary: correctNameSpelling(summary),
                 start: { dateTime: startDate.toISOString() },
                 end: { dateTime: endDate.toISOString() }
             };
