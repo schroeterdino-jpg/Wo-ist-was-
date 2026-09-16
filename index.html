@@ -3,1144 +3,202 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mein Helfer – Sprachassistent</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Identity Services (OAuth / Login) -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    
-    <!-- Eigenes Icon direkt aus dem Projektordner -->
-    <link rel="icon" type="image/png" href="./dino.png">
-    <link rel="apple-touch-icon" href="./dino.png">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-
+    <title>Automatisierter Gefährdungs- & Near-Miss-Report</title>
     <style>
-        body { font-size: 1.25rem; }
+        /* --- Screen Styling --- */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        h1 { font-size: 22px; color: #003366; border-bottom: 2px solid #003366; padding-bottom: 8px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
+        input[type="text"], select, textarea {
+            width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
+        }
+        textarea { resize: vertical; height: 100px; }
+        button {
+            background-color: #003366; color: white; border: none; padding: 12px 20px;
+            font-size: 16px; border-radius: 4px; cursor: pointer; width: 100%; margin-top: 10px;
+        }
+        button:hover { background-color: #002244; }
+
+        /* --- Report Print / A4 Layout Styling --- */
+        .report-preview {
+            margin-top: 40px; border: 2px solid #003366; padding: 25px; background: #fff; display: none;
+        }
+        .report-header { display: flex; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
+        .report-header div { font-size: 14px; }
+        .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+        .box { border: 1px solid #ccc; padding: 10px; border-radius: 4px; background: #fafafa; }
+        .photo-section { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .photo-box { border: 1px solid #ccc; padding: 8px; text-align: center; background: #fff; }
+        .photo-box img { max-width: 100%; height: 140px; object-fit: cover; border-radius: 3px; }
+        .photo-caption { font-size: 12px; margin-top: 5px; color: #555; }
+
+        /* --- Print Specifics (DIN A4 Clean Export) --- */
+        @media print {
+            body { background: none; padding: 0; }
+            .container > *:not(#reportOutput) { display: none; } /* Versteckt das Eingabeformular beim Drucken */
+            .report-preview { display: block !important; border: none; margin: 0; padding: 0; width: 100%; box-shadow: none; }
+            button { display: none; }
+        }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-900 min-h-screen flex flex-col justify-between">
+<body>
 
-    <!-- Kopfbereich -->
-    <header class="bg-blue-700 text-white p-6 text-center shadow-md relative">
-        <div class="flex justify-between items-center max-w-md mx-auto">
-            <div></div>
-            <div>
-                <h1 class="text-3xl font-bold">Mein Alltags-Helfer</h1>
-                <p id="userNameDisplay" class="text-lg text-blue-100 mt-1">Hallo, Dino!</p>
-            </div>
-            <button onclick="toggleSettings()" class="bg-blue-800 hover:bg-blue-900 text-white px-3 py-2 rounded-lg text-sm shadow">
-                ⚙️ Einstellungen
-            </button>
-        </div>
-    </header>
-
-    <!-- Einstellungs-Box -->
-    <div id="settingsBox" class="hidden bg-amber-50 border-b border-amber-200 p-4 shadow-inner">
-        <div class="container mx-auto max-w-md space-y-4">
-            <div>
-                <label class="block text-sm font-bold text-amber-900 mb-1">Wie soll ich dich nennen?:</label>
-                <input type="text" id="userNameInput" placeholder="Dein Name..." class="w-full p-2 border border-amber-300 rounded-lg text-base bg-white">
-            </div>
-
-            <div>
-                <label class="block text-sm font-bold text-amber-900 mb-1">Groq API-Key (gsk_...):</label>
-                <input type="password" id="apiKeyInput" placeholder="gsk_..." class="w-full p-2 border border-amber-300 rounded-lg text-base bg-white">
-            </div>
-
-            <div>
-                <label class="block text-sm font-bold text-amber-900 mb-1">Google Client-ID:</label>
-                <input type="text" id="googleClientIdInput" placeholder="Client ID..." class="w-full p-2 border border-amber-300 rounded-lg text-base bg-white">
-            </div>
-
-            <!-- Kontakte für Schnell-Anruf -->
-            <div class="border-t border-amber-200 pt-3">
-                <label class="block text-sm font-bold text-amber-900 mb-1">📞 Schnell-Anruf Kontakte:</label>
-                <div class="flex gap-2 mb-2">
-                    <input type="text" id="contactNameInput" placeholder="Name (z.B. Simone)" class="w-1/2 p-2 border border-amber-300 rounded-lg text-base bg-white">
-                    <input type="text" id="contactPhoneInput" placeholder="Nummer..." class="w-1/2 p-2 border border-amber-300 rounded-lg text-base bg-white">
-                </div>
-                <button onclick="saveContact()" class="w-full bg-amber-600 hover:bg-amber-700 text-white py-2 rounded-lg text-base font-semibold">Kontakt hinzufügen</button>
-                <div id="contactListDisplay" class="mt-2 text-xs text-amber-900 space-y-1"></div>
-            </div>
-
-            <!-- Gedächtnis -->
-            <div class="border-t border-amber-200 pt-3 space-y-2">
-                <div class="flex justify-between items-center">
-                    <label class="block text-sm font-bold text-amber-900">🔍 Gespeicherte Gegenstände:</label>
-                    <button onclick="clearAllMemory()" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded-lg text-xs font-semibold shadow">🗑️ Alles löschen</button>
-                </div>
-                <div id="categoryContainer" class="space-y-3 text-sm bg-white p-3 rounded-lg border border-amber-200">
-                    <!-- Kategorien werden hier dynamisch eingefügt -->
-                </div>
-            </div>
-
-            <div class="flex flex-col gap-2 border-t border-amber-200 pt-3">
-                <button onclick="loginWithGoogle()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
-                    📅 Mit Google Kalender verbinden
-                </button>
-            </div>
-            <p id="connectionStatus" class="text-xs text-amber-800 mt-2 font-medium break-all"></p>
-        </div>
+<div class="container">
+    <h1>Smart Report Generator</h1>
+    
+    <!-- Eingabeformular -->
+    <div class="form-group">
+        <label for="reportType">Berichtsart:</label>
+        <select id="reportType">
+            <option value="Near Miss Report (Beinaheunfall)">Near Miss Report (Beinaheunfall)</option>
+            <option value="Gefährdungsbericht / Mängelmeldung">Gefährdungsbericht / Mängelmeldung</option>
+        </select>
     </div>
 
-    <!-- Hauptbereich -->
-    <main class="container mx-auto p-4 max-w-md flex-grow flex flex-col justify-center space-y-6">
+    <div class="form-group">
+        <label for="department">Bereich / Kostenstelle:</label>
+        <input type="text" id="department" value="Kleinteillager (KTL)" placeholder="z.B. KTL Gang 3">
+    </div>
 
-        <!-- Mikrofon-Button & Tages-Briefing -->
-        <div class="flex flex-col items-center space-y-4">
-            <button id="recordBtn" onclick="toggleSpeechRecognition()" class="w-40 h-40 bg-red-600 hover:bg-red-700 text-white rounded-full flex flex-col items-center justify-center shadow-2xl transition transform active:scale-95 border-4 border-white cursor-pointer">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-                <span id="recordText" class="text-sm font-semibold tracking-wide">SPRECHEN</span>
-            </button>
-            <p id="statusMessage" class="text-center font-medium text-slate-700 h-6">Drücken und sprechen...</p>
+    <div class="form-group">
+        <label for="reporter">Melder:</label>
+        <input type="text" id="reporter" value="Dino Schröter">
+    </div>
 
-            <button onclick="triggerDailyBriefing()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-xl shadow-md font-bold text-lg flex items-center justify-center gap-2">
-                📋 Was steht heute an? (Briefing)
-            </button>
+    <div class="form-group">
+        <label for="rawNotes">Stichpunkte zum Vorfall (Die App sortiert & formuliert daraus den Text):</label>
+        <textarea id="rawNotes" placeholder="Eingangsbereich Regal 4: Schwere Europalette steht 15cm über Kante. Gefahr des Herabfallens. Sofortige Umstapelung und Absicherung veranlasst.">Übersicht: Eingangsbereich Regal 4, Palette steht 15cm über Kante.
+Detail: Nahaufnahme der losen Umreifung und der schiefen Position.
+Maßnahme: Sofortige Korrektur und Einweisung der Schicht.</textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="imageUpload">Fotos auswählen (Mehrfachauswahl):</label>
+        <input type="file" id="imageUpload" accept="image/*" multiple>
+    </div>
+
+    <button onclick="generateReport()">Report generieren & Drucken</button>
+
+    <!-- Fertiger Report (Wird nach Klick sichtbar & formatiert) -->
+    <div id="reportOutput" class="report-preview">
+        <div class="report-header">
+            <div><strong>Betriebs-Sicherheitsreport</strong><br><span id="outType">Near Miss Report</span></div>
+            <div>Datum: <span id="outDate"></span><br>Bereich: <span id="outDept"></span></div>
         </div>
 
-        <!-- Reiter-Navigation -->
-        <div class="flex bg-slate-200 p-1 rounded-xl">
-            <button id="tabCalendarBtn" onclick="switchTab('calendar')" class="flex-1 py-2 rounded-lg font-bold text-sm bg-white text-blue-800 shadow-sm transition">📅 Termine</button>
-            <button id="tabTodoBtn" onclick="switchTab('todo')" class="flex-1 py-2 rounded-lg font-bold text-sm text-slate-600 transition">📝 To-Dos</button>
+        <div class="report-grid">
+            <div class="box">
+                <label>Melder / Verantwortlich:</label>
+                <span id="outReporter">Dino Schröter</span>
+            </div>
+            <div class="box">
+                <label>Status:</label>
+                <span style="color: green; font-weight: bold;">Erfasst & Ausgearbeitet</span>
+            </div>
         </div>
 
-        <!-- Ansicht: Kalender-Termine -->
-        <div id="calendarView" class="bg-white p-5 rounded-2xl shadow-md border border-slate-200">
-            <h2 class="text-xl font-bold text-blue-800 mb-3">📅 Kalender-Termine:</h2>
-            <ul id="calendarList" class="space-y-2 text-lg">
-                <li class="text-slate-500">Keine Termine eingetragen.</li>
-            </ul>
+        <div class="box" style="margin-bottom: 15px;">
+            <label><strong>Automatisierter Untersuchungs- und Maßnahmenbericht:</strong></label>
+            <p id="outText" style="white-space: pre-line; font-size: 14px; line-height: 1.4;"></p>
         </div>
 
-        <!-- Ansicht: To-Dos & Notizen -->
-        <div id="todoView" class="hidden bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-4">
-            <h2 class="text-xl font-bold text-blue-800">📝 To-Dos & Notizen:</h2>
-            <ul id="todoList" class="space-y-2 text-lg">
-                <li class="text-slate-500">Keine offenen To-Dos.</li>
-            </ul>
+        <label><strong>Visuelle Dokumentation (Automatisch zugeordnet):</strong></label>
+        <div class="photo-section" id="outPhotos">
+            <!-- Dynamische Bilder landen hier -->
         </div>
+    </div>
+</div>
 
-    </main>
+<script>
+    function generateReport() {
+        // 1. Kopfdaten füllen
+        const type = document.getElementById('reportType').value;
+        const dept = document.getElementById('department').value;
+        const reporter = document.getElementById('reporter').value;
+        const notes = document.getElementById('rawNotes').value;
 
-    <!-- Fußbereich -->
-    <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
-        <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.33</span>
-    </footer>
-
-    <!-- JavaScript -->
-    <script>
-        const recordBtn = document.getElementById('recordBtn');
-        const recordText = document.getElementById('recordText');
-        const statusMessage = document.getElementById('statusMessage');
-        const calendarList = document.getElementById('calendarList');
-        const todoList = document.getElementById('todoList');
-        const categoryContainer = document.getElementById('categoryContainer');
-        const settingsBox = document.getElementById('settingsBox');
+        document.getElementById('outType').innerText = type;
+        document.getElementById('outDept').innerText = dept;
+        document.getElementById('outReporter').innerText = reporter;
         
-        const apiKeyInput = document.getElementById('apiKeyInput');
-        const googleClientIdInput = document.getElementById('googleClientIdInput');
-        const userNameInput = document.getElementById('userNameInput');
-        const userNameDisplay = document.getElementById('userNameDisplay');
-        const connectionStatus = document.getElementById('connectionStatus');
-        
-        const contactNameInput = document.getElementById('contactNameInput');
-        const contactPhoneInput = document.getElementById('contactPhoneInput');
-        const contactListDisplay = document.getElementById('contactListDisplay');
+        // Aktuelles Datum setzen
+        const today = new Date().toLocaleDateString('de-DE');
+        document.getElementById('outDate').innerText = today;
 
-        const calendarView = document.getElementById('calendarView');
-        const todoView = document.getElementById('todoView');
-        const tabCalendarBtn = document.getElementById('tabCalendarBtn');
-        const tabTodoBtn = document.getElementById('tabTodoBtn');
+        // 2. Stichpunkte in Fließtext verwandeln (Mini-Intelligenz)
+        // Hier greift später die echte KI-Logik ein, für den Prototypen formen wir es sauber auf:
+        let formattedText = "Basierend auf den erfassten Stichpunkten ergibt sich folgender Vorfall:\n\n" + notes;
+        document.getElementById('outText').innerText = formattedText;
 
-        function getPersistentData(key, defaultValue) {
-            let val = localStorage.getItem(key);
-            if (!val || val === "null" || val === "undefined") {
-                val = sessionStorage.getItem(key);
-            }
-            if (!val || val === "null" || val === "undefined") {
-                return defaultValue;
-            }
-            return val;
-        }
+        // 3. Bilder verarbeiten & automatisch zuordnen
+        const fileInput = document.getElementById('imageUpload');
+        const photoContainer = document.getElementById('outPhotos');
+        photoContainer.innerHTML = ''; // Vorherige Bilder löschen
 
-        function setPersistentData(key, value) {
-            try { localStorage.setItem(key, value); } catch (e) {}
-            try { sessionStorage.setItem(key, value); } catch (e) {}
-        }
+        if (fileInput.files && fileInput.files.length > 0) {
+            // Stichpunkte in Zeilen aufteilen, um Kategorien zu matchen
+            const noteLines = notes.split('\n');
 
-        let currentUserName = getPersistentData('user_custom_name', 'Dino');
-        userNameInput.value = currentUserName;
-        updateUserGreeting();
+            for (let i = 0; i < fileInput.files.length; i++) {
+                const file = fileInput.files[i];
+                const reader = new FileReader();
 
-        let savedKey = getPersistentData('user_api_key', '');
-        if (savedKey) apiKeyInput.value = savedKey;
+                reader.onload = function(e) {
+                    const box = document.createElement('div');
+                    box.className = 'photo-box';
 
-        let savedClientId = getPersistentData('google_client_id', '399573320370-qka01ghj0s88eoair7lla665cbj10o4g.apps.googleusercontent.com');
-        googleClientIdInput.value = savedClientId;
-        setPersistentData('google_client_id', savedClientId);
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
 
-        userNameInput.addEventListener('input', () => {
-            currentUserName = userNameInput.value.trim() || "Dino";
-            setPersistentData('user_custom_name', currentUserName);
-            updateUserGreeting();
-        });
+                    const caption = document.createElement('div');
+                    caption.className = 'photo-caption';
+                    
+                    // Automatische Zuordnung: Versuche Bild 1 als Übersicht, Bild 2 als Detail zuzuordnen
+                    let assignedLabel = `Dokumentation Bild ${i + 1}`;
+                    if (i === 0 && noteLines[0]) {
+                        assignedLabel = "Übersicht: " + noteLines[0].substring(0, 40) + "...";
+                    } else if (i === 1 && noteLines[1]) {
+                        assignedLabel = "Detail: " + noteLines[1].substring(0, 40) + "...";
+                    } else if (noteLines[i]) {
+                        assignedLabel = noteLines[i].substring(0, 40) + "...";
+                    }
+                    
+                    caption.innerText = assignedLabel;
 
-        apiKeyInput.addEventListener('input', () => {
-            setPersistentData('user_api_key', apiKeyInput.value.trim());
-            connectionStatus.textContent = "API-Key gespeichert.";
-        });
-
-        googleClientIdInput.addEventListener('input', () => {
-            setPersistentData('google_client_id', googleClientIdInput.value.trim());
-            connectionStatus.textContent = "Client-ID gespeichert.";
-        });
-
-        function updateUserGreeting() {
-            userNameDisplay.textContent = `Hallo, ${currentUserName}!`;
-        }
-
-        let rawCalendarEntries = JSON.parse(getPersistentData('helfer_calendar_entries', '[]')) || [];
-        const maxAllowedDate = new Date();
-        maxAllowedDate.setMonth(maxAllowedDate.getMonth() + 6);
-
-        let calendarEntries = rawCalendarEntries.filter(entry => {
-            if (!entry.isoDate) return true;
-            const entryDate = new Date(entry.isoDate);
-            if (isNaN(entryDate)) return true;
-            return entryDate <= maxAllowedDate;
-        });
-        setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
-
-        let todoEntries = JSON.parse(getPersistentData('helfer_todo_entries', '[]')) || [];
-        let memoryItems = JSON.parse(getPersistentData('helfer_memory', '{}')) || {};
-        let savedContacts = JSON.parse(getPersistentData('helfer_contacts', '{}')) || {};
-
-        renderAllLists();
-        renderContactList();
-
-        function saveContact() {
-            const name = contactNameInput.value.trim();
-            const phone = contactPhoneInput.value.trim();
-            if (name && phone) {
-                savedContacts[name.toLowerCase()] = { originalName: name, phone: phone };
-                setPersistentData('helfer_contacts', JSON.stringify(savedContacts));
-                contactNameInput.value = '';
-                contactPhoneInput.value = '';
-                renderContactList();
-                connectionStatus.textContent = `Kontakt "${name}" gespeichert.`;
-            } else {
-                alert('Bitte Name und Telefonnummer eingeben.');
-            }
-        }
-
-        function deleteContact(key) {
-            delete savedContacts[key];
-            setPersistentData('helfer_contacts', JSON.stringify(savedContacts));
-            renderContactList();
-        }
-
-        function renderContactList() {
-            const keys = Object.keys(savedContacts);
-            if (keys.length === 0) {
-                contactListDisplay.innerHTML = 'Keine Kontakte gespeichert.';
-            } else {
-                let html = '<b>Gespeicherte Kontakte:</b><br>';
-                keys.forEach(k => {
-                    html += `<div class="flex justify-between items-center my-1"><span>• ${savedContacts[k].originalName}: ${savedContacts[k].phone}</span> <button onclick="deleteContact('${k}')" class="text-red-600 font-bold ml-2">Löschen</button></div>`;
-                });
-                contactListDisplay.innerHTML = html;
-            }
-        }
-
-        function switchTab(tab) {
-            calendarView.classList.add('hidden');
-            todoView.classList.add('hidden');
-            tabCalendarBtn.className = "flex-1 py-2 rounded-lg font-bold text-sm text-slate-600 transition";
-            tabTodoBtn.className = "flex-1 py-2 rounded-lg font-bold text-sm text-slate-600 transition";
-
-            if (tab === 'calendar') {
-                calendarView.classList.remove('hidden');
-                tabCalendarBtn.className = "flex-1 py-2 rounded-lg font-bold text-sm bg-white text-blue-800 shadow-sm transition";
-            } else if (tab === 'todo') {
-                todoView.classList.remove('hidden');
-                tabTodoBtn.className = "flex-1 py-2 rounded-lg font-bold text-sm bg-white text-blue-800 shadow-sm transition";
-            }
-        }
-
-        let tokenClient;
-        let accessToken = getPersistentData('google_access_token', '');
-
-        window.addEventListener('load', () => {
-            if (accessToken) {
-                connectionStatus.textContent = "✅ Mit Google Kalender verbunden!";
-                fetchGoogleCalendarEvents();
-            }
-        });
-
-        function toggleSettings() {
-            settingsBox.classList.toggle('hidden');
-        }
-
-        function loginWithGoogle() {
-            const clientId = getPersistentData('google_client_id', '');
-            if (!clientId) {
-                alert('Bitte zuerst die Google Client-ID eintragen!');
-                return;
-            }
-
-            try {
-                tokenClient = google.accounts.oauth2.initTokenClient({
-                    client_id: clientId,
-                    scope: 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly',
-                    callback: (response) => {
-                        if (response.error) {
-                            connectionStatus.textContent = `❌ Fehler: ${response.error}`;
-                            return;
-                        }
-                        accessToken = response.access_token;
-                        setPersistentData('google_access_token', accessToken);
-                        connectionStatus.textContent = "✅ Mit Google Kalender verbunden!";
-                        fetchGoogleCalendarEvents();
-                    },
-                });
-                tokenClient.requestAccessToken({ prompt: 'consent' });
-            } catch (error) {
-                connectionStatus.textContent = `❌ Fehler: ${error.message}`;
-            }
-        }
-
-        async function fetchGoogleCalendarEvents() {
-            if (!accessToken) return;
-
-            const now = new Date();
-            const nowIso = now.toISOString();
-            
-            const maxDate = new Date();
-            maxDate.setMonth(maxDate.getMonth() + 6);
-            const maxIso = maxDate.toISOString();
-
-            const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${nowIso}&timeMax=${maxIso}&singleEvents=true&orderBy=startTime`;
-
-            try {
-                const response = await fetch(url, {
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
-
-                if (response.status === 401) {
-                    accessToken = '';
-                    localStorage.removeItem('google_access_token');
-                    sessionStorage.removeItem('google_access_token');
-                    connectionStatus.textContent = "⚠️ Google-Sitzung abgelaufen. Bitte neu verbinden.";
-                    return;
+                    box.appendChild(img);
+                    box.appendChild(caption);
+                    photoContainer.appendChild(box);
                 }
-
-                if (response.ok) {
-                    const data = await response.json();
-                    const googleItems = data.items || [];
-
-                    let existingCalendarIds = new Set(calendarEntries.map(e => e.calendarId));
-                    let seenSignatures = new Set(calendarEntries.map(e => `${e.text}_${e.isoDate}`.toLowerCase()));
-
-                    googleItems.forEach(item => {
-                        const startRaw = item.start.dateTime || item.start.date;
-                        if (!startRaw) return;
-
-                        const itemDate = new Date(startRaw);
-                        if (!isNaN(itemDate) && (itemDate < now || itemDate > maxDate)) {
-                            return;
-                        }
-
-                        const title = item.summary || "Kein Titel";
-                        const signature = `${title}_${startRaw}`.toLowerCase();
-
-                        if (!existingCalendarIds.has(item.id) && !seenSignatures.has(signature)) {
-                            let fullFormattedDate = "Ganztägig";
-                            let shortFormattedDate = "Ganztägig";
-                            
-                            const parsedDate = new Date(startRaw);
-                            if (!isNaN(parsedDate)) {
-                                if (item.start.dateTime) {
-                                    fullFormattedDate = parsedDate.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Berlin' });
-                                    let timePart = parsedDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
-                                    shortFormattedDate = `${parsedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' })} um ${timePart} Uhr`;
-                                } else {
-                                    fullFormattedDate = parsedDate.toLocaleDateString('de-DE', { dateStyle: 'medium', timeZone: 'Europe/Berlin' }) + " (Ganztägig)";
-                                    shortFormattedDate = parsedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' }) + " (Ganztägig)";
-                                }
-                            }
-
-                            calendarEntries.push({
-                                id: Date.now() + Math.random(),
-                                calendarId: item.id,
-                                text: title,
-                                date: fullFormattedDate,
-                                shortDate: shortFormattedDate,
-                                isoDate: startRaw
-                            });
-
-                            existingCalendarIds.add(item.id);
-                            seenSignatures.add(signature);
-                        }
-                    });
-
-                    calendarEntries = calendarEntries.filter(e => {
-                        if (!e.isoDate) return true;
-                        const d = new Date(e.isoDate);
-                        return isNaN(d) || (d >= now && d <= maxDate);
-                    });
-
-                    calendarEntries.sort((a, b) => new Date(a.isoDate) - new Date(b.isoDate));
-
-                    setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
-                    renderAllLists();
-                }
-            } catch (e) {
-                console.error("Fehler beim Abrufen des Google Kalenders:", e);
+                reader.readAsDataURL(file);
             }
-        }
-
-        let currentAudio = null;
-
-        function speak(text, onComplete) {
-            if (currentAudio) {
-                currentAudio.pause();
-                currentAudio = null;
-            }
-
-            const encodedText = encodeURIComponent(text);
-            const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=de&client=tw-ob`;
-            
-            currentAudio = new Audio(audioUrl);
-            currentAudio.playbackRate = 1.35; 
-
-            currentAudio.play().catch(err => {
-                fallbackSpeak(text, onComplete);
-            });
-
-            currentAudio.onended = function() {
-                currentAudio = null;
-                if (onComplete) {
-                    setTimeout(() => { onComplete(); }, 300);
-                }
-            };
-
-            currentAudio.onerror = function() {
-                currentAudio = null;
-                fallbackSpeak(text, onComplete);
-            };
-        }
-
-        function fallbackSpeak(text, onComplete) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'de-DE';
-                utterance.rate = 1.1;
-                utterance.onend = () => { if (onComplete) setTimeout(onComplete, 300); };
-                window.speechSynthesis.speak(utterance);
-            } else {
-                if (onComplete) setTimeout(onComplete, 300);
-            }
-        }
-
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        let recognition = null;
-        let isRecording = false;
-
-        if (SpeechRecognition) {
-            recognition = new SpeechRecognition();
-            recognition.lang = 'de-DE';
-            recognition.interimResults = false;
-            recognition.maxAlternatives = 1;
-
-            recognition.onstart = function() {
-                isRecording = true;
-                statusMessage.textContent = "Höre zu... Bitte sprechen.";
-                recordBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
-                recordBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700', 'animate-pulse');
-                recordText.textContent = "HÖRE...";
-            };
-
-            recognition.onresult = function(event) {
-                const speechResult = event.results[0][0].transcript;
-                statusMessage.textContent = `Erkannt: "${speechResult}"`;
-                
-                const lower = speechResult.toLowerCase();
-                
-                if ((lower.includes("ruf") || lower.includes("anrufen")) && lower.includes("an")) {
-                    handleCallCommand(lower);
-                } else if (lower.includes("was steht heute an") || lower.includes("was liegt heute an") || lower.includes("bevor ich das haus verlasse")) {
-                    triggerDailyBriefing();
-                } else if (lower.includes("was steht auf meiner to-do-liste") || lower.includes("to do liste") || lower.includes("was habe ich auf der liste")) {
-                    readTodoList();
-                } else if (lower.includes("wo bin ich") || lower.includes("aktueller standort") || lower.includes("befinde ich mich")) {
-                    handleLocationQuery();
-                } else {
-                    sendToGroqSmart(speechResult);
-                }
-            };
-
-            recognition.onerror = function() {
-                statusMessage.textContent = "Sprachfehler oder abgebrochen.";
-                resetButton();
-            };
-
-            recognition.onend = function() {
-                isRecording = false;
-                resetButton();
-            };
         } else {
-            statusMessage.textContent = "Keine Spracherkennung im Browser.";
-            recordBtn.disabled = true;
+            photoContainer.innerHTML = '<p style="font-size: 13px; color: #775;">Keine Bilder ausgewählt.</p>';
         }
 
-        function readTodoList() {
-            if (todoEntries.length === 0) {
-                speak("Deine To-Do-Liste ist aktuell leer.");
-                statusMessage.textContent = "To-Do-Liste ist leer.";
-                return;
-            }
+        // 4. Bereich sichtbar machen und Druckdialog aufrufen
+        document.getElementById('reportOutput').style.display = 'block';
+        
+        // Kurzer Timeout, damit Bilder laden können, bevor der Druckdialog startet
+        setTimeout(() => {
+            window.print();
+        }, 300);
+    }
+</script>
 
-            let textToSpeak = "Auf deiner To-Do-Liste stehen folgende Einträge: ";
-            todoEntries.forEach((entry, index) => {
-                textToSpeak += `Punkt ${index + 1}: ${entry.text}. `;
-            });
-            
-            statusMessage.textContent = "Lese To-Do-Liste vor...";
-            speak(textToSpeak);
-        }
-
-        function handleCallCommand(text) {
-            let foundContact = null;
-            for (let key in savedContacts) {
-                if (text.includes(key)) {
-                    foundContact = savedContacts[key];
-                    break;
-                }
-            }
-
-            if (foundContact) {
-                speak(`Ich rufe ${foundContact.originalName} für dich an.`, () => {
-                    window.location.href = `tel:${foundContact.phone}`;
-                });
-            } else {
-                speak("Diesen Kontakt habe ich leider nicht gefunden. Du kannst ihn ganz einfach in den Einstellungen hinzufügen.");
-            }
-        }
-
-        function toggleSpeechRecognition() {
-            const currentKey = getPersistentData('user_api_key', '');
-            if (!currentKey) {
-                alert('Bitte hinterlege zuerst deinen Groq API-Key oben über "⚙️ Einstellungen"!');
-                settingsBox.classList.remove('hidden');
-                return;
-            }
-
-            if (!recognition) {
-                alert('Spracherkennung wird vom Browser nicht unterstützt.');
-                return;
-            }
-
-            if (isRecording) {
-                recognition.stop();
-            } else {
-                try {
-                    recognition.start();
-                } catch (e) {
-                    try {
-                        recognition.stop();
-                        setTimeout(() => recognition.start(), 200);
-                    } catch (err) {}
-                }
-            }
-        }
-
-        function resetButton() {
-            isRecording = false;
-            recordBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700', 'animate-pulse');
-            recordBtn.classList.add('bg-red-600', 'hover:bg-red-700');
-            recordText.textContent = "SPRECHEN";
-        }
-
-        // Hilfsfunktion: Aktuelle GPS-Position ermitteln (mit Fallback auf Schwarzenbek)
-        function getCurrentPositionAsync() {
-            return new Promise((resolve) => {
-                if (!navigator.geolocation) {
-                    resolve({ latitude: 53.5135, longitude: 10.4182 }); // Fallback Schwarzenbek
-                    return;
-                }
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        resolve({
-                            latitude: position.coords.latitude,
-                            longitude: position.coords.longitude
-                        });
-                    },
-                    (error) => {
-                        console.warn("Geolocation fehlgeschlagen, nutze Standard-Koordinaten:", error);
-                        resolve({ latitude: 53.5135, longitude: 10.4182 }); // Fallback Schwarzenbek
-                    },
-                    { timeout: 5000, maximumAge: 60000 }
-                );
-            });
-        }
-
-        // Standort-Abfrage Befehl ("Wo bin ich?")
-        async function handleLocationQuery() {
-            statusMessage.textContent = "Ermittle genauen Standort...";
-            const coords = await getCurrentPositionAsync();
-
-            try {
-                // Open-Meteo Geocoding Reverse API nutzt Koordinaten für Ortsnamen (kostenlos & ohne Key)
-                const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=location&count=1&latitude=${coords.latitude}&longitude=${coords.longitude}`);
-                // Alternativ nutzen wir Nominatim (OpenStreetMap) für echte Straßennamen/Orte:
-                const nominatimRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.latitude}&lon=${coords.longitude}&zoom=18&addressdetails=1`);
-                
-                if (nominatimRes.ok) {
-                    const data = await nominatimRes.json();
-                    const address = data.address || {};
-                    const road = address.road || address.pedestrian || address.suburb || "";
-                    const city = address.city || address.town || address.village || address.municipality || "Schwarzenbek";
-                    
-                    let locationText = `Du befindest dich in ${city}`;
-                    if (road) {
-                        locationText = `Du befindest dich in der Straße ${road} in ${city}`;
-                    }
-                    
-                    statusMessage.textContent = locationText;
-                    speak(locationText);
-                    return;
-                }
-            } catch (e) {
-                console.error("Standort-Auflösung Fehler:", e);
-            }
-
-            // Fallback falls Reverse Geocoding blockiert wird
-            let fallbackText = `Deine aktuellen Koordinaten sind Breitengrad ${coords.latitude.toFixed(4)}, Längengrad ${coords.longitude.toFixed(4)}.`;
-            statusMessage.textContent = fallbackText;
-            speak(fallbackText);
-        }
-
-        async function triggerDailyBriefing() {
-            statusMessage.textContent = "Ermittle Standort & Wetter...";
-            
-            const coords = await getCurrentPositionAsync();
-
-            let weatherText = "";
-            let weatherAdvice = "";
-            try {
-                const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${coords.latitude}&longitude=${coords.longitude}&current=temperature_2m,weather_code,wind_speed_10m`);
-                if (weatherRes.ok) {
-                    const weatherData = await weatherRes.json();
-                    const temp = weatherData.current.temperature_2m;
-                    const code = weatherData.current.weather_code;
-                    const wind = weatherData.current.wind_speed_10m || 0;
-                    
-                    let condition = "bewölkt";
-                    if (code === 0) condition = "klar und sonnig";
-                    else if (code >= 1 && code <= 3) condition = "wechselhaft bewölkt";
-                    else if (code >= 51 && code <= 67) condition = "regnerisch";
-                    else if (code >= 71 && code <= 77) condition = "schneebedeckt";
-                    else if (code >= 95) condition = "Gewitter";
-
-                    weatherText = `Das aktuelle Wetter an deinem Standort ist ${condition} bei ${temp} Grad. `;
-
-                    if (code >= 51 && code <= 67) {
-                        weatherAdvice = "Es ist regnerisch, nimm bitte einen Regenschirm mit! ";
-                    } else if (temp < 12) {
-                        weatherAdvice = "Es ist ziemlich frisch draußen, zieh dir am besten eine Jacke an. ";
-                    } else if (temp > 24) {
-                        weatherAdvice = "Heute wird es schön warm! ";
-                    } else if (wind > 30) {
-                        weatherAdvice = "Es ist windig, nimm lieber eine Jacke mit. ";
-                    } else {
-                        weatherAdvice = "Das Wetter ist ganz angenehm. ";
-                    }
-                }
-            } catch (e) {
-                console.error("Wetterfehler:", e);
-            }
-
-            const nowBriefing = new Date();
-            const currentTimeStr = nowBriefing.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
-            let briefingText = `Guten Tag, ${currentUserName}. Es ist jetzt ${currentTimeStr} Uhr. Hier ist dein kurzer Überblick. ${weatherText} ${weatherAdvice}`;
-
-            const todayStr = nowBriefing.toLocaleDateString('en-CA');
-            const todayCalendarEntries = calendarEntries.filter(e => {
-                if (!e.isoDate) return false;
-                return e.isoDate.startsWith(todayStr);
-            });
-
-            if (todayCalendarEntries.length > 0) {
-                briefingText += "Deine Termine heute: ";
-                todayCalendarEntries.forEach((e, index) => {
-                    let timeOnly = "ganztägig";
-                    try {
-                        const parsedDate = new Date(e.isoDate);
-                        if (!isNaN(parsedDate) && e.isoDate.includes('T')) {
-                            timeOnly = parsedDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' }) + " Uhr";
-                        }
-                    } catch (err) {}
-                    briefingText += `Termin ${index + 1}: ${e.text}, um ${timeOnly}. `;
-                });
-            } else {
-                briefingText += "Du hast heute keine Termine. ";
-            }
-
-            if (todoEntries.length > 0) {
-                briefingText += "Offene To-Dos: ";
-                todoEntries.forEach(e => {
-                    briefingText += `${e.text}. `;
-                });
-            }
-
-            const importantKeywords = ["schlüssel", "brille", "portemonnaie", "geldbeutel", "beutel", "geld", "ausweis", "unterlage", "unterlagen", "dokument", "dokumente", "medikament", "medikamente", "tablette", "tabletten", "karte", "karten"];
-            const memKeys = Object.keys(memoryItems);
-            let relevantItems = [];
-
-            memKeys.forEach(k => {
-                let itemObj = memoryItems[k];
-                let loc = typeof itemObj === 'object' ? itemObj.location : itemObj;
-                let lowerKey = k.toLowerCase();
-                
-                let isImportant = importantKeywords.some(keyword => lowerKey.includes(keyword));
-                if (isImportant) {
-                    relevantItems.push({ name: k, loc: loc });
-                }
-            });
-
-            if (relevantItems.length > 0) {
-                relevantItems.forEach((item) => {
-                    let capitalizedName = item.name.charAt(0).toUpperCase() + item.name.slice(1);
-                    let lowerName = item.name.toLowerCase();
-                    let article = "Dein";
-                    let verbLoc = item.loc;
-                    
-                    if (lowerName.endsWith('e') && lowerName !== "schlüssele") {
-                        article = "Deine";
-                    }
-                    
-                    verbLoc = verbLoc.replace(/^auf den\b/i, "auf dem")
-                                     .replace(/^in den\b/i, "im")
-                                     .replace(/^an den\b/i, "am");
-
-                    briefingText += `Denk dran: ${article} ${capitalizedName} ${verbLoc}. `;
-                });
-            }
-
-            statusMessage.textContent = "Fertig.";
-            speak(briefingText);
-        }
-
-        async function sendToGroqSmart(text) {
-            const key = getPersistentData('user_api_key', '');
-            statusMessage.textContent = "Verarbeite...";
-
-            const now = new Date();
-            const todayStr = now.toLocaleDateString('en-CA');
-            const currentClockTime = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
-
-            const coords = await getCurrentPositionAsync();
-
-            let weatherContext = "";
-            const lowerTextCheck = text.toLowerCase();
-            if (lowerTextCheck.includes("regenschirm") || lowerTextCheck.includes("wetter") || lowerTextCheck.includes("regen") || lowerTextCheck.includes("jacke")) {
-                try {
-                    const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${coords.latitude}&longitude=${coords.longitude}&current=temperature_2m,weather_code,wind_speed_10m`);
-                    if (weatherRes.ok) {
-                        const weatherData = await weatherRes.json();
-                        const temp = weatherData.current.temperature_2m;
-                        const code = weatherData.current.weather_code;
-                        
-                        let condition = "bewölkt";
-                        if (code === 0) condition = "klar und sonnig";
-                        else if (code >= 1 && code <= 3) condition = "wechselhaft bewölkt";
-                        else if (code >= 51 && code <= 67) condition = "regnerisch";
-                        else if (code >= 71 && code <= 77) condition = "schneebedeckt";
-                        else if (code >= 95) condition = "Gewitter";
-
-                        weatherContext = `Aktuelles Live-Wetter am aktuellen Standort: ${condition}, ${temp} Grad.`;
-                        if (code >= 51 && code <= 67) {
-                            weatherContext += " Es regnet, ein Regenschirm wird dringend empfohlen!";
-                        } else if (temp < 12) {
-                            weatherContext += " Es ist frisch, eine Jacke wird empfohlen.";
-                        } else {
-                            weatherContext += " Regen ist aktuell keiner zu erwarten.";
-                        }
-                    }
-                } catch (e) {
-                    console.error("Wetter-Abruf Fehler:", e);
-                }
-            }
-
-            const memoryWithDetails = {};
-            for (let k in memoryItems) {
-                let item = memoryItems[k];
-                let loc = typeof item === 'object' ? item.location : item;
-                let ts = typeof item === 'object' ? item.timestamp : now.getTime();
-                
-                let diffDays = Math.floor((now.getTime() - ts) / (1000 * 60 * 60 * 24));
-                let timeDesc = diffDays === 0 ? "heute" : (diffDays === 1 ? "vor 1 Tag" : `vor ${diffDays} Tagen`);
-                
-                memoryWithDetails[k] = { location: loc, abgelegt: timeDesc };
-            }
-            const memoryContext = JSON.stringify(memoryWithDetails);
-            const calendarContext = JSON.stringify(calendarEntries);
-            const todoContext = JSON.stringify(todoEntries);
-
-            try {
-                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${key}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        model: "openai/gpt-oss-120b", 
-                        response_format: { type: "json_object" },
-                        messages: [
-                            {
-                                role: "system",
-                                content: `Du bist ${currentUserName}s smarter, absolut natürlicher und menschlicher Alltags-Assistent. 
-                                Aktuelles exaktes Datum heute ist ${todayStr} (${now.toLocaleDateString('de-DE', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'})}), Uhrzeit ist exakt ${currentClockTime} Uhr.
-                                ${weatherContext ? "Wetter-Information: " + weatherContext : ""}
-                                Bisheriges Gedächtnis über Gegenstände: ${memoryContext}
-                                Kalender: ${calendarContext}
-                                To-Dos: ${todoContext}
-
-                                ABSOLUT STRENGE REGELN (WICHTIGSTE PRIORITÄT!):
-                                1. KALENDER-ERSTELLUNG (WICHTIG): Wenn der Nutzer einen Termin anlegt (z.B. "Trage Termin X am [Datum/Uhrzeit] ein"), musst du zwingend den Typ "calendar" wählen und das Feld "start_time" als exaktes ISO-Datum (YYYY-MM-DDTHH:mm:ss) im Jahr 2026 ausfüllen! Wenn keine Uhrzeit genannt wird, setze standardmäßig 09:00:00 ein (z.B. 2026-09-17T09:00:00).
-                                2. KEINE FRAGEN ALS TO-DO SPEICHERN: Wenn der Nutzer fragt "Welche Termine habe ich?", "Brauche ich einen Regenschirm?" oder allgemeine Fragen stellt, wähle niemals den Typ "note"!
-                                3. SPRACH-STIL: Sag NIEMALS "Ich habe gemerkt...". Antworte immer natürlich und flüssig.
-                                4. GRAMMATIK: Achte bei Gegenständen streng auf die deutsche Grammatik.
-
-                                Gib ein JSON-Objekt zurück mit folgenden Feldern:
-                                - "type": string (Wähle aus: "chat", "name_change", "item_store", "item_query", "note", "calendar", "calendar_delete")
-                                - "new_name": string (Falls er seinen Namen ändern will)
-                                - "item_name": string (Name des Gegenstands bei store/query)
-                                - "item_location": string (Der genaue Ort im Zustand)
-                                - "item_category": string (Kategorie: "Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer", "Sonstiges")
-                                - "note_text": string (Nur bei echten To-Dos oder Notizen)
-                                - "summary": string (Titel für Kalender)
-                                - "start_time": string (Exaktes ISO-Datum im Format YYYY-MM-DDTHH:mm:ss für Kalender, z.B. 2026-09-17T14:00:00)
-                                - "calendar_delete_query": string (Suchbegriff des zu löschenden Termins bei Typ calendar_delete)
-                                - "reply": string (Deine komplette, natürliche, fehlerfreie Antwort auf Deutsch, die per Sprachausgabe vorgelesen wird!)`
-                            },
-                            {
-                                role: "user",
-                                content: text
-                            }
-                        ]
-                    })
-                });
-
-                if (!response.ok) {
-                    const errText = await response.text();
-                    throw new Error(`HTTP ${response.status}: ${errText}`);
-                }
-
-                const data = await response.json();
-                const aiData = JSON.parse(data.choices[0].message.content);
-
-                let finalReply = aiData.reply || "Alles klar!";
-
-                const lowerText = text.toLowerCase();
-                if (lowerText.includes("termin") || lowerText.includes("was habe ich") || lowerText.includes("was steht") || lowerText.includes("wo ist")) {
-                    if (aiData.type === 'note') {
-                        aiData.type = 'chat';
-                    }
-                }
-
-                if (aiData.type === 'calendar_delete') {
-                    let searchQuery = (aiData.calendar_delete_query || text).toLowerCase();
-                    searchQuery = searchQuery.replace(/lösche|termin|den|das|für|am/gi, "").trim();
-                    
-                    let matchedEntry = calendarEntries.find(e => e.text.toLowerCase().includes(searchQuery));
-
-                    if (matchedEntry) {
-                        if (matchedEntry.calendarId && matchedEntry.calendarId !== 'null' && accessToken) {
-                            try {
-                                await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${matchedEntry.calendarId}`, {
-                                    method: 'DELETE',
-                                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                                });
-                            } catch (e) {}
-                        }
-                        calendarEntries = calendarEntries.filter(e => e.id !== matchedEntry.id);
-                        setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
-                        renderAllLists();
-                        
-                        finalReply = `Ich habe den Termin ${matchedEntry.text} für dich gelöscht.`;
-                    } else {
-                        finalReply = "Ich habe keinen passenden Termin dazu in deiner Liste gefunden.";
-                    }
-                }
-                else if (aiData.type === 'calendar') {
-                    let calendarEventId = null;
-                    let fullFormattedDate = new Date().toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Berlin' });
-                    let shortFormattedDate = new Date().toLocaleDateString('de-DE', { day: 'numeric', month: 'long' });
-                    let rawIsoTime = aiData.start_time || new Date().toISOString();
-                    
-                    if (aiData.start_time) {
-                        calendarEventId = await createGoogleCalendarEvent(aiData.summary || text, aiData.start_time);
-                        const parsedDate = new Date(aiData.start_time);
-                        if (!isNaN(parsedDate)) {
-                            fullFormattedDate = parsedDate.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Berlin' });
-                            let timePart = parsedDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
-                            shortFormattedDate = `${parsedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' })} um ${timePart} Uhr`;
-                        }
-                    }
-
-                    const newCalEntry = {
-                        id: Date.now(),
-                        calendarId: calendarEventId,
-                        text: aiData.summary || text,
-                        date: fullFormattedDate,
-                        shortDate: shortFormattedDate,
-                        isoDate: rawIsoTime
-                    };
-                    calendarEntries.unshift(newCalEntry);
-                    calendarEntries.sort((a, b) => new Date(a.isoDate) - new Date(b.isoDate));
-                    setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
-                } else if (aiData.type === 'note') {
-                    let noteContent = aiData.note_text || text;
-                    noteContent = noteContent.replace(/\s+(am|um)\s+.*/gi, '').trim();
-
-                    const newTodoEntry = {
-                        id: Date.now(),
-                        text: noteContent
-                    };
-                    todoEntries.unshift(newTodoEntry);
-                    setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
-                } else if (aiData.type === 'item_store' && aiData.item_name && aiData.item_location) {
-                    let cleanName = aiData.item_name.toLowerCase();
-                    let cleanLoc = aiData.item_location;
-                    
-                    cleanLoc = cleanLoc.replace(/\b(im|in der|in dem|auf dem|auf der|an der|am)\s+(in|im|in der|in dem|auf|an)\b/gi, '$1');
-                    let category = aiData.item_category || "Sonstiges";
-                    
-                    memoryItems[cleanName] = {
-                        location: cleanLoc,
-                        timestamp: Date.now(),
-                        category: category
-                    };
-                    setPersistentData('helfer_memory', JSON.stringify(memoryItems));
-                }
-
-                if (aiData.type === 'name_change' && aiData.new_name) {
-                    currentUserName = aiData.new_name;
-                    setPersistentData('user_custom_name', currentUserName);
-                    userNameInput.value = currentUserName;
-                    updateUserGreeting();
-                }
-
-                if (aiData.type === 'item_query' && aiData.item_name) {
-                    let cleanQuery = aiData.item_name.toLowerCase();
-                    let foundItem = null;
-                    let matchedName = aiData.item_name;
-
-                    for (let storedKey in memoryItems) {
-                        if (cleanQuery.includes(storedKey)  || storedKey.includes(cleanQuery)) {
-                            foundItem = memoryItems[storedKey];
-                            matchedName = storedKey.charAt(0).toUpperCase() + storedKey.slice(1);
-                            break;
-                        }
-                    }
-
-                    if (foundItem) {
-                        if (!aiData.reply || aiData.reply.includes("habe gemerkt")) {
-                            let article = "Dein";
-                            let lowerMatched = matchedName.toLowerCase();
-                            let cleanLoc = foundItem.location;
-                            
-                            if (lowerMatched.endsWith('e') && lowerMatched !== "schlüssele") {
-                                article = "Deine";
-                            }
-                            
-                            cleanLoc = cleanLoc.replace(/^auf den\b/i, "auf dem")
-                                             .replace(/^in den\b/i, "im")
-                                             .replace(/^an den\b/i, "am");
-
-                            finalReply = `${article} ${matchedName} ${cleanLoc}.`;
-                        }
-                    }
-                }
-
-                statusMessage.textContent = "Fertig.";
-                speak(finalReply);
-                renderAllLists();
-
-            } catch (error) {
-                console.error(error);
-                statusMessage.textContent = error.message;
-                speak("Es gab einen Fehler: " + error.message);
-            }
-        }
-
-        async function createGoogleCalendarEvent(summary, startTimeStr) {
-            if (!accessToken) return null;
-
-            const startDate = new Date(startTimeStr);
-            const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
-
-            const event = {
-                summary: summary,
-                start: { dateTime: startDate.toISOString() },
-                end: { dateTime: endDate.toISOString() },
-                reminders: {
-                    useDefault: false,
-                    overrides: [
-                        { method: 'popup', minutes: 120 },
-                        { method: 'email', minutes: 120 }
-                    ]
-                }
-            };
-
-            try {
-                const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(event)
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    return data.id;
-                }
-            } catch (e) {
-                console.error(e);
-            }
-            return null;
-        }
-
-        async function deleteCalendarEntry(id, calendarId) {
-            if (calendarId && calendarId !== 'null' && calendarId !== 'undefined' && accessToken) {
-                try {
-                    await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${calendarId}`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${accessToken}` }
-                    });
-                } catch (e) {}
-            }
-
-            calendarEntries = calendarEntries.filter(e => e.id !== id);
-            setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
-            renderAllLists();
-            speak("Termin gelöscht.");
-        }
-
-        function deleteTodoEntry(id) {
-            todoEntries = todoEntries.filter(e => e.id !== id);
-            setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
-            renderAllLists();
-            speak("Erledigt.");
-        }
-
-        function deleteMemoryItem(key) {
-            delete memoryItems[key];
-            setPersistentData('helfer_memory', JSON.stringify(memoryItems));
-            renderAllLists();
-            speak("Gelöscht.");
-        }
-
-        function clearAllMemory() {
-            memoryItems = {};
-            localStorage.removeItem('helfer_memory');
-            sessionStorage.removeItem('helfer_memory');
-            renderAllLists();
-            speak("Gedächtnis geleert.");
-        }
-
-        function renderAllLists() {
-            if (calendarEntries.length === 0) {
-                calendarList.innerHTML = '<li class="text-slate-500">Keine Termine eingetragen.</li>';
-            } else {
-                calendarList.innerHTML = '';
-                calendarEntries.forEach(entry => {
-                    const li = document.createElement('li');
-                    li.className = "bg-slate-50 p-3 rounded-xl border border-slate-100 flex justify-between items-center text-base";
-                    li.innerHTML = `
-                        <div>
-                            <span>📅 ${entry.text}</span>
-                            <div class="text-xs text-slate-400">${entry.date}</div>
-                        </div>
-                        <button onclick="deleteCalendarEntry(${entry.id}, '${entry.calendarId || ''}')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm font-semibold ml-2">
-                            Löschen
-                        </button>
-                    `;
-                    calendarList.appendChild(li);
-                });
-            }
-
-            if (todoEntries.length === 0) {
-                todoList.innerHTML = '<li class="text-slate-500">Keine offenen To-Dos.</li>';
-            } else {
-                todoList.innerHTML = '';
-                todoEntries.forEach(entry => {
-                    const li = document.createElement('li');
-                    li.className = "bg-slate-50 p-3 rounded-xl border border-slate-100 flex justify-between items-center text-base";
-                    li.innerHTML = `
-                        <div>
-                            <span>📝 ${entry.text}</span>
-                        </div>
-                        <button onclick="deleteTodoEntry(${entry.id})" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1 rounded-lg text-sm font-semibold ml-2">
-                            Erledigt
-                        </button>
-                    `;
-                    todoList.appendChild(li);
-                });
-            }
-
-            const categories = ["Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer", "Sonstiges"];
-            const grouped = {};
-            categories.forEach(c => grouped[c] = []);
-
-            for (let key in memoryItems) {
-                let item = memoryItems[key];
-                let loc = typeof item === 'object' ? item.location : item;
-                let cat = (typeof item === 'object' && item.category) ? item.category : "Sonstiges";
-                if (!grouped[cat]) cat = "Sonstiges";
-                
-                grouped[cat].push({ key: key, location: loc });
-            }
-
-            let catHtml = '';
-            let hasAnyItems = false;
-
-            categories.forEach(cat => {
-                let itemsInCat = grouped[cat];
-                if (itemsInCat && itemsInCat.length > 0) {
-                    hasAnyItems = true;
-                    catHtml += `<div class="border border-slate-200 rounded-xl p-3 bg-slate-50 mb-2">
-                        <h3 class="font-bold text-amber-900 mb-2">📌 ${cat}</h3>
-                        <ul class="space-y-1">`;
-                    
-                    itemsInCat.forEach(i => {
-                        let capitalizedName = i.key.charAt(0).toUpperCase() + i.key.slice(1);
-                        catHtml += `<li class="flex justify-between items-center text-xs py-1 border-b border-slate-200 last:border-none">
-                            <span>• <b>${capitalizedName}</b>: ${i.location}</span>
-                            <button onclick="deleteMemoryItem('${i.key}')" class="text-red-600 font-bold ml2">Löschen</button>
-                        </li>`;
-                    });
-
-                    catHtml += `</ul></div>`;
-                }
-            });
-
-            if (!hasAnyItems) {
-                categoryContainer.innerHTML = '<p class="text-slate-500 text-xs">Keine Gegenstände gespeichert.</p>';
-            } else {
-                categoryContainer.innerHTML = catHtml;
-            }
-        }
-    </script>
 </body>
 </html>
