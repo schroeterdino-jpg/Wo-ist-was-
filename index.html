@@ -329,7 +329,7 @@
             const nowIso = now.toISOString();
             
             const maxDate = new Date();
-            maxDate.setMonth(maxDate.getMonth() + 6);
+            maxDate.setFullYear(maxDate.getFullYear() + 2); // Hier angepasst auf 2 Jahre
             const maxIso = maxDate.toISOString();
 
             const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${nowIso}&timeMax=${maxIso}&singleEvents=true&orderBy=startTime`;
