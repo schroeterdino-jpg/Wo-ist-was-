@@ -151,7 +151,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.33</span>
+        <span>Version 4.35</span>
     </footer>
 
     <!-- JavaScript -->
@@ -348,6 +348,18 @@
 
         let currentAudio = null;
 
+        function prepareTextForSpeech(text) {
+            if (!text) return "";
+            return text
+                .replace(/\./g, ' Punkt ')
+                .replace(/,/g, ' Komma ')
+                .replace(/!/g, ' Ausrufezeichen ')
+                .replace(/\?/g, ' Fragezeichen ')
+                .replace(/-/g, ' Bindestrich ')
+                .replace(/_/g, ' Unterstrich ')
+                .replace(/@/g, ' At-Zeichen ');
+        }
+
         function speak(text, onComplete) {
             lastSpokenText = text;
             if (currentAudio) {
@@ -355,14 +367,15 @@
                 currentAudio = null;
             }
 
-            const encodedText = encodeURIComponent(text);
+            const spokenVersion = prepareTextForSpeech(text);
+            const encodedText = encodeURIComponent(spokenVersion);
             const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=de&client=tw-ob`;
             
             currentAudio = new Audio(audioUrl);
             currentAudio.playbackRate = 1.35; 
 
             currentAudio.play().catch(err => {
-                fallbackSpeak(text, onComplete);
+                fallbackSpeak(spokenVersion, onComplete);
             });
 
             currentAudio.onended = function() {
@@ -372,7 +385,7 @@
 
             currentAudio.onerror = function() {
                 currentAudio = null;
-                fallbackSpeak(text, onComplete);
+                fallbackSpeak(spokenVersion, onComplete);
             };
         }
 
@@ -397,7 +410,6 @@
             }
         }
 
-        // Erweiterte Erkennung für Satzzeichen & Bindestriche
         function formatSpokenPunctuations(text) {
             if (!text) return "";
             return text
@@ -407,7 +419,7 @@
                 .replace(/\s+fragezeichen\s+/gi, '?')
                 .replace(/\s+apostroph\s+/gi, "'")
                 .replace(/\s+(bindestrich|minus|strich)\s+/gi, '-')
-                .replace(/bindestrich|minus|strich/gi, '-'); // Auch am Satzende/Anfang
+                .replace(/bindestrich|minus|strich/gi, '-');
         }
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -646,10 +658,11 @@
             for (let k in memoryItems) {
                 let item = memoryItems[k];
                 let loc = typeof item === 'object' ? item.location : item;
+                let userVal = (typeof item === 'object' && item.username) ? item.username : null;
                 let ts = typeof item === 'object' ? item.timestamp : now.getTime();
                 let diffDays = Math.floor((now.getTime() - ts) / (1000 * 60 * 60 * 24));
                 let timeDesc = diffDays === 0 ? "heute" : (diffDays === 1 ? "vor 1 Tag" : `vor ${diffDays} Tagen`);
-                memoryWithDetails[k] = { location: loc, abgelegt: timeDesc };
+                memoryWithDetails[k] = { location: loc, username: userVal, abgelegt: timeDesc };
             }
 
             try {
@@ -671,11 +684,12 @@
                                 Kalender: ${JSON.stringify(calendarEntries)}
                                 To-Dos: ${JSON.stringify(todoEntries)}
 
-                                WICHTIG FÜR PASSWÖRTER & GEGENSTÄNDE:
-                                - Wenn der Nutzer ein Passwort speichert, setze "type" auf "item_store", "item_category" auf "Passwörter", "item_name" auf den Dienst (z.B. "netflix", "wlan") und "item_location" auf das exakte Passwort (achte auf exakte Übernahme von Ziffern, Sonderzeichen wie Bindestriche "-", Gross-/Kleinschreibung).
+                                WICHTIG FÜR PASSWÖRTER & BENUTZERNAMEN:
+                                - Wenn der Nutzer ein Passwort oder Zugangsdaten speichert (z.B. "Mein Passwort für Netflix ist X und Benutzername ist Y"), setze "type" auf "item_store", "item_category" auf "Passwörter", "item_name" auf den Dienst (z.B. "netflix"), "item_location" auf das exakte Passwort und "item_username" auf den Benutzernamen (falls genannt).
+                                - Bei Abfragen von Passwörtern oder Zugangsdaten (item_query): Antworte im "reply" explizit mit dem Benutzernamen und dem Passwort, damit sie laut vorgelesen werden.
                                 - Bei Lösch-Befehlen (calendar_delete): Extrahiere im Feld "calendar_delete_query" den Kernbegriff.
 
-                                Gib ein JSON-Objekt zurück mit Feldern: "type" ("chat", "name_change", "item_store", "item_query", "note", "calendar", "calendar_delete"), "new_name", "item_name", "item_location", "item_category", "note_text", "summary", "start_time", "calendar_delete_query", "reply".`
+                                Gib ein JSON-Objekt zurück mit Feldern: "type" ("chat", "name_change", "item_store", "item_query", "note", "calendar", "calendar_delete"), "new_name", "item_name", "item_location", "item_username", "item_category", "note_text", "summary", "start_time", "calendar_delete_query", "reply".`
                             },
                             {
                                 role: "user",
@@ -755,8 +769,11 @@
                     setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
                 } else if (aiData.type === 'item_store' && aiData.item_name && aiData.item_location) {
                     let cleanName = aiData.item_name.toLowerCase();
+                    // Wenn für den Anbieter schon ein Eintrag existiert, behalten wir bestehende Werte bei falls einer fehlt
+                    let existing = memoryItems[cleanName] || {};
                     memoryItems[cleanName] = {
-                        location: aiData.item_location,
+                        location: aiData.item_location || existing.location,
+                        username: aiData.item_username || existing.username || null,
                         timestamp: Date.now(),
                         category: aiData.item_category || "Sonstiges"
                     };
@@ -776,9 +793,12 @@
                         if (cleanQuery.includes(storedKey) || storedKey.includes(cleanQuery)) {
                             let item = memoryItems[storedKey];
                             let matchedName = storedKey.charAt(0).toUpperCase() + storedKey.slice(1);
-                            finalReply = item.category === "Passwörter" 
-                                ? `Dein Passwort für ${matchedName} lautet: ${item.location}` 
-                                : `Dein ${matchedName} ist ${item.location}.`;
+                            if (item.category === "Passwörter") {
+                                let userPart = item.username ? `Dein Benutzername ist ${item.username} und ` : "";
+                                finalReply = `${userPart}dein Passwort für ${matchedName} lautet: ${item.location}`;
+                            } else {
+                                finalReply = `Dein ${matchedName} ist ${item.location}.`;
+                            }
                             break;
                         }
                     }
@@ -914,9 +934,10 @@
             for (let key in memoryItems) {
                 let item = memoryItems[key];
                 let loc = typeof item === 'object' ? item.location : item;
+                let userVal = (typeof item === 'object' && item.username) ? item.username : null;
                 let cat = (typeof item === 'object' && item.category) ? item.category : "Sonstiges";
                 if (!grouped[cat]) cat = "Sonstiges";
-                grouped[cat].push({ key: key, location: loc });
+                grouped[cat].push({ key: key, location: loc, username: userVal });
             }
 
             let catHtml = '';
@@ -928,8 +949,9 @@
                     hasAnyItems = true;
                     catHtml += `<div class="border border-slate-200 rounded-xl p-3 bg-slate-50 mb-2">
                         <h3 class="font-bold text-amber-900 mb-2">📌 ${cat}</h3>
-                        <ul class="space-y-1">`;
+                        <ul class="space-y-2">`;
                     
+                    itemsInCat.itemsInCat = itemsInCat || [];
                     itemsInCat.forEach(i => {
                         let capitalizedName = i.key.charAt(0).toUpperCase() + i.key.slice(1);
                         
@@ -937,12 +959,17 @@
                             let isVisible = visiblePasswords[i.key];
                             let displayVal = isVisible ? i.location : "••••••••";
                             let btnLabel = isVisible ? "Verbergen" : "Anzeigen";
+                            let userDisplay = i.username ? `<div class="text-slate-700">Benutzername: <span class="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 font-bold">${i.username}</span></div>` : "";
                             
-                            catHtml += `<li class="flex justify-between items-center text-xs py-1 border-b border-slate-200 last:border-none">
-                                <div>• <b>${capitalizedName}</b>: <span class="font-mono bg-white px-1 py-0.5 rounded border border-slate-200">${displayVal}</span></div>
-                                <div class="flex items-center gap-2">
-                                    <button onclick="togglePasswordVisibility('${i.key}')" class="text-blue-600 font-bold">${btnLabel}</button>
-                                    <button onclick="deleteMemoryItem('${i.key}')" class="text-red-600 font-bold">Löschen</button>
+                            catHtml += `<li class="bg-white p-2.5 rounded-lg border border-slate-200 shadow-sm flex flex-col gap-1 text-xs">
+                                <div class="flex justify-between items-center font-bold text-amber-900 border-b border-slate-100 pb-1">
+                                    <span>🔑 ${capitalizedName}</span>
+                                    <button onclick="deleteMemoryItem('${i.key}')" class="text-red-600 font-bold hover:underline">Löschen</button>
+                                </div>
+                                ${userDisplay}
+                                <div class="flex justify-between items-center pt-0.5">
+                                    <span class="text-slate-700">Passwort: <span class="font-mono bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">${displayVal}</span></span>
+                                    <button onclick="togglePasswordVisibility('${i.key}')" class="text-blue-600 font-bold hover:underline">${btnLabel}</button>
                                 </div>
                             </li>`;
                         } else {
