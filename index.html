@@ -634,7 +634,7 @@
                                 4. GRAMMATIK: Achte bei Gegenständen streng auf die deutsche Grammatik (z.B. "Deine Brille liegt auf dem Tisch", nicht "Dein Brille liegt auf den Tisch").
 
                                 Gib ein JSON-Objekt zurück mit folgenden Feldern:
-                                - "type": string (Wähle aus: "chat", "name_change", "item_store", "item_query", "note", "calendar")
+                                - "type": string (Wähle aus: "chat", "name_change", "item_store", "item_query", "note", "calendar", "calendar_delete")
                                 - "new_name": string (Falls er seinen Namen ändern will)
                                 - "item_name": string (Name des Gegenstands bei store/query)
                                 - "item_location": string (Der genaue Ort im Zustand, z.B. "hängt am Schlüsselbrett" oder "liegt auf dem Tisch")
@@ -642,6 +642,7 @@
                                 - "note_text": string (Nur bei echten To-Dos oder Notizen – NIEMALS bei Fragen!)
                                 - "summary": string (Titel für Kalender)
                                 - "start_time": string (Exaktes ISO-Datum im Format YYYY-MM-DDTHH:mm:ss für Kalender)
+                                - "calendar_delete_query": string (Suchbegriff oder Titel des zu löschenden Termins bei Typ calendar_delete)
                                 - "reply": string (Deine komplette, natürliche, fehlerfreie Antwort auf Deutsch, die per Sprachausgabe vorgelesen wird!)`
                             },
                             {
@@ -674,7 +675,31 @@
                     aiData.note_text = aiData.summary || text;
                 }
 
-                if (aiData.type === 'calendar') {
+                if (aiData.type === 'calendar_delete') {
+                    let searchQuery = (aiData.calendar_delete_query || text).toLowerCase();
+                    searchQuery = searchQuery.replace(/lösche|termin|den|das|für|am/gi, "").trim();
+                    
+                    let matchedEntry = calendarEntries.find(e => e.text.toLowerCase().includes(searchQuery));
+
+                    if (matchedEntry) {
+                        if (matchedEntry.calendarId && matchedEntry.calendarId !== 'null' && accessToken) {
+                            try {
+                                await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${matchedEntry.calendarId}`, {
+                                    method: 'DELETE',
+                                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                                });
+                            } catch (e) {}
+                        }
+                        calendarEntries = calendarEntries.filter(e => e.id !== matchedEntry.id);
+                        setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
+                        renderAllLists();
+                        
+                        finalReply = `Ich habe den Termin ${matchedEntry.text} für dich gelöscht.`;
+                    } else {
+                        finalReply = "Ich habe keinen passenden Termin dazu in deiner Liste gefunden.";
+                    }
+                }
+                else if (aiData.type === 'calendar') {
                     let calendarEventId = null;
                     let fullFormattedDate = new Date().toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Berlin' });
                     let shortFormattedDate = new Date().toLocaleDateString('de-DE', { day: 'numeric', month: 'long' });
