@@ -329,17 +329,16 @@
             const nowIso = now.toISOString();
             
             const maxDate = new Date();
-            maxDate.setFullYear(maxDate.getFullYear() + 2); // Hier angepasst auf 2 Jahre
+            maxDate.setFullYear(maxDate.getFullYear() + 2);
             const maxIso = maxDate.toISOString();
 
-            const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${nowIso}&timeMax=${maxIso}&singleEvents=true&orderBy=startTime`;
-
             try {
-                const response = await fetch(url, {
+                // 1. Alle Kalender des Nutzers abrufen (inkl. Geburtstage & geteilte Kalender)
+                const calendarListRes = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
                     headers: { 'Authorization': `Bearer ${accessToken}` }
                 });
 
-                if (response.status === 401) {
+                if (calendarListRes.status === 401) {
                     accessToken = '';
                     localStorage.removeItem('google_access_token');
                     sessionStorage.removeItem('google_access_token');
@@ -347,74 +346,97 @@
                     return;
                 }
 
-                if (response.ok) {
-                    const data = await response.json();
-                    const googleItems = data.items || [];
+                if (!calendarListRes.ok) return;
 
-                    let existingCalendarIds = new Set(calendarEntries.map(e => e.calendarId).filter(Boolean));
-                    let seenSignatures = new Set(calendarEntries.map(e => `${e.text}_${e.isoDate}`.toLowerCase()));
+                const calendarListData = await calendarListRes.json();
+                const calendars = calendarListData.items || [];
 
-                    googleItems.forEach(item => {
-                        const startRaw = item.start.dateTime || item.start.date;
-                        if (!startRaw) return;
+                let allGoogleItems = [];
 
-                        const itemDate = new Date(startRaw);
-                        if (!isNaN(itemDate) && (itemDate < now || itemDate > maxDate)) {
-                            return;
-                        }
+                // 2. Events für jeden einzelnen Kalender abrufen
+                for (let cal of calendars) {
+                    const calId = encodeURIComponent(cal.id);
+                    const url = `https://www.googleapis.com/calendar/v3/calendars/${calId}/events?timeMin=${nowIso}&timeMax=${maxIso}&singleEvents=true&orderBy=startTime`;
 
-                        const title = item.summary || "Kein Titel";
-                        const signature = `${title}_${startRaw}`.toLowerCase();
-
-                        if (existingCalendarIds.has(item.id)) {
-                            let existing = calendarEntries.find(e => e.calendarId === item.id);
-                            if (existing) {
-                                existing.text = title;
-                                existing.isoDate = startRaw;
+                    try {
+                        const eventRes = await fetch(url, {
+                            headers: { 'Authorization': `Bearer ${accessToken}` }
+                        });
+                        if (eventRes.ok) {
+                            const eventData = await eventRes.json();
+                            if (eventData.items) {
+                                allGoogleItems.push(...eventData.items);
                             }
-                        } else if (!seenSignatures.has(signature)) {
-                            let fullFormattedDate = "Ganztägig";
-                            let shortFormattedDate = "Ganztägig";
-                            
-                            const parsedDate = new Date(startRaw);
-                            if (!isNaN(parsedDate)) {
-                                if (item.start.dateTime) {
-                                    fullFormattedDate = parsedDate.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Berlin' });
-                                    let timePart = parsedDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
-                                    shortFormattedDate = `${parsedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' })} um ${timePart} Uhr`;
-                                } else {
-                                    fullFormattedDate = parsedDate.toLocaleDateString('de-DE', { dateStyle: 'medium', timeZone: 'Europe/Berlin' }) + " (Ganztägig)";
-                                    shortFormattedDate = parsedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' }) + " (Ganztägig)";
-                                }
-                            }
-
-                            calendarEntries.push({
-                                id: Date.now() + Math.random(),
-                                calendarId: item.id,
-                                text: title,
-                                date: fullFormattedDate,
-                                shortDate: shortFormattedDate,
-                                isoDate: startRaw
-                            });
-
-                            existingCalendarIds.add(item.id);
-                            seenSignatures.add(signature);
                         }
-                    });
-
-                    calendarEntries = calendarEntries.filter(e => {
-                        if (!e.isoDate) return true;
-                        const d = new Date(e.isoDate);
-                        return isNaN(d) || (d >= now && d <= maxDate);
-                    });
-
-                    calendarEntries.sort((a, b) => new Date(a.isoDate) - new Date(b.isoDate));
-
-                    setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
-                    renderAllLists();
+                    } catch (err) {
+                        console.error(`Fehler beim Laden von Kalender ${cal.summary}:`, err);
+                    }
                 }
+
+                let existingCalendarIds = new Set(calendarEntries.map(e => e.calendarId).filter(Boolean));
+                let seenSignatures = new Set(calendarEntries.map(e => `${e.text}_${e.isoDate}`.toLowerCase()));
+
+                allGoogleItems.forEach(item => {
+                    const startRaw = item.start.dateTime || item.start.date;
+                    if (!startRaw) return;
+
+                    const itemDate = new Date(startRaw);
+                    if (!isNaN(itemDate) && (itemDate < now || itemDate > maxDate)) {
+                        return;
+                    }
+
+                    const title = item.summary || "Kein Titel";
+                    const signature = `${title}_${startRaw}`.toLowerCase();
+
+                    if (existingCalendarIds.has(item.id)) {
+                        let existing = calendarEntries.find(e => e.calendarId === item.id);
+                        if (existing) {
+                            existing.text = title;
+                            existing.isoDate = startRaw;
+                        }
+                    } else if (!seenSignatures.has(signature)) {
+                        let fullFormattedDate = "Ganztägig";
+                        let shortFormattedDate = "Ganztägig";
+                        
+                        const parsedDate = new Date(startRaw);
+                        if (!isNaN(parsedDate)) {
+                            if (item.start.dateTime) {
+                                fullFormattedDate = parsedDate.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Berlin' });
+                                let timePart = parsedDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
+                                shortFormattedDate = `${parsedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' })} um ${timePart} Uhr`;
+                            } else {
+                                fullFormattedDate = parsedDate.toLocaleDateString('de-DE', { dateStyle: 'medium', timeZone: 'Europe/Berlin' }) + " (Ganztägig)";
+                                shortFormattedDate = parsedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' }) + " (Ganztägig)";
+                            }
+                        }
+
+                        calendarEntries.push({
+                            id: Date.now() + Math.random(),
+                            calendarId: item.id,
+                            text: title,
+                            date: fullFormattedDate,
+                            shortDate: shortFormattedDate,
+                            isoDate: startRaw
+                        });
+
+                        existingCalendarIds.add(item.id);
+                        seenSignatures.add(signature);
+                    }
+                });
+
+                calendarEntries = calendarEntries.filter(e => {
+                    if (!e.isoDate) return true;
+                    const d = new Date(e.isoDate);
+                    return isNaN(d) || (d >= now && d <= maxDate);
+                });
+
+                calendarEntries.sort((a, b) => new Date(a.isoDate) - new Date(b.isoDate));
+
+                setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
+                renderAllLists();
+
             } catch (e) {
-                console.error("Fehler beim Abrufen des Google Kalenders:", e);
+                console.error("Fehler beim Abrufen der Google Kalender:", e);
             }
         }
 
@@ -777,7 +799,7 @@
                         } else if (temp < 12) {
                             weatherContext += " Es ist frisch, eine Jacke wird empfohlen.";
                         } else {
-                            weatherContext += " Regen ist aktuell keiner zu erwarten.";
+                            weatherContext += " Regen is aktuell keiner zu erwarten.";
                         }
                     }
                 } catch (e) {
@@ -921,7 +943,6 @@
                     let noteContent = aiData.note_text || text;
                     noteContent = noteContent.charAt(0).toUpperCase() + noteContent.slice(1);
 
-                    // Erstellungsdatum generieren (z.B. "Erstellt am 16.09.2026")
                     const creationDateStr = `Erstellt am ${now.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
 
                     const newTodoEntry = {
@@ -1099,7 +1120,6 @@
             } else {
                 todoList.innerHTML = '';
                 todoEntries.forEach(entry => {
-                    // Falls ein älteres To-Do noch kein Erstellungsdatum hat, fangen wir das ab
                     const dateDisplay = entry.createdDate ? `<div class="text-xs text-slate-400 mt-0.5">${entry.createdDate}</div>` : '';
 
                     const li = document.createElement('li');
