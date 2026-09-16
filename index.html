@@ -129,7 +129,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.33</span>
+        <span>Version 4.34</span>
     </footer>
 
     <!-- JavaScript -->
@@ -275,7 +275,6 @@
         let tokenClient;
         let accessToken = getPersistentData('google_access_token', '');
 
-        // Beim Laden der Seite prüfen, ob Client-ID da ist und direkt im Hintergrund initialisieren
         window.addEventListener('load', () => {
             const clientId = getPersistentData('google_client_id', '');
             if (clientId) {
@@ -291,7 +290,6 @@
             settingsBox.classList.toggle('hidden');
         }
 
-        // Google Client einmal zentral initialisieren
         function initGoogleClient(clientId, autoRun = false) {
             try {
                 tokenClient = google.accounts.oauth2.initTokenClient({
@@ -309,7 +307,6 @@
                     },
                 });
 
-                // Wenn bereits ein Token da war, im Hintergrund versuchen zu aktualisieren
                 if (autoRun && accessToken) {
                     tokenClient.requestAccessToken({ prompt: 'none' });
                 }
@@ -829,7 +826,8 @@
                                 To-Dos: ${todoContext}
 
                                 ABSOLUT STRENGE REGELN (WICHTIGSTE PRIORITÄT!):
-                                1. KALENDER-ERSTELLUNG (WICHTIG): Wenn der Nutzer einen Termin anlegt (z.B. "Trage Termin X am [Datum/Uhrzeit] ein"), musst du zwingend den Typ "calendar" wählen und das Feld "start_time" als exaktes ISO-Datum (YYYY-MM-DDTHH:mm:ss) im Jahr 2026 ausfüllen! Wenn keine Uhrzeit genannt wird, setze standardmäßig 09:00:00 ein (z.B. 2026-09-17T09:00:00).
+                                1. TERMIN VS. TO-DO UNTERSCHEIDUNG (STRENG!): Trage etwas NUR dann als Kalender-Termin ("calendar") ein, wenn der Nutzer explizit eine Uhrzeit oder ein Datum genannt hat (z.B. "morgen um 15 Uhr"). 
+                                Wenn der Nutzer eine reine Absicht oder Alltagsaufgabe äußert, ohne eine Uhrzeit oder ein Datum zu nennen (z. B. "Ich muss meine Tochter abholen" oder "Ich muss einkaufen"), wähle ZWINGEND den Typ "note" (To-Do-Liste)! Erfinde niemals eigenmächtig eine Uhrzeit oder einen Termin, wenn keine genannt wurde!
                                 2. KEINE FRAGEN ALS TO-DO SPEICHERN: Wenn der Nutzer fragt "Welche Termine habe ich?", "Brauche ich einen Regenschirm?" oder allgemeine Fragen stellt, wähle niemals den Typ "note"!
                                 3. SPRACH-STIL: Sag NIEMALS "Ich habe gemerkt...". Antworte immer natürlich und flüssig.
                                 4. GRAMMATIK: Achte bei Gegenständen streng auf die deutsche Grammatik.
@@ -842,7 +840,7 @@
                                 - "item_category": string (Kategorie: "Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer", "Sonstiges")
                                 - "note_text": string (Nur bei echten To-Dos oder Notizen)
                                 - "summary": string (Titel für Kalender)
-                                - "start_time": string (Exaktes ISO-Datum im Format YYYY-MM-DDTHH:mm:ss für Kalender, z.B. 2026-09-17T14:00:00)
+                                - "start_time": string (Exaktes ISO-Datum im Format YYYY-MM-DDTHH:mm:ss für Kalender, nur bei explizitem Zeitbezug)
                                 - "calendar_delete_query": string (Suchbegriff des zu löschenden Termins bei Typ calendar_delete)
                                 - "reply": string (Deine komplette, natürliche, fehlerfreie Antwort auf Deutsch, die per Sprachausgabe vorgelesen wird!)`
                             },
