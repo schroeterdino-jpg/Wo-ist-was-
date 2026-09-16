@@ -181,62 +181,53 @@
         }
 
         let currentUserName = getPersistentData('user_custom_name', 'Dino');
-        userNameInput.value = currentUserName;
+        if (userNameInput) userNameInput.value = currentUserName;
         updateUserGreeting();
 
         let savedKey = getPersistentData('user_api_key', '');
-        if (savedKey) apiKeyInput.value = savedKey;
+        if (savedKey && apiKeyInput) apiKeyInput.value = savedKey;
 
         let savedModel = getPersistentData('user_model_name', 'llama-3.3-70b-versatile');
-        modelInput.value = savedModel;
+        if (modelInput) modelInput.value = savedModel;
         setPersistentData('user_model_name', savedModel);
         updateActiveModelDisplay();
 
         let savedClientId = getPersistentData('google_client_id', '399573320370-qka01ghj0s88eoair7lla665cbj10o4g.apps.googleusercontent.com');
-        googleClientIdInput.value = savedClientId;
+        if (googleClientIdInput) googleClientIdInput.value = savedClientId;
         setPersistentData('google_client_id', savedClientId);
 
-        userNameInput.addEventListener('input', () => {
-            currentUserName = userNameInput.value.trim() || "Dino";
-            setPersistentData('user_custom_name', currentUserName);
-            updateUserGreeting();
-        });
-        userNameInput.addEventListener('change', () => {
-            currentUserName = userNameInput.value.trim() || "Dino";
-            setPersistentData('user_custom_name', currentUserName);
-            updateUserGreeting();
-        });
+        if (userNameInput) {
+            userNameInput.addEventListener('input', () => {
+                currentUserName = userNameInput.value.trim() || "Dino";
+                setPersistentData('user_custom_name', currentUserName);
+                updateUserGreeting();
+            });
+        }
 
-        apiKeyInput.addEventListener('input', () => {
-            setPersistentData('user_api_key', apiKeyInput.value.trim());
-            connectionStatus.textContent = "API-Key gespeichert.";
-        });
-        apiKeyInput.addEventListener('change', () => {
-            setPersistentData('user_api_key', apiKeyInput.value.trim());
-        });
+        if (apiKeyInput) {
+            apiKeyInput.addEventListener('input', () => {
+                setPersistentData('user_api_key', apiKeyInput.value.trim());
+                connectionStatus.textContent = "API-Key gespeichert.";
+            });
+        }
 
-        modelInput.addEventListener('input', () => {
-            const newModel = modelInput.value.trim() || 'llama-3.3-70b-versatile';
-            setPersistentData('user_model_name', newModel);
-            connectionStatus.textContent = "Modell gespeichert.";
-            updateActiveModelDisplay();
-        });
-        modelInput.addEventListener('change', () => {
-            const newModel = modelInput.value.trim() || 'llama-3.3-70b-versatile';
-            setPersistentData('user_model_name', newModel);
-            updateActiveModelDisplay();
-        });
+        if (modelInput) {
+            modelInput.addEventListener('input', () => {
+                const newModel = modelInput.value.trim() || 'llama-3.3-70b-versatile';
+                setPersistentData('user_model_name', newModel);
+                connectionStatus.textContent = "Modell gespeichert.";
+                updateActiveModelDisplay();
+            });
+        }
 
-        googleClientIdInput.addEventListener('input', () => {
-            setPersistentData('google_client_id', googleClientIdInput.value.trim());
-            connectionStatus.textContent = "Client-ID gespeichert.";
-        });
-        googleClientIdInput.addEventListener('change', () => {
-            setPersistentData('google_client_id', googleClientIdInput.value.trim());
-        });
+        if (googleClientIdInput) {
+            googleClientIdInput.addEventListener('input', () => {
+                setPersistentData('google_client_id', googleClientIdInput.value.trim());
+            });
+        }
 
         function updateUserGreeting() {
-            userNameDisplay.textContent = `Hallo, ${currentUserName}!`;
+            if (userNameDisplay) userNameDisplay.textContent = `Hallo, ${currentUserName}!`;
         }
 
         function updateActiveModelDisplay() {
@@ -673,7 +664,7 @@
                                 - "item_category": string (Kategorie: "Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer", "Sonstiges")
                                 - "note_text": string (Nur bei echten To-Dos oder Notizen – NIEMALS bei Fragen!)
                                 - "summary": string (Titel für Kalender)
-                                - "start_time": string (Exaktes ISO-Datum im Format YYYY-MM-DDTHH:mm:ss for Kalender)
+                                - "start_time": string (Exaktes ISO-Datum im Format YYYY-MM-DDTHH:mm:ss für Kalender)
                                 - "reply": string (Deine komplette, natürliche, fehlerfreie Antwort auf Deutsch, die per Sprachausgabe vorgelesen wird!)`
                             },
                             {
@@ -761,7 +752,7 @@
                 if (aiData.type === 'name_change' && aiData.new_name) {
                     currentUserName = aiData.new_name;
                     setPersistentData('user_custom_name', currentUserName);
-                    userNameInput.value = currentUserName;
+                    if (userNameInput) userNameInput.value = currentUserName;
                     updateUserGreeting();
                 }
 
