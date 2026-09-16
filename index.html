@@ -151,7 +151,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.33</span>
+        <span>Version 4.34</span>
     </footer>
 
     <!-- JavaScript -->
@@ -397,17 +397,9 @@
             }
         }
 
-        // Erweiterte Erkennung für Satzzeichen & Bindestriche
+        // Keine automatischen Ersetzungen mehr – gesprochener Text wird exakt 1:1 durchgereicht
         function formatSpokenPunctuations(text) {
-            if (!text) return "";
-            return text
-                .replace(/\s+punkt\s+/gi, '.')
-                .replace(/\s+komma\s+/gi, ',')
-                .replace(/\s+ausrufezeichen\s+/gi, '!')
-                .replace(/\s+fragezeichen\s+/gi, '?')
-                .replace(/\s+apostroph\s+/gi, "'")
-                .replace(/\s+(bindestrich|minus|strich)\s+/gi, '-')
-                .replace(/bindestrich|minus|strich/gi, '-'); // Auch am Satzende/Anfang
+            return text;
         }
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -671,9 +663,10 @@
                                 Kalender: ${JSON.stringify(calendarEntries)}
                                 To-Dos: ${JSON.stringify(todoEntries)}
 
-                                WICHTIG FÜR PASSWÖRTER & GEGENSTÄNDE:
-                                - Wenn der Nutzer ein Passwort speichert, setze "type" auf "item_store", "item_category" auf "Passwörter", "item_name" auf den Dienst (z.B. "netflix", "wlan") und "item_location" auf das exakte Passwort (achte auf exakte Übernahme von Ziffern, Sonderzeichen wie Bindestriche "-", Gross-/Kleinschreibung).
-                                - Bei Lösch-Befehlen (calendar_delete): Extrahiere im Feld "calendar_delete_query" den Kernbegriff.
+                                WICHTIG FÜR PASSWÖRTER, E-MAILS & ZUGANGSDATEN:
+                                - Wenn der Nutzer Zugangsdaten, Benutzername, E-Mail-Adresse oder Passwörter speichert (z.B. "speichere meine Zugangsdaten für Google...", "Meine E-Mail ist...", "Passwort für..."), setze "type" auf "item_store", "item_category" auf "Passwörter", "item_name" auf den Dienst/Namen und "item_location" auf die exakten Daten (z.B. Benutzername + Passwort oder E-Mail-Adresse).
+                                - Achte extrem darauf, Zeichen in E-Mail-Adressen und Passwörtern (wie das At-Zeichen "@", Punkte ".", Bindestriche "-", Unterstriche "_") **exakt** so zu übernehmen, wie sie genannt wurden (z.B. schröterdino@googlemail.com). Erfinde keine Leerzeichen.
+                                - Die KI soll den Wert bei der Bestätigung ("reply") normal und kurz bestätigen (z.B. "Ist gespeichert!"), ohne den Code oder Punkte mühsam vorzulesen.
 
                                 Gib ein JSON-Objekt zurück mit Feldern: "type" ("chat", "name_change", "item_store", "item_query", "note", "calendar", "calendar_delete"), "new_name", "item_name", "item_location", "item_category", "note_text", "summary", "start_time", "calendar_delete_query", "reply".`
                             },
@@ -777,7 +770,7 @@
                             let item = memoryItems[storedKey];
                             let matchedName = storedKey.charAt(0).toUpperCase() + storedKey.slice(1);
                             finalReply = item.category === "Passwörter" 
-                                ? `Dein Passwort für ${matchedName} lautet: ${item.location}` 
+                                ? `Deine Zugangsdaten für ${matchedName} lauten: ${item.location}` 
                                 : `Dein ${matchedName} ist ${item.location}.`;
                             break;
                         }
