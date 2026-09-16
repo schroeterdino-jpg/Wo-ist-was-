@@ -129,7 +129,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.25</span>
+        <span>Version 4.27</span>
     </footer>
 
     <!-- JavaScript -->
@@ -275,7 +275,6 @@
         let tokenClient;
         let accessToken = getPersistentData('google_access_token', '');
 
-        // Direkt beim Start versuchen, bestehende Google-Termine zu laden, falls Token vorhanden
         if (accessToken) {
             fetchGoogleCalendarEvents();
         }
@@ -304,7 +303,6 @@
                         setPersistentData('google_access_token', accessToken);
                         connectionStatus.textContent = "✅ Mit Google Kalender verbunden!";
                         
-                        // Sofort Termine und Geburtstage aus Google laden
                         fetchGoogleCalendarEvents();
                     },
                 });
@@ -314,7 +312,6 @@
             }
         }
 
-        // --- GOOGLE KALENDER & GEBURTSTAGE EINLESEN ---
         async function fetchGoogleCalendarEvents() {
             if (!accessToken) return;
 
@@ -336,7 +333,6 @@
                         const startRaw = item.start.dateTime || item.start.date;
                         if (!startRaw) return;
 
-                        // Nur hinzufügen, wenn die Event-ID noch nicht lokal existiert
                         if (!existingCalendarIds.has(item.id)) {
                             let fullFormattedDate = "Ganztägig";
                             let shortFormattedDate = "Ganztägig";
@@ -348,7 +344,6 @@
                                     let timePart = parsedDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
                                     shortFormattedDate = `${parsedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' })} um ${timePart} Uhr`;
                                 } else {
-                                    // Ganztägige Termine oder Geburtstage
                                     fullFormattedDate = parsedDate.toLocaleDateString('de-DE', { dateStyle: 'medium', timeZone: 'Europe/Berlin' }) + " (Ganztägig)";
                                     shortFormattedDate = parsedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' }) + " (Ganztägig)";
                                 }
@@ -365,7 +360,6 @@
                         }
                     });
 
-                    // Nach Datum sortieren
                     calendarEntries.sort((a, b) => new Date(a.isoDate) - new Date(b.isoDate));
 
                     setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
@@ -376,7 +370,7 @@
             }
         }
 
-        // --- AUDIO-SPRACHAUSGABE MIT GESCHWINDIGKEITS-KONTROLLE ---
+        // --- AUDIO-SPRACHAUSGABE ---
         let currentAudio = null;
 
         function speak(text, onComplete) {
@@ -471,23 +465,9 @@
             recordBtn.disabled = true;
         }
 
-        function startListeningAuto() {
-            const currentKey = getPersistentData('user_api_key', '');
-            if (!currentKey || !recognition) return;
-            if (isRecording) return;
-            try {
-                recognition.start();
-            } catch (e) {
-                try {
-                    recognition.stop();
-                    setTimeout(() => recognition.start(), 200);
-                } catch (err) {}
-            }
-        }
-
         function readTodoList() {
             if (todoEntries.length === 0) {
-                speak("Deine To-Do-Liste ist aktuell leer.", () => startListeningAuto());
+                speak("Deine To-Do-Liste ist aktuell leer.");
                 statusMessage.textContent = "To-Do-Liste ist leer.";
                 return;
             }
@@ -498,7 +478,7 @@
             });
             
             statusMessage.textContent = "Lese To-Do-Liste vor...";
-            speak(textToSpeak, () => startListeningAuto());
+            speak(textToSpeak);
         }
 
         function handleCallCommand(text) {
@@ -515,7 +495,7 @@
                     window.location.href = `tel:${foundContact.phone}`;
                 });
             } else {
-                speak("Diesen Kontakt habe ich leider nicht gefunden. Du kannst ihn ganz einfach in den Einstellungen hinzufügen.", () => startListeningAuto());
+                speak("Diesen Kontakt habe ich leider nicht gefunden. Du kannst ihn ganz einfach in den Einstellungen hinzufügen.");
             }
         }
 
@@ -535,7 +515,14 @@
             if (isRecording) {
                 recognition.stop();
             } else {
-                startListeningAuto();
+                try {
+                    recognition.start();
+                } catch (e) {
+                    try {
+                        recognition.stop();
+                        setTimeout(() => recognition.start(), 200);
+                    } catch (err) {}
+                }
             }
         }
 
@@ -652,7 +639,7 @@
             }
 
             statusMessage.textContent = "Fertig.";
-            speak(briefingText, () => startListeningAuto());
+            speak(briefingText);
         }
 
         async function sendToGroqSmart(text) {
@@ -861,13 +848,13 @@
                 }
 
                 statusMessage.textContent = "Fertig.";
-                speak(finalReply, () => startListeningAuto());
+                speak(finalReply);
                 renderAllLists();
 
             } catch (error) {
                 console.error(error);
                 statusMessage.textContent = error.message;
-                speak("Es gab einen Fehler: " + error.message, () => startListeningAuto());
+                speak("Es gab einen Fehler: " + error.message);
             }
         }
 
