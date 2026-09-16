@@ -129,7 +129,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.34</span>
+        <span>Version 4.35</span>
     </footer>
 
     <!-- JavaScript -->
@@ -204,18 +204,7 @@
             userNameDisplay.textContent = `Hallo, ${currentUserName}!`;
         }
 
-        let rawCalendarEntries = JSON.parse(getPersistentData('helfer_calendar_entries', '[]')) || [];
-        const maxAllowedDate = new Date();
-        maxAllowedDate.setMonth(maxAllowedDate.getMonth() + 6);
-
-        let calendarEntries = rawCalendarEntries.filter(entry => {
-            if (!entry.isoDate) return true;
-            const entryDate = new Date(entry.isoDate);
-            if (isNaN(entryDate)) return true;
-            return entryDate <= maxAllowedDate;
-        });
-        setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
-
+        let calendarEntries = JSON.parse(getPersistentData('helfer_calendar_entries', '[]')) || [];
         let todoEntries = JSON.parse(getPersistentData('helfer_todo_entries', '[]')) || [];
         let memoryItems = JSON.parse(getPersistentData('helfer_memory', '{}')) || {};
         let savedContacts = JSON.parse(getPersistentData('helfer_contacts', '{}')) || {};
@@ -362,7 +351,7 @@
                     const data = await response.json();
                     const googleItems = data.items || [];
 
-                    let existingCalendarIds = new Set(calendarEntries.map(e => e.calendarId));
+                    let existingCalendarIds = new Set(calendarEntries.map(e => e.calendarId).filter(Boolean));
                     let seenSignatures = new Set(calendarEntries.map(e => `${e.text}_${e.isoDate}`.toLowerCase()));
 
                     googleItems.forEach(item => {
@@ -377,7 +366,14 @@
                         const title = item.summary || "Kein Titel";
                         const signature = `${title}_${startRaw}`.toLowerCase();
 
-                        if (!existingCalendarIds.has(item.id) && !seenSignatures.has(signature)) {
+                        // Wenn die Event-ID bereits existiert, aktualisieren wir den Eintrag ggf. (Sicherstellen, dass er da ist)
+                        if (existingCalendarIds.has(item.id)) {
+                            let existing = calendarEntries.find(e => e.calendarId === item.id);
+                            if (existing) {
+                                existing.text = title;
+                                existing.isoDate = startRaw;
+                            }
+                        } else if (!seenSignatures.has(signature)) {
                             let fullFormattedDate = "Ganztägig";
                             let shortFormattedDate = "Ganztägig";
                             
@@ -407,6 +403,7 @@
                         }
                     });
 
+                    // Wir behalten alle lokalen Einträge, die in der Zukunft liegen (damit manuell oder frisch erstellte nie verloren gehen)
                     calendarEntries = calendarEntries.filter(e => {
                         if (!e.isoDate) return true;
                         const d = new Date(e.isoDate);
@@ -920,6 +917,7 @@
                     calendarEntries.unshift(newCalEntry);
                     calendarEntries.sort((a, b) => new Date(a.isoDate) - new Date(b.isoDate));
                     setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
+                    renderAllLists(); // Direktes Rendern nach dem Hinzufügen!
                 } else if (aiData.type === 'note') {
                     let noteContent = aiData.note_text || text;
                     noteContent = noteContent.replace(/\s+(am|um)\s+.*/gi, '').trim();
