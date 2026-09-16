@@ -129,7 +129,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.28</span>
+        <span>Version 4.29</span>
     </footer>
 
     <!-- JavaScript -->
@@ -215,7 +215,20 @@
             userNameDisplay.textContent = `Hallo, ${currentUserName}!`;
         }
 
-        let calendarEntries = JSON.parse(getPersistentData('helfer_calendar_entries', '[]')) || [];
+        // --- HINGESCHAUT: Alte, ferne Termine aus dem Speicher direkt beim Laden radikal rauswerfen ---
+        let rawCalendarEntries = JSON.parse(getPersistentData('helfer_calendar_entries', '[]')) || [];
+        const maxAllowedDate = new Date();
+        maxAllowedDate.setMonth(maxAllowedDate.getMonth() + 6); // Max 6 Monate in die Zukunft
+
+        let calendarEntries = rawCalendarEntries.filter(entry => {
+            if (!entry.isoDate) return true;
+            const entryDate = new Date(entry.isoDate);
+            if (isNaN(entryDate)) return true;
+            return entryDate <= maxAllowedDate;
+        });
+        // Direkt bereinigte Liste wieder sichern
+        setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
+
         let todoEntries = JSON.parse(getPersistentData('helfer_todo_entries', '[]')) || [];
         let memoryItems = JSON.parse(getPersistentData('helfer_memory', '{}')) || {};
         let savedContacts = JSON.parse(getPersistentData('helfer_contacts', '{}')) || {};
@@ -318,7 +331,6 @@
             const now = new Date();
             const nowIso = now.toISOString();
             
-            // Maximal 6 Monate in die Zukunft schauen, um unendliche Serien/Geburtstage zu blockieren
             const maxDate = new Date();
             maxDate.setMonth(maxDate.getMonth() + 6);
             const maxIso = maxDate.toISOString();
@@ -341,10 +353,15 @@
                         const startRaw = item.start.dateTime || item.start.date;
                         if (!startRaw) return;
 
+                        // Zusätzlicher Schutz: Termine außerhalb des 6-Monatsfensters ignorieren
+                        const itemDate = new Date(startRaw);
+                        if (!isNaN(itemDate) && (itemDate < now || itemDate > maxDate)) {
+                            return;
+                        }
+
                         const title = item.summary || "Kein Titel";
                         const signature = `${title}_${startRaw}`.toLowerCase();
 
-                        // Nur hinzufügen, wenn es weder die ID noch die Kombination aus Titel+Datum schon gibt
                         if (!existingCalendarIds.has(item.id) && !seenSignatures.has(signature)) {
                             let fullFormattedDate = "Ganztägig";
                             let shortFormattedDate = "Ganztägig";
@@ -373,6 +390,13 @@
                             existingCalendarIds.add(item.id);
                             seenSignatures.add(signature);
                         }
+                    });
+
+                    // Erneut filtern und sortieren
+                    calendarEntries = calendarEntries.filter(e => {
+                        if (!e.isoDate) return true;
+                        const d = new Date(e.isoDate);
+                        return isNaN(d) || (d >= now && d <= maxDate);
                     });
 
                     calendarEntries.sort((a, b) => new Date(a.isoDate) - new Date(b.isoDate));
@@ -893,7 +917,7 @@
             };
 
             try {
-                const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+                const res = await fetch('https://api.googleapis.com/calendar/v3/calendars/primary/events', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${accessToken}`,
