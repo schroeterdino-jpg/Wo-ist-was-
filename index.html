@@ -682,6 +682,38 @@
             const todayStr = now.toLocaleDateString('en-CA');
             const currentClockTime = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
 
+            // Wetter live abrufen, falls nach Regenschirm oder Wetter gefragt wird
+            let weatherContext = "";
+            const lowerTextCheck = text.toLowerCase();
+            if (lowerTextCheck.includes("regenschirm") || lowerTextCheck.includes("wetter") || lowerTextCheck.includes("regen") || lowerTextCheck.includes("jacke")) {
+                try {
+                    const weatherRes = await fetch('https://api.open-meteo.com/v1/forecast?latitude=53.5135&longitude=10.4182&current=temperature_2m,weather_code,wind_speed_10m');
+                    if (weatherRes.ok) {
+                        const weatherData = await weatherRes.json();
+                        const temp = weatherData.current.temperature_2m;
+                        const code = weatherData.current.weather_code;
+                        
+                        let condition = "bewölkt";
+                        if (code === 0) condition = "klar und sonnig";
+                        else if (code >= 1 && code <= 3) condition = "wechselhaft bewölkt";
+                        else if (code >= 51 && code <= 67) condition = "regnerisch";
+                        else if (code >= 71 && code <= 77) condition = "schneebedeckt";
+                        else if (code >= 95) condition = "Gewitter";
+
+                        weatherContext = `Aktuelles Live-Wetter in Schwarzenbek: ${condition}, ${temp} Grad.`;
+                        if (code >= 51 && code <= 67) {
+                            weatherContext += " Es regnet, ein Regenschirm wird dringend empfohlen!";
+                        } else if (temp < 12) {
+                            weatherContext += " Es ist frisch, eine Jacke wird empfohlen.";
+                        } else {
+                            weatherContext += " Regen ist aktuell keiner zu erwarten.";
+                        }
+                    }
+                } catch (e) {
+                    console.error("Wetter-Abruf Fehler:", e);
+                }
+            }
+
             const memoryWithDetails = {};
             for (let k in memoryItems) {
                 let item = memoryItems[k];
@@ -712,13 +744,14 @@
                                 role: "system",
                                 content: `Du bist ${currentUserName}s smarter, absolut natürlicher und menschlicher Alltags-Assistent in Schwarzenbek. 
                                 Aktuelles exaktes Datum heute ist ${todayStr} (${now.toLocaleDateString('de-DE', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'})}), Uhrzeit ist exakt ${currentClockTime} Uhr.
+                                ${weatherContext ? "Wetter-Information: " + weatherContext : ""}
                                 Bisheriges Gedächtnis über Gegenstände: ${memoryContext}
                                 Kalender: ${calendarContext}
                                 To-Dos: ${todoContext}
 
                                 ABSOLUT STRENGE REGELN (WICHTIGSTE PRIORITÄT!):
                                 1. KALENDER-ERSTELLUNG (WICHTIG): Wenn der Nutzer einen Termin anlegt (z.B. "Trage Termin X am [Datum/Uhrzeit] ein"), musst du zwingend den Typ "calendar" wählen und das Feld "start_time" als exaktes ISO-Datum (YYYY-MM-DDTHH:mm:ss) im Jahr 2026 ausfüllen! Wenn keine Uhrzeit genannt wird, setze standardmäßig 09:00:00 ein (z.B. 2026-09-17T09:00:00).
-                                2. KEINE FRAGEN ALS TO-DO SPEICHERN: Wenn der Nutzer fragt "Welche Termine habe ich?", "Was habe ich vor?" oder allgemeine Fragen stellt, wähle niemals den Typ "note"!
+                                2. KEINE FRAGEN ALS TO-DO SPEICHERN: Wenn der Nutzer fragt "Welche Termine habe ich?", "Brauche ich einen Regenschirm?" oder allgemeine Fragen stellt, wähle niemals den Typ "note"!
                                 3. SPRACH-STIL: Sag NIEMALS "Ich habe gemerkt...". Antworte immer natürlich und flüssig.
                                 4. GRAMMATIK: Achte bei Gegenständen streng auf die deutsche Grammatik.
 
