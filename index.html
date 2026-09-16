@@ -332,12 +332,15 @@
             maxDate.setFullYear(maxDate.getFullYear() + 2);
             const maxIso = maxDate.toISOString();
 
+            // Nur den primären Google-Kalender abfragen
+            const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${nowIso}&timeMax=${maxIso}&singleEvents=true&orderBy=startTime`;
+
             try {
-                const calendarListRes = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
+                const response = await fetch(url, {
                     headers: { 'Authorization': `Bearer ${accessToken}` }
                 });
 
-                if (calendarListRes.status === 401) {
+                if (response.status === 401) {
                     accessToken = '';
                     localStorage.removeItem('google_access_token');
                     sessionStorage.removeItem('google_access_token');
@@ -345,118 +348,96 @@
                     return;
                 }
 
-                if (!calendarListRes.ok) return;
+                if (response.ok) {
+                    const data = await response.json();
+                    const googleItems = data.items || [];
 
-                const calendarListData = await calendarListRes.json();
-                const calendars = calendarListData.items || [];
+                    let existingCalendarIds = new Set(calendarEntries.map(e => e.calendarId).filter(Boolean));
+                    let seenSignatures = new Set(calendarEntries.map(e => `${e.text}_${e.isoDate}`.toLowerCase()));
 
-                let allGoogleItems = [];
+                    // Ausschlussliste für unerwünschte Feiertage/Systemeinträge im Hauptkalender
+                    const ignoreKeywords = [
+                        "weltfrauentag", "weltkindertag", "feiertag", "gesetzlicher", "holiday", 
+                        "muttertag", "vatertag", "sommerzeit", "winterzeit", "daylight", "saving", 
+                        "ostern", "pfingsten", "weihnachten", "neujahr", "karfreitag", "himmelfahrt", 
+                        "arbeit", "einheit", "reformationstag", "könige", "valentinstag", "halloween", 
+                        "silvester", "fasching", "karneval", "children's", "unity", "good friday", 
+                        "easter", "christmas", "new year", "ascension", "pentecost", "corpus christi", 
+                        "assumption", "all saints", "boxing day"
+                    ];
 
-                for (let cal of calendars) {
-                    const calId = encodeURIComponent(cal.id);
-                    const url = `https://www.googleapis.com/calendar/v3/calendars/${calId}/events?timeMin=${nowIso}&timeMax=${maxIso}&singleEvents=true&orderBy=startTime`;
+                    // Vorherige Feiertage aus dem lokalen Cache direkt löschen
+                    calendarEntries = calendarEntries.filter(e => {
+                        const lower = e.text.toLowerCase();
+                        return !ignoreKeywords.some(kw => lower.includes(kw));
+                    });
 
-                    try {
-                        const eventRes = await fetch(url, {
-                            headers: { 'Authorization': `Bearer ${accessToken}` }
-                        });
-                        if (eventRes.ok) {
-                            const eventData = await eventRes.json();
-                            if (eventData.items) {
-                                allGoogleItems.push(...eventData.items);
-                            }
+                    googleItems.forEach(item => {
+                        const startRaw = item.start.dateTime || item.start.date;
+                        if (!startRaw) return;
+
+                        const title = item.summary || "Kein Titel";
+                        const lowerTitle = title.toLowerCase();
+
+                        const isIgnored = ignoreKeywords.some(keyword => lowerTitle.includes(keyword));
+                        if (isIgnored) return;
+
+                        const itemDate = new Date(startRaw);
+                        if (!isNaN(itemDate) && (itemDate < now || itemDate > maxDate)) {
+                            return;
                         }
-                    } catch (err) {
-                        console.error(`Fehler beim Laden von Kalender ${cal.summary}:`, err);
-                    }
+
+                        const signature = `${title}_${startRaw}`.toLowerCase();
+
+                        if (existingCalendarIds.has(item.id)) {
+                            let existing = calendarEntries.find(e => e.calendarId === item.id);
+                            if (existing) {
+                                existing.text = title;
+                                existing.isoDate = startRaw;
+                            }
+                        } else if (!seenSignatures.has(signature)) {
+                            let fullFormattedDate = "Ganztägig";
+                            let shortFormattedDate = "Ganztägig";
+                            
+                            const parsedDate = new Date(startRaw);
+                            if (!isNaN(parsedDate)) {
+                                if (item.start.dateTime) {
+                                    fullFormattedDate = parsedDate.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Berlin' });
+                                    let timePart = parsedDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
+                                    shortFormattedDate = `${parsedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' })} um ${timePart} Uhr`;
+                                } else {
+                                    fullFormattedDate = parsedDate.toLocaleDateString('de-DE', { dateStyle: 'medium', timeZone: 'Europe/Berlin' }) + " (Ganztägig)";
+                                    shortFormattedDate = parsedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' }) + " (Ganztägig)";
+                                }
+                            }
+
+                            calendarEntries.push({
+                                id: Date.now() + Math.random(),
+                                calendarId: item.id,
+                                text: title,
+                                date: fullFormattedDate,
+                                shortDate: shortFormattedDate,
+                                isoDate: startRaw
+                            });
+
+                            existingCalendarIds.add(item.id);
+                            seenSignatures.add(signature);
+                        }
+                    });
+
+                    calendarEntries = calendarEntries.filter(e => {
+                        if (!e.isoDate) return true;
+                        const d = new Date(e.isoDate);
+                        return isNaN(d) || (d >= now && d <= maxDate);
+                    });
+
+                    calendarEntries.sort((a, b) => new Date(a.isoDate) - new Date(b.isoDate));
+
+                    setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
+                    renderAllLists();
                 }
-
-                let existingCalendarIds = new Set(calendarEntries.map(e => e.calendarId).filter(Boolean));
-                let seenSignatures = new Set(calendarEntries.map(e => `${e.text}_${e.isoDate}`.toLowerCase()));
-
-                // Erweiterte Ausschlussliste, um jegliche System- und Feiertagseinträge radikal auszusortieren
-                const ignoreKeywords = [
-                    "weltfrauentag", "weltkindertag", "feiertag", "gesetzlicher", "holiday", 
-                    "muttertag", "vatertag", "sommerzeit", "winterzeit", "daylight", "saving", 
-                    "ostern", "pfingsten", "weihnachten", "neujahr", "karfreitag", "himmelfahrt", 
-                    "arbeit", "einheit", "reformationstag", "könige", "valentinstag", "halloween", 
-                    "silvester", "fasching", "karneval", "children's", "unity", "good friday", 
-                    "easter", "christmas", "new year", "ascension", "pentecost", "corpus christi", 
-                    "assumption", "all saints", "boxing day"
-                ];
-
-                // Bereinige bestehende Einträge im Cache einmalig von Altlasten
-                calendarEntries = calendarEntries.filter(e => {
-                    const lower = e.text.toLowerCase();
-                    return !ignoreKeywords.some(kw => lower.includes(kw));
-                });
-
-                allGoogleItems.forEach(item => {
-                    const startRaw = item.start.dateTime || item.start.date;
-                    if (!startRaw) return;
-
-                    const title = item.summary || "Kein Titel";
-                    const lowerTitle = title.toLowerCase();
-
-                    const isIgnored = ignoreKeywords.some(keyword => lowerTitle.includes(keyword));
-                    if (isIgnored) return;
-
-                    const itemDate = new Date(startRaw);
-                    if (!isNaN(itemDate) && (itemDate < now || itemDate > maxDate)) {
-                        return;
-                    }
-
-                    const signature = `${title}_${startRaw}`.toLowerCase();
-
-                    if (existingCalendarIds.has(item.id)) {
-                        let existing = calendarEntries.find(e => e.calendarId === item.id);
-                        if (existing) {
-                            existing.text = title;
-                            existing.isoDate = startRaw;
-                        }
-                    } else if (!seenSignatures.has(signature)) {
-                        let fullFormattedDate = "Ganztägig";
-                        let shortFormattedDate = "Ganztägig";
-                        
-                        const parsedDate = new Date(startRaw);
-                        if (!isNaN(parsedDate)) {
-                            if (item.start.dateTime) {
-                                fullFormattedDate = parsedDate.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Berlin' });
-                                let timePart = parsedDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
-                                shortFormattedDate = `${parsedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' })} um ${timePart} Uhr`;
-                            } else {
-                                fullFormattedDate = parsedDate.toLocaleDateString('de-DE', { dateStyle: 'medium', timeZone: 'Europe/Berlin' }) + " (Ganztägig)";
-                                shortFormattedDate = parsedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' }) + " (Ganztägig)";
-                            }
-                        }
-
-                        calendarEntries.push({
-                            id: Date.now() + Math.random(),
-                            calendarId: item.id,
-                            text: title,
-                            date: fullFormattedDate,
-                            shortDate: shortFormattedDate,
-                            isoDate: startRaw
-                        });
-
-                        existingCalendarIds.add(item.id);
-                        seenSignatures.add(signature);
-                    }
-                });
-
-                calendarEntries = calendarEntries.filter(e => {
-                    if (!e.isoDate) return true;
-                    const d = new Date(e.isoDate);
-                    return isNaN(d) || (d >= now && d <= maxDate);
-                });
-
-                calendarEntries.sort((a, b) => new Date(a.isoDate) - new Date(b.isoDate));
-
-                setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
-                renderAllLists();
-
             } catch (e) {
-                console.error("Fehler beim Abrufen der Google Kalender:", e);
+                console.error("Fehler beim Abrufen des Google Kalenders:", e);
             }
         }
 
@@ -856,7 +837,7 @@
                             {
                                 role: "system",
                                 content: `Du bist ${currentUserName}s smarter, absolut natürlicher und menschlicher Alltags-Assistent. 
-                                Aktuelles exaktes Datum heute ist ${todayStr} (${now.toLocaleDateString('de-DE', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'})}), Uhrzeit ist exakt ${currentClockTime} Uhr.
+                                Aktuelles exaktes Datum heute ist ${todayStr} (${now.toLocaleDateString('de-DE', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'})}), Uhrzeit is exakt ${currentClockTime} Uhr.
                                 ${weatherContext ? "Wetter-Information: " + weatherContext : ""}
                                 Bisheriges Gedächtnis über Gegenstände: ${memoryContext}
                                 Kalender: ${calendarContext}
