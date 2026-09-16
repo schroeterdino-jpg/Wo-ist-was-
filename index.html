@@ -129,7 +129,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.24</span>
+        <span>Version 4.25</span>
     </footer>
 
     <!-- JavaScript -->
@@ -275,6 +275,11 @@
         let tokenClient;
         let accessToken = getPersistentData('google_access_token', '');
 
+        // Direkt beim Start versuchen, bestehende Google-Termine zu laden, falls Token vorhanden
+        if (accessToken) {
+            fetchGoogleCalendarEvents();
+        }
+
         function toggleSettings() {
             settingsBox.classList.toggle('hidden');
         }
@@ -289,7 +294,7 @@
             try {
                 tokenClient = google.accounts.oauth2.initTokenClient({
                     client_id: clientId,
-                    scope: 'https://www.googleapis.com/auth/calendar.events',
+                    scope: 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly',
                     callback: (response) => {
                         if (response.error) {
                             connectionStatus.textContent = `❌ Fehler: ${response.error}`;
@@ -298,11 +303,76 @@
                         accessToken = response.access_token;
                         setPersistentData('google_access_token', accessToken);
                         connectionStatus.textContent = "✅ Mit Google Kalender verbunden!";
+                        
+                        // Sofort Termine und Geburtstage aus Google laden
+                        fetchGoogleCalendarEvents();
                     },
                 });
                 tokenClient.requestAccessToken();
             } catch (error) {
                 connectionStatus.textContent = `❌ Fehler: ${error.message}`;
+            }
+        }
+
+        // --- GOOGLE KALENDER & GEBURTSTAGE EINLESEN ---
+        async function fetchGoogleCalendarEvents() {
+            if (!accessToken) return;
+
+            const nowIso = new Date().toISOString();
+            const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${nowIso}&singleEvents=true&orderBy=startTime`;
+
+            try {
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const googleItems = data.items || [];
+
+                    let existingCalendarIds = new Set(calendarEntries.map(e => e.calendarId));
+
+                    googleItems.forEach(item => {
+                        const startRaw = item.start.dateTime || item.start.date;
+                        if (!startRaw) return;
+
+                        // Nur hinzufügen, wenn die Event-ID noch nicht lokal existiert
+                        if (!existingCalendarIds.has(item.id)) {
+                            let fullFormattedDate = "Ganztägig";
+                            let shortFormattedDate = "Ganztägig";
+                            
+                            const parsedDate = new Date(startRaw);
+                            if (!isNaN(parsedDate)) {
+                                if (item.start.dateTime) {
+                                    fullFormattedDate = parsedDate.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Berlin' });
+                                    let timePart = parsedDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
+                                    shortFormattedDate = `${parsedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' })} um ${timePart} Uhr`;
+                                } else {
+                                    // Ganztägige Termine oder Geburtstage
+                                    fullFormattedDate = parsedDate.toLocaleDateString('de-DE', { dateStyle: 'medium', timeZone: 'Europe/Berlin' }) + " (Ganztägig)";
+                                    shortFormattedDate = parsedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' }) + " (Ganztägig)";
+                                }
+                            }
+
+                            calendarEntries.push({
+                                id: Date.now() + Math.random(),
+                                calendarId: item.id,
+                                text: item.summary || "Kein Titel",
+                                date: fullFormattedDate,
+                                shortDate: shortFormattedDate,
+                                isoDate: startRaw
+                            });
+                        }
+                    });
+
+                    // Nach Datum sortieren
+                    calendarEntries.sort((a, b) => new Date(a.isoDate) - new Date(b.isoDate));
+
+                    setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
+                    renderAllLists();
+                }
+            } catch (e) {
+                console.error("Fehler beim Abrufen des Google Kalenders:", e);
             }
         }
 
@@ -965,4 +1035,3 @@
     </script>
 </body>
 </html>
- Findest du meine App sinnvoll? Findest du sie gut?
