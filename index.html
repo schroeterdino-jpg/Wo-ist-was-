@@ -275,7 +275,12 @@
         let tokenClient;
         let accessToken = getPersistentData('google_access_token', '');
 
+        // Beim Laden der Seite prüfen, ob Client-ID da ist und direkt im Hintergrund initialisieren
         window.addEventListener('load', () => {
+            const clientId = getPersistentData('google_client_id', '');
+            if (clientId) {
+                initGoogleClient(clientId, accessToken ? true : false);
+            }
             if (accessToken) {
                 connectionStatus.textContent = "✅ Mit Google Kalender verbunden!";
                 fetchGoogleCalendarEvents();
@@ -286,13 +291,8 @@
             settingsBox.classList.toggle('hidden');
         }
 
-        function loginWithGoogle() {
-            const clientId = getPersistentData('google_client_id', '');
-            if (!clientId) {
-                alert('Bitte zuerst die Google Client-ID eintragen!');
-                return;
-            }
-
+        // Google Client einmal zentral initialisieren
+        function initGoogleClient(clientId, autoRun = false) {
             try {
                 tokenClient = google.accounts.oauth2.initTokenClient({
                     client_id: clientId,
@@ -308,6 +308,28 @@
                         fetchGoogleCalendarEvents();
                     },
                 });
+
+                // Wenn bereits ein Token da war, im Hintergrund versuchen zu aktualisieren
+                if (autoRun && accessToken) {
+                    tokenClient.requestAccessToken({ prompt: 'none' });
+                }
+            } catch (error) {
+                console.error("Fehler bei Google Initialisierung:", error);
+            }
+        }
+
+        function loginWithGoogle() {
+            const clientId = getPersistentData('google_client_id', '');
+            if (!clientId) {
+                alert('Bitte zuerst die Google Client-ID eintragen!');
+                return;
+            }
+
+            if (!tokenClient) {
+                initGoogleClient(clientId, false);
+            }
+
+            try {
                 tokenClient.requestAccessToken({ prompt: 'consent' });
             } catch (error) {
                 connectionStatus.textContent = `❌ Fehler: ${error.message}`;
@@ -567,11 +589,10 @@
             recordText.textContent = "SPRECHEN";
         }
 
-        // Hilfsfunktion: Aktuelle GPS-Position ermitteln (mit Fallback auf Schwarzenbek)
         function getCurrentPositionAsync() {
             return new Promise((resolve) => {
                 if (!navigator.geolocation) {
-                    resolve({ latitude: 53.5135, longitude: 10.4182 }); // Fallback Schwarzenbek
+                    resolve({ latitude: 53.5135, longitude: 10.4182 });
                     return;
                 }
                 navigator.geolocation.getCurrentPosition(
@@ -582,23 +603,18 @@
                         });
                     },
                     (error) => {
-                        console.warn("Geolocation fehlgeschlagen, nutze Standard-Koordinaten:", error);
-                        resolve({ latitude: 53.5135, longitude: 10.4182 }); // Fallback Schwarzenbek
+                        resolve({ latitude: 53.5135, longitude: 10.4182 });
                     },
                     { timeout: 5000, maximumAge: 60000 }
                 );
             });
         }
 
-        // Standort-Abfrage Befehl ("Wo bin ich?")
         async function handleLocationQuery() {
             statusMessage.textContent = "Ermittle genauen Standort...";
             const coords = await getCurrentPositionAsync();
 
             try {
-                // Open-Meteo Geocoding Reverse API nutzt Koordinaten für Ortsnamen (kostenlos & ohne Key)
-                const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=location&count=1&latitude=${coords.latitude}&longitude=${coords.longitude}`);
-                // Alternativ nutzen wir Nominatim (OpenStreetMap) für echte Straßennamen/Orte:
                 const nominatimRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.latitude}&lon=${coords.longitude}&zoom=18&addressdetails=1`);
                 
                 if (nominatimRes.ok) {
@@ -620,7 +636,6 @@
                 console.error("Standort-Auflösung Fehler:", e);
             }
 
-            // Fallback falls Reverse Geocoding blockiert wird
             let fallbackText = `Deine aktuellen Koordinaten sind Breitengrad ${coords.latitude.toFixed(4)}, Längengrad ${coords.longitude.toFixed(4)}.`;
             statusMessage.textContent = fallbackText;
             speak(fallbackText);
