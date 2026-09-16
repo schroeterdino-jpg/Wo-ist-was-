@@ -129,7 +129,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.27</span>
+        <span>Version 4.28</span>
     </footer>
 
     <!-- JavaScript -->
@@ -315,8 +315,15 @@
         async function fetchGoogleCalendarEvents() {
             if (!accessToken) return;
 
-            const nowIso = new Date().toISOString();
-            const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${nowIso}&singleEvents=true&orderBy=startTime`;
+            const now = new Date();
+            const nowIso = now.toISOString();
+            
+            // Maximal 6 Monate in die Zukunft schauen, um unendliche Serien/Geburtstage zu blockieren
+            const maxDate = new Date();
+            maxDate.setMonth(maxDate.getMonth() + 6);
+            const maxIso = maxDate.toISOString();
+
+            const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${nowIso}&timeMax=${maxIso}&singleEvents=true&orderBy=startTime`;
 
             try {
                 const response = await fetch(url, {
@@ -328,12 +335,17 @@
                     const googleItems = data.items || [];
 
                     let existingCalendarIds = new Set(calendarEntries.map(e => e.calendarId));
+                    let seenSignatures = new Set(calendarEntries.map(e => `${e.text}_${e.isoDate}`.toLowerCase()));
 
                     googleItems.forEach(item => {
                         const startRaw = item.start.dateTime || item.start.date;
                         if (!startRaw) return;
 
-                        if (!existingCalendarIds.has(item.id)) {
+                        const title = item.summary || "Kein Titel";
+                        const signature = `${title}_${startRaw}`.toLowerCase();
+
+                        // Nur hinzufügen, wenn es weder die ID noch die Kombination aus Titel+Datum schon gibt
+                        if (!existingCalendarIds.has(item.id) && !seenSignatures.has(signature)) {
                             let fullFormattedDate = "Ganztägig";
                             let shortFormattedDate = "Ganztägig";
                             
@@ -352,11 +364,14 @@
                             calendarEntries.push({
                                 id: Date.now() + Math.random(),
                                 calendarId: item.id,
-                                text: item.summary || "Kein Titel",
+                                text: title,
                                 date: fullFormattedDate,
                                 shortDate: shortFormattedDate,
                                 isoDate: startRaw
                             });
+
+                            existingCalendarIds.add(item.id);
+                            seenSignatures.add(signature);
                         }
                     });
 
