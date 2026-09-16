@@ -67,8 +67,8 @@
             <!-- Gedächtnis -->
             <div class="border-t border-amber-200 pt-3 space-y-2">
                 <div class="flex justify-between items-center">
-                    <label class="block text-sm font-bold text-amber-900">🔍 Gespeicherte Gegenstände & Passwörter:</label>
-                    <button onclick="confirmAction('Möchtest du wirklich das gesamte Gedächtnis inkl. Passwörter löschen?', clearAllMemory)" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded-lg text-xs font-semibold shadow">🗑️ Alles löschen</button>
+                    <label class="block text-sm font-bold text-amber-900">🔍 Gespeicherte Gegenstände:</label>
+                    <button onclick="clearAllMemory()" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded-lg text-xs font-semibold shadow">🗑️ Alles löschen</button>
                 </div>
                 <div id="categoryContainer" class="space-y-3 text-sm bg-white p-3 rounded-lg border border-amber-200">
                     <!-- Kategorien werden hier dynamisch eingefügt -->
@@ -87,8 +87,8 @@
     <!-- Hauptbereich -->
     <main class="container mx-auto p-4 max-w-md flex-grow flex flex-col justify-center space-y-6">
 
-        <!-- Mikrofon-Button, Text-Fallback & Tages-Briefing -->
-        <div class="flex flex-col items-center space-y-3">
+        <!-- Mikrofon-Button & Tages-Briefing -->
+        <div class="flex flex-col items-center space-y-4">
             <button id="recordBtn" onclick="toggleSpeechRecognition()" class="w-40 h-40 bg-red-600 hover:bg-red-700 text-white rounded-full flex flex-col items-center justify-center shadow-2xl transition transform active:scale-95 border-4 border-white cursor-pointer">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
@@ -97,18 +97,7 @@
             </button>
             <p id="statusMessage" class="text-center font-medium text-slate-700 h-6">Drücken und sprechen...</p>
 
-            <!-- Text-Fallback & Nochmal-Button -->
-            <div class="w-full flex items-center gap-2 mt-1">
-                <button onclick="repeatLastSpeech()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 py-2.5 px-3 rounded-xl text-sm font-semibold shadow-sm flex items-center justify-center gap-1 shrink-0">
-                    🔁 Nochmal
-                </button>
-                <div class="flex-grow flex gap-1">
-                    <input type="text" id="textFallbackInput" placeholder="Oder Text tippen..." class="w-full p-2 border border-slate-300 rounded-xl text-sm bg-white focus:outline-none focus:border-blue-500" onkeydown="if(event.key==='Enter') submitTextFallback()">
-                    <button onclick="submitTextFallback()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl text-sm font-semibold shadow-sm shrink-0">Senden</button>
-                </div>
-            </div>
-
-            <button onclick="triggerDailyBriefing()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-xl shadow-md font-bold text-lg flex items-center justify-center gap-2 mt-2">
+            <button onclick="triggerDailyBriefing()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-xl shadow-md font-bold text-lg flex items-center justify-center gap-2">
                 📋 Was steht heute an? (Briefing)
             </button>
         </div>
@@ -137,21 +126,10 @@
 
     </main>
 
-    <!-- Bestätigungs-Modal -->
-    <div id="confirmModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4 text-center">
-            <h3 id="confirmModalText" class="text-lg font-bold text-slate-800">Bist du sicher?</h3>
-            <div class="flex gap-3 pt-2">
-                <button id="confirmModalNoBtn" class="flex-1 bg-slate-300 hover:bg-slate-400 text-slate-800 py-2 rounded-xl font-semibold">Abbrechen</button>
-                <button id="confirmModalYesBtn" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-xl font-semibold">Löschen</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.38</span>
+        <span>Version 4.24</span>
     </footer>
 
     <!-- JavaScript -->
@@ -169,7 +147,6 @@
         const userNameInput = document.getElementById('userNameInput');
         const userNameDisplay = document.getElementById('userNameDisplay');
         const connectionStatus = document.getElementById('connectionStatus');
-        const textFallbackInput = document.getElementById('textFallbackInput');
         
         const contactNameInput = document.getElementById('contactNameInput');
         const contactPhoneInput = document.getElementById('contactPhoneInput');
@@ -180,48 +157,6 @@
         const tabCalendarBtn = document.getElementById('tabCalendarBtn');
         const tabTodoBtn = document.getElementById('tabTodoBtn');
 
-        const confirmModal = document.getElementById('confirmModal');
-        const confirmModalText = document.getElementById('confirmModalText');
-        const confirmModalYesBtn = document.getElementById('confirmModalYesBtn');
-        const confirmModalNoBtn = document.getElementById('confirmModalNoBtn');
-
-        let lastSpokenText = "";
-        let visiblePasswords = {};
-
-        // Zustand für schrittweise Passwort-Eingabe (Genau nach deinem Ablauf)
-        let passwordWizard = {
-            active: false,
-            step: 0, // 1: wartet auf Anbieter, 2: wartet auf Benutzername, 3: wartet auf Passwort
-            service: "",
-            username: ""
-        };
-
-        // Automatische Korrektur für "Schröder" zu "Schroeder"
-        function correctNameSpelling(text) {
-            if (!text) return "";
-            return text
-                .replace(/Schröder/g, "Schroeder")
-                .replace(/schröder/g, "schroeder");
-        }
-
-        function confirmAction(question, onConfirm) {
-            confirmModalText.textContent = question;
-            confirmModal.classList.remove('hidden');
-            
-            const newYesBtn = confirmModalYesBtn.cloneNode(true);
-            const newNoBtn = confirmModalNoBtn.cloneNode(true);
-            confirmModalYesBtn.parentNode.replaceChild(newYesBtn, confirmModalYesBtn);
-            confirmModalNoBtn.parentNode.replaceChild(newNoBtn, confirmModalNoBtn);
-
-            newYesBtn.onclick = () => {
-                confirmModal.classList.add('hidden');
-                onConfirm();
-            };
-            newNoBtn.onclick = () => {
-                confirmModal.classList.add('hidden');
-            };
-        }
-
         function getPersistentData(key, defaultValue) {
             let val = localStorage.getItem(key);
             if (!val || val === "null" || val === "undefined") {
@@ -230,16 +165,15 @@
             if (!val || val === "null" || val === "undefined") {
                 return defaultValue;
             }
-            return correctNameSpelling(val);
+            return val;
         }
 
         function setPersistentData(key, value) {
-            const correctedValue = correctNameSpelling(value);
-            try { localStorage.setItem(key, correctedValue); } catch (e) {}
-            try { sessionStorage.setItem(key, correctedValue); } catch (e) {}
+            try { localStorage.setItem(key, value); } catch (e) {}
+            try { sessionStorage.setItem(key, value); } catch (e) {}
         }
 
-        let currentUserName = correctNameSpelling(getPersistentData('user_custom_name', 'Dino'));
+        let currentUserName = getPersistentData('user_custom_name', 'Dino');
         userNameInput.value = currentUserName;
         updateUserGreeting();
 
@@ -251,7 +185,12 @@
         setPersistentData('google_client_id', savedClientId);
 
         userNameInput.addEventListener('input', () => {
-            currentUserName = correctNameSpelling(userNameInput.value.trim() || "Dino");
+            currentUserName = userNameInput.value.trim() || "Dino";
+            setPersistentData('user_custom_name', currentUserName);
+            updateUserGreeting();
+        });
+        userNameInput.addEventListener('change', () => {
+            currentUserName = userNameInput.value.trim() || "Dino";
             setPersistentData('user_custom_name', currentUserName);
             updateUserGreeting();
         });
@@ -260,10 +199,16 @@
             setPersistentData('user_api_key', apiKeyInput.value.trim());
             connectionStatus.textContent = "API-Key gespeichert.";
         });
+        apiKeyInput.addEventListener('change', () => {
+            setPersistentData('user_api_key', apiKeyInput.value.trim());
+        });
 
         googleClientIdInput.addEventListener('input', () => {
             setPersistentData('google_client_id', googleClientIdInput.value.trim());
             connectionStatus.textContent = "Client-ID gespeichert.";
+        });
+        googleClientIdInput.addEventListener('change', () => {
+            setPersistentData('google_client_id', googleClientIdInput.value.trim());
         });
 
         function updateUserGreeting() {
@@ -279,7 +224,7 @@
         renderContactList();
 
         function saveContact() {
-            const name = correctNameSpelling(contactNameInput.value.trim());
+            const name = contactNameInput.value.trim();
             const phone = contactPhoneInput.value.trim();
             if (name && phone) {
                 savedContacts[name.toLowerCase()] = { originalName: name, phone: phone };
@@ -294,11 +239,9 @@
         }
 
         function deleteContact(key) {
-            confirmAction(`Möchtest du den Kontakt "${savedContacts[key]?.originalName || key}" wirklich löschen?`, () => {
-                delete savedContacts[key];
-                setPersistentData('helfer_contacts', JSON.stringify(savedContacts));
-                renderContactList();
-            });
+            delete savedContacts[key];
+            setPersistentData('helfer_contacts', JSON.stringify(savedContacts));
+            renderContactList();
         }
 
         function renderContactList() {
@@ -363,10 +306,10 @@
             }
         }
 
+        // --- AUDIO-SPRACHAUSGABE MIT GESCHWINDIGKEITS-KONTROLLE ---
         let currentAudio = null;
 
         function speak(text, onComplete) {
-            lastSpokenText = text;
             if (currentAudio) {
                 currentAudio.pause();
                 currentAudio = null;
@@ -376,16 +319,18 @@
             const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=de&client=tw-ob`;
             
             currentAudio = new Audio(audioUrl);
-            currentAudio.playbackRate = 1.15; // Ruhiges und entspanntes Tempo
+            currentAudio.playbackRate = 1.35; 
 
             currentAudio.play().catch(err => {
+                console.log("Audio-Stream-Fallback aktiv:", err);
                 fallbackSpeak(text, onComplete);
             });
 
             currentAudio.onended = function() {
                 currentAudio = null;
-                // Überall 1,2 Sekunden großzügige Denkpause, bevor das Mikrofon wieder startet
-                if (onComplete) setTimeout(() => { onComplete(); }, 1200);
+                if (onComplete) {
+                    setTimeout(() => { onComplete(); }, 300);
+                }
             };
 
             currentAudio.onerror = function() {
@@ -399,19 +344,11 @@
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'de-DE';
-                utterance.rate = 0.95;
-                utterance.onend = () => { if (onComplete) setTimeout(onComplete, 1200); };
+                utterance.rate = 1.1;
+                utterance.onend = () => { if (onComplete) setTimeout(onComplete, 300); };
                 window.speechSynthesis.speak(utterance);
             } else {
-                if (onComplete) setTimeout(onComplete, 1200);
-            }
-        }
-
-        function repeatLastSpeech() {
-            if (lastSpokenText) {
-                speak(lastSpokenText);
-            } else {
-                speak("Es gibt noch nichts vorzulesen.");
+                if (onComplete) setTimeout(onComplete, 300);
             }
         }
 
@@ -422,34 +359,31 @@
         if (SpeechRecognition) {
             recognition = new SpeechRecognition();
             recognition.lang = 'de-DE';
-            recognition.interimResults = true;
+            recognition.interimResults = false;
             recognition.maxAlternatives = 1;
 
             recognition.onstart = function() {
                 isRecording = true;
-                statusMessage.textContent = passwordWizard.active ? "Warte auf deine Eingabe..." : "Höre zu... Bitte sprechen.";
+                statusMessage.textContent = "Höre zu... Bitte sprechen.";
                 recordBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
                 recordBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700', 'animate-pulse');
                 recordText.textContent = "HÖRE...";
             };
 
             recognition.onresult = function(event) {
-                let interimTranscript = '';
-                let finalTranscript = '';
-
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript;
-                    } else {
-                        interimTranscript += event.results[i][0].transcript;
-                    }
-                }
-
-                if (finalTranscript) {
-                    const cleanedSpeech = correctNameSpelling(finalTranscript);
-                    processUserCommand(cleanedSpeech);
-                } else if (interimTranscript) {
-                    statusMessage.textContent = `Höre: "${correctNameSpelling(interimTranscript)}"`;
+                const speechResult = event.results[0][0].transcript;
+                statusMessage.textContent = `Erkannt: "${speechResult}"`;
+                
+                const lower = speechResult.toLowerCase();
+                
+                if ((lower.includes("ruf") || lower.includes("anrufen")) && lower.includes("an")) {
+                    handleCallCommand(lower);
+                } else if (lower.includes("was steht heute an") || lower.includes("was liegt heute an") || lower.includes("bevor ich das haus verlasse")) {
+                    triggerDailyBriefing();
+                } else if (lower.includes("was steht auf meiner to-do-liste") || lower.includes("to do liste") || lower.includes("was habe ich auf der liste")) {
+                    readTodoList();
+                } else {
+                    sendToGroqSmart(speechResult);
                 }
             };
 
@@ -467,80 +401,6 @@
             recordBtn.disabled = true;
         }
 
-        function submitTextFallback() {
-            const text = correctNameSpelling(textFallbackInput.value.trim());
-            if (!text) return;
-            textFallbackInput.value = '';
-            processUserCommand(text);
-        }
-
-        function processUserCommand(speechResult) {
-            const cleanedSpeech = correctNameSpelling(speechResult);
-            statusMessage.textContent = `Erkannt: "${cleanedSpeech}"`;
-            const lower = cleanedSpeech.toLowerCase();
-
-            // SCHRITT-FÜR-SCHRITT WIZARD FÜR PASSWÖRTER (Genau nach deinem Wunsch)
-            if (passwordWizard.active) {
-                handlePasswordWizard(cleanedSpeech);
-                return;
-            }
-
-            // Prüfen, ob der Nutzer Zugangsdaten speichern möchte
-            if (lower.includes("zugangsdaten") || (lower.includes("passwort") && (lower.includes("speichern") || lower.includes("neu"))) || lower.includes("anmeldedaten")) {
-                passwordWizard.active = true;
-                passwordWizard.step = 1; // Schritt 1: Frage nach dem Anbieter
-                speak("Wie lautet der Anbieter?", () => startListeningAuto());
-                return;
-            }
-            
-            if ((lower.includes("ruf") || lower.includes("anrufen")) && lower.includes("an")) {
-                handleCallCommand(lower);
-            } else if (lower.includes("was steht heute an") || lower.includes("was liegt heute an") || lower.includes("bevor ich das haus verlasse")) {
-                triggerDailyBriefing();
-            } else if (lower.includes("was steht auf meiner to-do-liste") || lower.includes("to do liste") || lower.includes("was habe ich auf der liste")) {
-                readTodoList();
-            } else {
-                sendToGroqSmart(cleanedSpeech);
-            }
-        }
-
-        function handlePasswordWizard(text) {
-            const cleanText = correctNameSpelling(text.trim());
-            
-            if (passwordWizard.step === 1) {
-                // Nutzer hat den Anbieter genannt
-                passwordWizard.service = cleanText.charAt(0).toUpperCase() + cleanText.slice(1);
-                passwordWizard.step = 2; // Schritt 2: Nach Benutzername fragen
-                speak("Wie lautet der Benutzername?", () => startListeningAuto());
-            } else if (passwordWizard.step === 2) {
-                // Nutzer hat den Benutzernamen genannt
-                passwordWizard.username = cleanText;
-                passwordWizard.step = 3; // Schritt 3: Nach Passwort fragen
-                speak("Wie lautet das Passwort?", () => startListeningAuto());
-            } else if (passwordWizard.step === 3) {
-                // Nutzer hat das Passwort genannt -> Speichern
-                let password = cleanText;
-                let finalValue = `Benutzer: ${passwordWizard.username} | Passwort: ${password}`;
-                let cleanKey = passwordWizard.service.toLowerCase();
-
-                memoryItems[cleanKey] = {
-                    location: finalValue,
-                    timestamp: Date.now(),
-                    category: "Passwörter"
-                };
-                setPersistentData('helfer_memory', JSON.stringify(memoryItems));
-                renderAllLists();
-
-                // Wizard zurücksetzen
-                passwordWizard.active = false;
-                passwordWizard.step = 0;
-                passwordWizard.service = "";
-                passwordWizard.username = "";
-
-                speak("Die Zugangsdaten sind sicher gespeichert!", () => startListeningAuto());
-            }
-        }
-
         function startListeningAuto() {
             const currentKey = getPersistentData('user_api_key', '');
             if (!currentKey || !recognition) return;
@@ -550,7 +410,7 @@
             } catch (e) {
                 try {
                     recognition.stop();
-                    setTimeout(() => recognition.start(), 300);
+                    setTimeout(() => recognition.start(), 200);
                 } catch (err) {}
             }
         }
@@ -616,27 +476,13 @@
             recordText.textContent = "SPRECHEN";
         }
 
-        async function getCoordinates() {
-            return new Promise((resolve) => {
-                if (!navigator.geolocation) {
-                    resolve({ lat: 53.5135, lon: 10.4182 });
-                    return;
-                }
-                navigator.geolocation.getCurrentPosition(
-                    (position) => { resolve({ lat: position.coords.latitude, lon: position.coords.longitude }); },
-                    (error) => { resolve({ lat: 53.5135, lon: 10.4182 }); },
-                    { timeout: 5000 }
-                );
-            });
-        }
-
         async function triggerDailyBriefing() {
             statusMessage.textContent = "Lade Wetter & Briefing...";
-            const coords = await getCoordinates();
+            
             let weatherText = "";
             let weatherAdvice = "";
             try {
-                const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,weather_code,wind_speed_10m`);
+                const weatherRes = await fetch('https://api.open-meteo.com/v1/forecast?latitude=53.5135&longitude=10.4182&current=temperature_2m,weather_code,wind_speed_10m');
                 if (weatherRes.ok) {
                     const weatherData = await weatherRes.json();
                     const temp = weatherData.current.temperature_2m;
@@ -650,21 +496,33 @@
                     else if (code >= 71 && code <= 77) condition = "schneebedeckt";
                     else if (code >= 95) condition = "Gewitter";
 
-                    weatherText = `Das aktuelle Wetter an deinem Standort ist ${condition} bei ${temp} Grad. `;
-                    if (code >= 51 && code <= 67) weatherAdvice = "Es ist regnerisch, nimm bitte einen Regenschirm mit! ";
-                    else if (temp < 12) weatherAdvice = "Es ist ziemlich frisch draußen, zieh dir am besten eine Jacke an. ";
-                    else if (temp > 24) weatherAdvice = "Heute wird es schön warm! ";
-                    else if (wind > 30) weatherAdvice = "Es ist windig, nimm lieber eine Jacke mit. ";
-                    else weatherAdvice = "Das Wetter ist ganz angenehm. ";
+                    weatherText = `Das aktuelle Wetter in Schwarzenbek ist ${condition} bei ${temp} Grad. `;
+
+                    if (code >= 51 && code <= 67) {
+                        weatherAdvice = "Es ist regnerisch, nimm bitte einen Regenschirm mit! ";
+                    } else if (temp < 12) {
+                        weatherAdvice = "Es ist ziemlich frisch draußen, zieh dir am besten eine Jacke an. ";
+                    } else if (temp > 24) {
+                        weatherAdvice = "Heute wird es schön warm! ";
+                    } else if (wind > 30) {
+                        weatherAdvice = "Es ist windig, nimm lieber eine Jacke mit. ";
+                    } else {
+                        weatherAdvice = "Das Wetter ist ganz angenehm. ";
+                    }
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.error("Wetterfehler:", e);
+            }
 
             const nowBriefing = new Date();
             const currentTimeStr = nowBriefing.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
             let briefingText = `Guten Tag, ${currentUserName}. Es ist jetzt ${currentTimeStr} Uhr. Hier ist dein kurzer Überblick. ${weatherText} ${weatherAdvice}`;
 
             const todayStr = nowBriefing.toLocaleDateString('en-CA');
-            const todayCalendarEntries = calendarEntries.filter(e => e.isoDate && e.isoDate.startsWith(todayStr));
+            const todayCalendarEntries = calendarEntries.filter(e => {
+                if (!e.isoDate) return false;
+                return e.isoDate.startsWith(todayStr);
+            });
 
             if (todayCalendarEntries.length > 0) {
                 briefingText += "Deine Termine heute: ";
@@ -684,7 +542,43 @@
 
             if (todoEntries.length > 0) {
                 briefingText += "Offene To-Dos: ";
-                todoEntries.forEach(e => { briefingText += `${e.text}. `; });
+                todoEntries.forEach(e => {
+                    briefingText += `${e.text}. `;
+                });
+            }
+
+            const importantKeywords = ["schlüssel", "brille", "portemonnaie", "geldbeutel", "beutel", "geld", "ausweis", "unterlage", "unterlagen", "dokument", "dokumente", "medikament", "medikamente", "tablette", "tabletten", "karte", "karten"];
+            const memKeys = Object.keys(memoryItems);
+            let relevantItems = [];
+
+            memKeys.forEach(k => {
+                let itemObj = memoryItems[k];
+                let loc = typeof itemObj === 'object' ? itemObj.location : itemObj;
+                let lowerKey = k.toLowerCase();
+                
+                let isImportant = importantKeywords.some(keyword => lowerKey.includes(keyword));
+                if (isImportant) {
+                    relevantItems.push({ name: k, loc: loc });
+                }
+            });
+
+            if (relevantItems.length > 0) {
+                relevantItems.forEach((item) => {
+                    let capitalizedName = item.name.charAt(0).toUpperCase() + item.name.slice(1);
+                    let lowerName = item.name.toLowerCase();
+                    let article = "Dein";
+                    let verbLoc = item.loc;
+                    
+                    if (lowerName.endsWith('e') && lowerName !== "schlüssele") {
+                        article = "Deine";
+                    }
+                    
+                    verbLoc = verbLoc.replace(/^auf den\b/i, "auf dem")
+                                     .replace(/^in den\b/i, "im")
+                                     .replace(/^an den\b/i, "am");
+
+                    briefingText += `Denk dran: ${article} ${capitalizedName} ${verbLoc}. `;
+                });
             }
 
             statusMessage.textContent = "Fertig.";
@@ -692,7 +586,6 @@
         }
 
         async function sendToGroqSmart(text) {
-            const cleanedText = correctNameSpelling(text);
             const key = getPersistentData('user_api_key', '');
             statusMessage.textContent = "Verarbeite...";
 
@@ -705,10 +598,15 @@
                 let item = memoryItems[k];
                 let loc = typeof item === 'object' ? item.location : item;
                 let ts = typeof item === 'object' ? item.timestamp : now.getTime();
+                
                 let diffDays = Math.floor((now.getTime() - ts) / (1000 * 60 * 60 * 24));
                 let timeDesc = diffDays === 0 ? "heute" : (diffDays === 1 ? "vor 1 Tag" : `vor ${diffDays} Tagen`);
+                
                 memoryWithDetails[k] = { location: loc, abgelegt: timeDesc };
             }
+            const memoryContext = JSON.stringify(memoryWithDetails);
+            const calendarContext = JSON.stringify(calendarEntries);
+            const todoContext = JSON.stringify(todoEntries);
 
             try {
                 const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -724,58 +622,79 @@
                             {
                                 role: "system",
                                 content: `Du bist ${currentUserName}s smarter, absolut natürlicher und menschlicher Alltags-Assistent in Schwarzenbek. 
-                                WICHTIG: Der Nachname des Nutzers wird immer mit "oe" geschrieben ("Schroeder"), niemals mit "ö". 
-                                Aktuelles exaktes Datum heute ist ${todayStr}, Uhrzeit ist exakt ${currentClockTime} Uhr.
-                                Bisheriges Gedächtnis: ${JSON.stringify(memoryWithDetails)}
-                                Kalender: ${JSON.stringify(calendarEntries)}
-                                To-Dos: ${JSON.stringify(todoEntries)}
+                                Aktuelles exaktes Datum heute ist ${todayStr} (${now.toLocaleDateString('de-DE', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'})}), Uhrzeit ist exakt ${currentClockTime} Uhr.
+                                Bisheriges Gedächtnis über Gegenstände: ${memoryContext}
+                                Kalender: ${calendarContext}
+                                To-Dos: ${todoContext}
 
-                                Gib ein JSON-Objekt zurück mit Feldern: "type" ("chat", "name_change", "item_store", "item_query", "note", "calendar", "calendar_delete"), "new_name", "item_name", "item_location", "item_category", "note_text", "summary", "start_time", "calendar_delete_query", "reply".`
+                                ABSOLUT STRENGE REGELN (WICHTIGSTE PRIORITÄT!):
+                                1. KEINE FRAGEN ALS TO-DO SPEICHERN: Wenn der Nutzer fragt "Welche Termine habe ich?", "Was habe ich vor?", "Wo ist mein Schlüssel?" oder allgemeine Fragen stellt, darfst du NIEMALS den Typ "note" wählen! Das ist eine reine Informationsabfrage (Typ "chat" oder "item_query"). Speichere niemals die Frage des Nutzers als To-Do!
+                                2. EXAKTES DATUM BEACHTEN: Achte penibel auf das genaue Datum, das der Nutzer nennt (z.B. "am 17."). Verwechsle ein genanntes Datum NIEMALS mit "morgen" oder "heute", es sei denn, der Nutzer sagt explizit "morgen".
+                                3. SPRACH-STIL: Sag NIEMALS "Ich habe gemerkt...". Antworte immer natürlich und flüssig.
+                                4. GRAMMATIK: Achte bei Gegenständen streng auf die deutsche Grammatik (z.B. "Deine Brille liegt auf dem Tisch", nicht "Dein Brille liegt auf den Tisch").
+
+                                Gib ein JSON-Objekt zurück mit folgenden Feldern:
+                                - "type": string (Wähle aus: "chat", "name_change", "item_store", "item_query", "note", "calendar", "calendar_delete")
+                                - "new_name": string (Falls er seinen Namen ändern will)
+                                - "item_name": string (Name des Gegenstands bei store/query)
+                                - "item_location": string (Der genaue Ort im Zustand, z.B. "hängt am Schlüsselbrett" oder "liegt auf dem Tisch")
+                                - "item_category": string (Kategorie: "Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer", "Sonstiges")
+                                - "note_text": string (Nur bei echten To-Dos oder Notizen – NIEMALS bei Fragen!)
+                                - "summary": string (Titel für Kalender)
+                                - "start_time": string (Exaktes ISO-Datum im Format YYYY-MM-DDTHH:mm:ss für Kalender)
+                                - "calendar_delete_query": string (Suchbegriff oder Titel des zu löschenden Termins bei Typ calendar_delete)
+                                - "reply": string (Deine komplette, natürliche, fehlerfreie Antwort auf Deutsch, die per Sprachausgabe vorgelesen wird!)`
                             },
                             {
                                 role: "user",
-                                content: cleanedText
+                                content: text
                             }
                         ]
                     })
                 });
 
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errText}`);
+                }
 
                 const data = await response.json();
                 const aiData = JSON.parse(data.choices[0].message.content);
 
-                let finalReply = correctNameSpelling(aiData.reply || "Alles klar!");
+                let finalReply = aiData.reply || "Alles klar!";
+
+                const lowerText = text.toLowerCase();
+                if (lowerText.includes("termin") || lowerText.includes("was habe ich") || lowerText.includes("was steht") || lowerText.includes("wo ist")) {
+                    if (aiData.type === 'note') {
+                        aiData.type = 'chat';
+                    }
+                }
+
+                if (aiData.type === 'calendar' && (!aiData.start_time || aiData.start_time === "" || aiData.start_time === "null")) {
+                    aiData.type = 'note';
+                    aiData.note_text = aiData.summary || text;
+                }
 
                 if (aiData.type === 'calendar_delete') {
-                    let searchQuery = correctNameSpelling(aiData.calendar_delete_query || cleanedText).toLowerCase();
-                    searchQuery = searchQuery.replace(/lösche|termin|den|das|für|am|meinen|meine|bitte/gi, "").trim();
+                    let searchQuery = (aiData.calendar_delete_query || text).toLowerCase();
+                    searchQuery = searchQuery.replace(/lösche|termin|den|das|für|am/gi, "").trim();
                     
-                    let matchedEntry = calendarEntries.find(e => e.text.toLowerCase().includes(searchQuery) || searchQuery.includes(e.text.toLowerCase()));
-
-                    if (!matchedEntry && searchQuery.length > 2) {
-                        matchedEntry = calendarEntries.find(e => {
-                            let words = e.text.toLowerCase().split(/\s+/);
-                            return words.some(w => w.length > 2 && searchQuery.includes(w));
-                        });
-                    }
+                    let matchedEntry = calendarEntries.find(e => e.text.toLowerCase().includes(searchQuery));
 
                     if (matchedEntry) {
-                        confirmAction(`Möchtest du den Termin "${matchedEntry.text}" wirklich löschen?`, async () => {
-                            if (matchedEntry.calendarId && accessToken) {
-                                try {
-                                    await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${matchedEntry.calendarId}`, {
-                                        method: 'DELETE',
-                                        headers: { 'Authorization': `Bearer ${accessToken}` }
-                                    });
-                                } catch (e) {}
-                            }
-                            calendarEntries = calendarEntries.filter(e => e.id !== matchedEntry.id);
-                            setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
-                            renderAllLists();
-                            speak("Termin gelöscht.");
-                        });
-                        finalReply = `Soll ich den Termin ${matchedEntry.text} wirklich löschen?`;
+                        if (matchedEntry.calendarId && matchedEntry.calendarId !== 'null' && accessToken) {
+                            try {
+                                await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${matchedEntry.calendarId}`, {
+                                    method: 'DELETE',
+                                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                                });
+                            } catch (e) {}
+                        }
+                        calendarEntries = calendarEntries.filter(e => e.id !== matchedEntry.id);
+                        setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
+                        renderAllLists();
+                        
+                        finalReply = `Ich habe den Termin ${matchedEntry.text} für dich gelöscht.`;
                     } else {
                         finalReply = "Ich habe keinen passenden Termin dazu in deiner Liste gefunden.";
                     }
@@ -787,7 +706,7 @@
                     let rawIsoTime = aiData.start_time || new Date().toISOString();
                     
                     if (aiData.start_time) {
-                        calendarEventId = await createGoogleCalendarEvent(correctNameSpelling(aiData.summary || cleanedText), aiData.start_time);
+                        calendarEventId = await createGoogleCalendarEvent(aiData.summary || text, aiData.start_time);
                         const parsedDate = new Date(aiData.start_time);
                         if (!isNaN(parsedDate)) {
                             fullFormattedDate = parsedDate.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Berlin' });
@@ -796,45 +715,77 @@
                         }
                     }
 
-                    calendarEntries.unshift({
+                    const newCalEntry = {
                         id: Date.now(),
                         calendarId: calendarEventId,
-                        text: correctNameSpelling(aiData.summary || cleanedText),
+                        text: aiData.summary || text,
                         date: fullFormattedDate,
                         shortDate: shortFormattedDate,
                         isoDate: rawIsoTime
-                    });
+                    };
+                    calendarEntries.unshift(newCalEntry);
                     setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
                 } else if (aiData.type === 'note') {
-                    todoEntries.unshift({ id: Date.now(), text: correctNameSpelling((aiData.note_text || cleanedText).replace(/\s+(am|um)\s+.*/gi, '').trim()) });
+                    let noteContent = aiData.note_text || text;
+                    noteContent = noteContent.replace(/\s+(am|um)\s+.*/gi, '').trim();
+
+                    const newTodoEntry = {
+                        id: Date.now(),
+                        text: noteContent
+                    };
+                    todoEntries.unshift(newTodoEntry);
                     setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
                 } else if (aiData.type === 'item_store' && aiData.item_name && aiData.item_location) {
-                    let cleanName = correctNameSpelling(aiData.item_name).toLowerCase();
+                    let cleanName = aiData.item_name.toLowerCase();
+                    let cleanLoc = aiData.item_location;
+                    
+                    cleanLoc = cleanLoc.replace(/\b(im|in der|in dem|auf dem|auf der|an der|am)\s+(in|im|in der|in dem|auf|an)\b/gi, '$1');
+                    
+                    let category = aiData.item_category || "Sonstiges";
+                    
                     memoryItems[cleanName] = {
-                        location: correctNameSpelling(aiData.item_location),
+                        location: cleanLoc,
                         timestamp: Date.now(),
-                        category: aiData.item_category || "Sonstiges"
+                        category: category
                     };
                     setPersistentData('helfer_memory', JSON.stringify(memoryItems));
                 }
 
                 if (aiData.type === 'name_change' && aiData.new_name) {
-                    currentUserName = correctNameSpelling(aiData.new_name);
+                    currentUserName = aiData.new_name;
                     setPersistentData('user_custom_name', currentUserName);
                     userNameInput.value = currentUserName;
                     updateUserGreeting();
                 }
 
                 if (aiData.type === 'item_query' && aiData.item_name) {
-                    let cleanQuery = correctNameSpelling(aiData.item_name).toLowerCase();
+                    let cleanQuery = aiData.item_name.toLowerCase();
+                    let foundItem = null;
+                    let matchedName = aiData.item_name;
+
                     for (let storedKey in memoryItems) {
                         if (cleanQuery.includes(storedKey) || storedKey.includes(cleanQuery)) {
-                            let item = memoryItems[storedKey];
-                            let matchedName = storedKey.charAt(0).toUpperCase() + storedKey.slice(1);
-                            finalReply = item.category === "Passwörter" 
-                                ? `Deine Zugangsdaten für ${matchedName} lauten: ${item.location}` 
-                                : `Dein ${matchedName} ist ${item.location}.`;
+                            foundItem = memoryItems[storedKey];
+                            matchedName = storedKey.charAt(0).toUpperCase() + storedKey.slice(1);
                             break;
+                        }
+                    }
+
+                    if (foundItem) {
+                        if (!aiData.reply || aiData.reply.includes("habe gemerkt")) {
+                            let article = "Dein";
+                            let lowerMatched = matchedName.toLowerCase();
+                            let cleanLoc = foundItem.location;
+                            
+                            if (lowerMatched.endsWith('e') && lowerMatched !== "schlüssele") {
+                                article = "Deine";
+                            }
+                            
+                            cleanLoc = cleanLoc.replace(/^auf den\b/i, "auf dem")
+                                             .replace(/^in den\b/i, "im")
+                                             .replace(/^an den\b/i, "am");
+
+                            finalReply = `${article} ${matchedName} ${cleanLoc}.`;
                         }
                     }
                 }
@@ -846,78 +797,85 @@
             } catch (error) {
                 console.error(error);
                 statusMessage.textContent = error.message;
-                speak("Es gab einen Fehler.", () => startListeningAuto());
+                speak("Es gab einen Fehler: " + error.message, () => startListeningAuto());
             }
         }
 
         async function createGoogleCalendarEvent(summary, startTimeStr) {
             if (!accessToken) return null;
+
             const startDate = new Date(startTimeStr);
             const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+
             const event = {
-                summary: correctNameSpelling(summary),
+                summary: summary,
                 start: { dateTime: startDate.toISOString() },
-                end: { dateTime: endDate.toISOString() }
+                end: { dateTime: endDate.toISOString() },
+                reminders: {
+                    useDefault: false,
+                    overrides: [
+                        { method: 'popup', minutes: 120 },
+                        { method: 'email', minutes: 120 }
+                    ]
+                }
             };
+
             try {
                 const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify(event)
                 });
+
                 if (res.ok) {
                     const data = await res.json();
                     return data.id;
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.error(e);
+            }
             return null;
         }
 
-        function deleteCalendarEntry(id, calendarId) {
-            confirmAction("Möchtest du diesen Termin wirklich löschen?", async () => {
-                if (calendarId && calendarId !== 'null' && accessToken) {
-                    try {
-                        await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${calendarId}`, {
-                            method: 'DELETE',
-                            headers: { 'Authorization': `Bearer ${accessToken}` }
-                        });
-                    } catch (e) {}
+        async function deleteCalendarEntry(id, calendarId) {
+            if (calendarId && calendarId !== 'null' && calendarId !== 'undefined' && accessToken) {
+                try {
+                    await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${calendarId}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+                } catch (e) {
+                    console.error("Fehler beim Löschen im Google Kalender:", e);
                 }
-                calendarEntries = calendarEntries.filter(e => e.id !== id);
-                setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
-                renderAllLists();
-                speak("Termin gelöscht.");
-            });
+            }
+
+            calendarEntries = calendarEntries.filter(e => e.id !== id);
+            setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
+            renderAllLists();
+            speak("Termin gelöscht.");
         }
 
         function deleteTodoEntry(id) {
-            confirmAction("Möchtest du dieses To-Do wirklich löschen?", () => {
-                todoEntries = todoEntries.filter(e => e.id !== id);
-                setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
-                renderAllLists();
-                speak("Erledigt.");
-            });
+            todoEntries = todoEntries.filter(e => e.id !== id);
+            setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
+            renderAllLists();
+            speak("Erledigt.");
         }
 
         function deleteMemoryItem(key) {
-            confirmAction(`Möchtest du "${key}" wirklich aus dem Gedächtnis löschen?`, () => {
-                delete memoryItems[key];
-                setPersistentData('helfer_memory', JSON.stringify(memoryItems));
-                renderAllLists();
-                speak("Gelöscht.");
-            });
-        }
-
-        function togglePasswordVisibility(key) {
-            visiblePasswords[key] = !visiblePasswords[key];
+            delete memoryItems[key];
+            setPersistentData('helfer_memory', JSON.stringify(memoryItems));
             renderAllLists();
+            speak("Gelöscht.");
         }
 
         function clearAllMemory() {
             memoryItems = {};
             localStorage.removeItem('helfer_memory');
             sessionStorage.removeItem('helfer_memory');
-            visiblePasswords = {};
             renderAllLists();
             speak("Gedächtnis geleert.");
         }
@@ -962,7 +920,7 @@
                 });
             }
 
-            const categories = ["Passwörter", "Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer", "Sonstiges"];
+            const categories = ["Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer", "Sonstiges"];
             const grouped = {};
             categories.forEach(c => grouped[c] = []);
 
@@ -971,6 +929,7 @@
                 let loc = typeof item === 'object' ? item.location : item;
                 let cat = (typeof item === 'object' && item.category) ? item.category : "Sonstiges";
                 if (!grouped[cat]) cat = "Sonstiges";
+                
                 grouped[cat].push({ key: key, location: loc });
             }
 
@@ -987,25 +946,10 @@
                     
                     itemsInCat.forEach(i => {
                         let capitalizedName = i.key.charAt(0).toUpperCase() + i.key.slice(1);
-                        
-                        if (cat === "Passwörter") {
-                            let isVisible = visiblePasswords[i.key];
-                            let displayVal = isVisible ? i.location : "••••••••";
-                            let btnLabel = isVisible ? "Verbergen" : "Anzeigen";
-                            
-                            catHtml += `<li class="flex justify-between items-center text-xs py-1 border-b border-slate-200 last:border-none">
-                                <div>• <b>${capitalizedName}</b>: <span class="font-mono bg-white px-1 py-0.5 rounded border border-slate-200">${displayVal}</span></div>
-                                <div class="flex items-center gap-2">
-                                    <button onclick="togglePasswordVisibility('${i.key}')" class="text-blue-600 font-bold">${btnLabel}</button>
-                                    <button onclick="deleteMemoryItem('${i.key}')" class="text-red-600 font-bold">Löschen</button>
-                                </div>
-                            </li>`;
-                        } else {
-                            catHtml += `<li class="flex justify-between items-center text-xs py-1 border-b border-slate-200 last:border-none">
-                                <span>• <b>${capitalizedName}</b>: ${i.location}</span>
-                                <button onclick="deleteMemoryItem('${i.key}')" class="text-red-600 font-bold ml-2">Löschen</button>
-                            </li>`;
-                        }
+                        catHtml += `<li class="flex justify-between items-center text-xs py-1 border-b border-slate-200 last:border-none">
+                            <span>• <b>${capitalizedName}</b>: ${i.location}</span>
+                            <button onclick="deleteMemoryItem('${i.key}')" class="text-red-600 font-bold ml-2">Löschen</button>
+                        </li>`;
                     });
 
                     catHtml += `</ul></div>`;
@@ -1013,7 +957,7 @@
             });
 
             if (!hasAnyItems) {
-                categoryContainer.innerHTML = '<p class="text-slate-500 text-xs">Keine Gegenstände oder Passwörter gespeichert.</p>';
+                categoryContainer.innerHTML = '<p class="text-slate-500 text-xs">Keine Gegenstände gespeichert.</p>';
             } else {
                 categoryContainer.innerHTML = catHtml;
             }
