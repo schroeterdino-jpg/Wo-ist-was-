@@ -333,7 +333,6 @@
             const maxIso = maxDate.toISOString();
 
             try {
-                // Alle Kalender abrufen, um auch verbundene/geteilte Einträge zu finden
                 const calendarListRes = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
                     headers: { 'Authorization': `Bearer ${accessToken}` }
                 });
@@ -375,14 +374,22 @@
                 let existingCalendarIds = new Set(calendarEntries.map(e => e.calendarId).filter(Boolean));
                 let seenSignatures = new Set(calendarEntries.map(e => `${e.text}_${e.isoDate}`.toLowerCase()));
 
-                // Wörter/Phrasen, die automatisch ausgeblendet werden sollen (Feiertage, Weltfrauentag etc.)
+                // Erweiterte Ausschlussliste, um jegliche System- und Feiertagseinträge radikal auszusortieren
                 const ignoreKeywords = [
-                    "weltfrauentag", "weltkindertag", "feiertag", "gesetzlicher feiertag", 
-                    "muttertag", "vatertag", "sommerzeit", "winterzeit", "ostern", "pfingsten", 
-                    "weihnachten", "neujahr", "karfreitag", "christi himmelfahrt", "tag der arbeit", 
-                    "tag der deutschen einheit", "reformationstag", "heilige drei könige", "valentinstag",
-                    "halloween", "silvester", "fasching", "karneval", "german world", "children's da"
+                    "weltfrauentag", "weltkindertag", "feiertag", "gesetzlicher", "holiday", 
+                    "muttertag", "vatertag", "sommerzeit", "winterzeit", "daylight", "saving", 
+                    "ostern", "pfingsten", "weihnachten", "neujahr", "karfreitag", "himmelfahrt", 
+                    "arbeit", "einheit", "reformationstag", "könige", "valentinstag", "halloween", 
+                    "silvester", "fasching", "karneval", "children's", "unity", "good friday", 
+                    "easter", "christmas", "new year", "ascension", "pentecost", "corpus christi", 
+                    "assumption", "all saints", "boxing day"
                 ];
+
+                // Bereinige bestehende Einträge im Cache einmalig von Altlasten
+                calendarEntries = calendarEntries.filter(e => {
+                    const lower = e.text.toLowerCase();
+                    return !ignoreKeywords.some(kw => lower.includes(kw));
+                });
 
                 allGoogleItems.forEach(item => {
                     const startRaw = item.start.dateTime || item.start.date;
@@ -391,7 +398,6 @@
                     const title = item.summary || "Kein Titel";
                     const lowerTitle = title.toLowerCase();
 
-                    // Prüfen, ob es ein Feiertag / unerwünschter System-Eintrag ist -> Überspringen!
                     const isIgnored = ignoreKeywords.some(keyword => lowerTitle.includes(keyword));
                     if (isIgnored) return;
 
