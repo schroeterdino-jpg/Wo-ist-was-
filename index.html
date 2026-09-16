@@ -129,7 +129,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.38</span>
+        <span>Version 4.37</span>
     </footer>
 
     <!-- JavaScript -->
@@ -205,26 +205,6 @@
         }
 
         let calendarEntries = JSON.parse(getPersistentData('helfer_calendar_entries', '[]')) || [];
-        
-        // Sofortiger Bereinigungs-Durchlauf gegen bereits im Speicher befindliche Feiertage
-        const ignoreKeywordsCleanup = [
-            "weltfrauentag", "weltkindertag", "feiertag", "gesetzlicher", "holiday", 
-            "muttertag", "vatertag", "sommerzeit", "winterzeit", "daylight", "saving", 
-            "ostern", "pfingsten", "weihnachten", "neujahr", "karfreitag", "himmelfahrt", 
-            "arbeit", "einheit", "reformationstag", "könige", "valentinstag", "halloween", 
-            "silvester", "fasching", "karneval", "children's", "unity", "good friday", 
-            "easter", "christmas", "new year", "ascension", "pentecost", "corpus christi", 
-            "assumption", "all saints", "boxing day", "palmsonntag", "palm sunday",
-            "ostermontag", "easter monday", "may day", "mother's day", "father's day",
-            "pfingstmontag", "whit monday", "aschermittwoch", "fronleichnam",
-            "buß- und bettag", "allerheiligen", "erntedankfest", "martini", "nikolaus"
-        ];
-        calendarEntries = calendarEntries.filter(e => {
-            const lower = e.text.toLowerCase();
-            return !ignoreKeywordsCleanup.some(kw => lower.includes(kw));
-        });
-        setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
-
         let todoEntries = JSON.parse(getPersistentData('helfer_todo_entries', '[]')) || [];
         let memoryItems = JSON.parse(getPersistentData('helfer_memory', '{}')) || {};
         let savedContacts = JSON.parse(getPersistentData('helfer_contacts', '{}')) || {};
@@ -349,7 +329,7 @@
             const nowIso = now.toISOString();
             
             const maxDate = new Date();
-            maxDate.setFullYear(maxDate.getFullYear() + 2);
+            maxDate.setMonth(maxDate.getMonth() + 6);
             const maxIso = maxDate.toISOString();
 
             const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${nowIso}&timeMax=${maxIso}&singleEvents=true&orderBy=startTime`;
@@ -374,41 +354,16 @@
                     let existingCalendarIds = new Set(calendarEntries.map(e => e.calendarId).filter(Boolean));
                     let seenSignatures = new Set(calendarEntries.map(e => `${e.text}_${e.isoDate}`.toLowerCase()));
 
-                    // Umfassende Ausschlussliste gegen Feiertage, Dubletten & Jahreskreistage
-                    const ignoreKeywords = [
-                        "weltfrauentag", "weltkindertag", "feiertag", "gesetzlicher", "holiday", 
-                        "muttertag", "vatertag", "sommerzeit", "winterzeit", "daylight", "saving", 
-                        "ostern", "pfingsten", "weihnachten", "neujahr", "karfreitag", "himmelfahrt", 
-                        "arbeit", "einheit", "reformationstag", "könige", "valentinstag", "halloween", 
-                        "silvester", "fasching", "karneval", "children's", "unity", "good friday", 
-                        "easter", "christmas", "new year", "ascension", "pentecost", "corpus christi", 
-                        "assumption", "all saints", "boxing day", "palmsonntag", "palm sunday",
-                        "ostermontag", "easter monday", "may day", "mother's day", "father's day",
-                        "pfingstmontag", "whit monday", "aschermittwoch", "fronleichnam",
-                        "buß- und bettag", "allerheiligen", "erntedankfest", "martini", "nikolaus"
-                    ];
-
-                    // Lokale Feiertage sofort rausfiltern
-                    calendarEntries = calendarEntries.filter(e => {
-                        const lower = e.text.toLowerCase();
-                        return !ignoreKeywords.some(kw => lower.includes(kw));
-                    });
-
                     googleItems.forEach(item => {
                         const startRaw = item.start.dateTime || item.start.date;
                         if (!startRaw) return;
-
-                        const title = item.summary || "Kein Titel";
-                        const lowerTitle = title.toLowerCase();
-
-                        const isIgnored = ignoreKeywords.some(keyword => lowerTitle.includes(keyword));
-                        if (isIgnored) return;
 
                         const itemDate = new Date(startRaw);
                         if (!isNaN(itemDate) && (itemDate < now || itemDate > maxDate)) {
                             return;
                         }
 
+                        const title = item.summary || "Kein Titel";
                         const signature = `${title}_${startRaw}`.toLowerCase();
 
                         if (existingCalendarIds.has(item.id)) {
@@ -859,7 +814,7 @@
                             {
                                 role: "system",
                                 content: `Du bist ${currentUserName}s smarter, absolut natürlicher und menschlicher Alltags-Assistent. 
-                                Aktuelles exaktes Datum heute ist ${todayStr} (${now.toLocaleDateString('de-DE', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'})}), Uhrzeit is exakt ${currentClockTime} Uhr.
+                                Aktuelles exaktes Datum heute ist ${todayStr} (${now.toLocaleDateString('de-DE', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'})}), Uhrzeit ist exakt ${currentClockTime} Uhr.
                                 ${weatherContext ? "Wetter-Information: " + weatherContext : ""}
                                 Bisheriges Gedächtnis über Gegenstände: ${memoryContext}
                                 Kalender: ${calendarContext}
@@ -966,6 +921,7 @@
                     let noteContent = aiData.note_text || text;
                     noteContent = noteContent.charAt(0).toUpperCase() + noteContent.slice(1);
 
+                    // Erstellungsdatum generieren (z.B. "Erstellt am 16.09.2026")
                     const creationDateStr = `Erstellt am ${now.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
 
                     const newTodoEntry = {
@@ -1143,6 +1099,7 @@
             } else {
                 todoList.innerHTML = '';
                 todoEntries.forEach(entry => {
+                    // Falls ein älteres To-Do noch kein Erstellungsdatum hat, fangen wir das ab
                     const dateDisplay = entry.createdDate ? `<div class="text-xs text-slate-400 mt-0.5">${entry.createdDate}</div>` : '';
 
                     const li = document.createElement('li');
@@ -1205,3 +1162,4 @@
     </script>
 </body>
 </html>
+ 
