@@ -129,7 +129,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.32</span>
+        <span>Version 4.33</span>
     </footer>
 
     <!-- JavaScript -->
@@ -478,6 +478,8 @@
                     triggerDailyBriefing();
                 } else if (lower.includes("was steht auf meiner to-do-liste") || lower.includes("to do liste") || lower.includes("was habe ich auf der liste")) {
                     readTodoList();
+                } else if (lower.includes("wo bin ich") || lower.includes("aktueller standort") || lower.includes("befinde ich mich")) {
+                    handleLocationQuery();
                 } else {
                     sendToGroqSmart(speechResult);
                 }
@@ -586,6 +588,42 @@
                     { timeout: 5000, maximumAge: 60000 }
                 );
             });
+        }
+
+        // Standort-Abfrage Befehl ("Wo bin ich?")
+        async function handleLocationQuery() {
+            statusMessage.textContent = "Ermittle genauen Standort...";
+            const coords = await getCurrentPositionAsync();
+
+            try {
+                // Open-Meteo Geocoding Reverse API nutzt Koordinaten für Ortsnamen (kostenlos & ohne Key)
+                const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=location&count=1&latitude=${coords.latitude}&longitude=${coords.longitude}`);
+                // Alternativ nutzen wir Nominatim (OpenStreetMap) für echte Straßennamen/Orte:
+                const nominatimRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.latitude}&lon=${coords.longitude}&zoom=18&addressdetails=1`);
+                
+                if (nominatimRes.ok) {
+                    const data = await nominatimRes.json();
+                    const address = data.address || {};
+                    const road = address.road || address.pedestrian || address.suburb || "";
+                    const city = address.city || address.town || address.village || address.municipality || "Schwarzenbek";
+                    
+                    let locationText = `Du befindest dich in ${city}`;
+                    if (road) {
+                        locationText = `Du befindest dich in der Straße ${road} in ${city}`;
+                    }
+                    
+                    statusMessage.textContent = locationText;
+                    speak(locationText);
+                    return;
+                }
+            } catch (e) {
+                console.error("Standort-Auflösung Fehler:", e);
+            }
+
+            // Fallback falls Reverse Geocoding blockiert wird
+            let fallbackText = `Deine aktuellen Koordinaten sind Breitengrad ${coords.latitude.toFixed(4)}, Längengrad ${coords.longitude.toFixed(4)}.`;
+            statusMessage.textContent = fallbackText;
+            speak(fallbackText);
         }
 
         async function triggerDailyBriefing() {
@@ -709,7 +747,6 @@
 
             const coords = await getCurrentPositionAsync();
 
-            // Wetter live für aktuellen Standort abrufen, falls nach Regenschirm oder Wetter gefragt wird
             let weatherContext = "";
             const lowerTextCheck = text.toLowerCase();
             if (lowerTextCheck.includes("regenschirm") || lowerTextCheck.includes("wetter") || lowerTextCheck.includes("regen") || lowerTextCheck.includes("jacke")) {
@@ -1090,7 +1127,7 @@
                         let capitalizedName = i.key.charAt(0).toUpperCase() + i.key.slice(1);
                         catHtml += `<li class="flex justify-between items-center text-xs py-1 border-b border-slate-200 last:border-none">
                             <span>• <b>${capitalizedName}</b>: ${i.location}</span>
-                            <button onclick="deleteMemoryItem('${i.key}')" class="text-red-600 font-bold ml-2">Löschen</button>
+                            <button onclick="deleteMemoryItem('${i.key}')" class="text-red-600 font-bold ml2">Löschen</button>
                         </li>`;
                     });
 
