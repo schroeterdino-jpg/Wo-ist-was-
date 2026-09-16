@@ -333,7 +333,7 @@
             const maxIso = maxDate.toISOString();
 
             try {
-                // 1. Alle Kalender des Nutzers abrufen (inkl. Geburtstage & geteilte Kalender)
+                // Alle Kalender abrufen, um auch verbundene/geteilte Einträge zu finden
                 const calendarListRes = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
                     headers: { 'Authorization': `Bearer ${accessToken}` }
                 });
@@ -353,7 +353,6 @@
 
                 let allGoogleItems = [];
 
-                // 2. Events für jeden einzelnen Kalender abrufen
                 for (let cal of calendars) {
                     const calId = encodeURIComponent(cal.id);
                     const url = `https://www.googleapis.com/calendar/v3/calendars/${calId}/events?timeMin=${nowIso}&timeMax=${maxIso}&singleEvents=true&orderBy=startTime`;
@@ -376,16 +375,31 @@
                 let existingCalendarIds = new Set(calendarEntries.map(e => e.calendarId).filter(Boolean));
                 let seenSignatures = new Set(calendarEntries.map(e => `${e.text}_${e.isoDate}`.toLowerCase()));
 
+                // Wörter/Phrasen, die automatisch ausgeblendet werden sollen (Feiertage, Weltfrauentag etc.)
+                const ignoreKeywords = [
+                    "weltfrauentag", "weltkindertag", "feiertag", "gesetzlicher feiertag", 
+                    "muttertag", "vatertag", "sommerzeit", "winterzeit", "ostern", "pfingsten", 
+                    "weihnachten", "neujahr", "karfreitag", "christi himmelfahrt", "tag der arbeit", 
+                    "tag der deutschen einheit", "reformationstag", "heilige drei könige", "valentinstag",
+                    "halloween", "silvester", "fasching", "karneval", "german world", "children's da"
+                ];
+
                 allGoogleItems.forEach(item => {
                     const startRaw = item.start.dateTime || item.start.date;
                     if (!startRaw) return;
+
+                    const title = item.summary || "Kein Titel";
+                    const lowerTitle = title.toLowerCase();
+
+                    // Prüfen, ob es ein Feiertag / unerwünschter System-Eintrag ist -> Überspringen!
+                    const isIgnored = ignoreKeywords.some(keyword => lowerTitle.includes(keyword));
+                    if (isIgnored) return;
 
                     const itemDate = new Date(startRaw);
                     if (!isNaN(itemDate) && (itemDate < now || itemDate > maxDate)) {
                         return;
                     }
 
-                    const title = item.summary || "Kein Titel";
                     const signature = `${title}_${startRaw}`.toLowerCase();
 
                     if (existingCalendarIds.has(item.id)) {
@@ -799,7 +813,7 @@
                         } else if (temp < 12) {
                             weatherContext += " Es ist frisch, eine Jacke wird empfohlen.";
                         } else {
-                            weatherContext += " Regen is aktuell keiner zu erwarten.";
+                            weatherContext += " Regen ist aktuell keiner zu erwarten.";
                         }
                     }
                 } catch (e) {
