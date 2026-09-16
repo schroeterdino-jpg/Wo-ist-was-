@@ -129,7 +129,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.35</span>
+        <span>Version 4.36</span>
     </footer>
 
     <!-- JavaScript -->
@@ -366,7 +366,6 @@
                         const title = item.summary || "Kein Titel";
                         const signature = `${title}_${startRaw}`.toLowerCase();
 
-                        // Wenn die Event-ID bereits existiert, aktualisieren wir den Eintrag ggf. (Sicherstellen, dass er da ist)
                         if (existingCalendarIds.has(item.id)) {
                             let existing = calendarEntries.find(e => e.calendarId === item.id);
                             if (existing) {
@@ -403,7 +402,6 @@
                         }
                     });
 
-                    // Wir behalten alle lokalen Einträge, die in der Zukunft liegen (damit manuell oder frisch erstellte nie verloren gehen)
                     calendarEntries = calendarEntries.filter(e => {
                         if (!e.isoDate) return true;
                         const d = new Date(e.isoDate);
@@ -823,8 +821,9 @@
                                 To-Dos: ${todoContext}
 
                                 ABSOLUT STRENGE REGELN (WICHTIGSTE PRIORITÄT!):
-                                1. TERMIN VS. TO-DO UNTERSCHEIDUNG (STRENG!): Trage etwas NUR dann als Kalender-Termin ("calendar") ein, wenn der Nutzer explizit eine Uhrzeit oder ein Datum genannt hat (z.B. "morgen um 15 Uhr"). 
-                                Wenn der Nutzer eine reine Absicht oder Alltagsaufgabe äußert, ohne eine Uhrzeit oder ein Datum zu nennen (z. B. "Ich muss meine Tochter abholen" oder "Ich muss einkaufen"), wähle ZWINGEND den Typ "note" (To-Do-Liste)! Erfinde niemals eigenmächtig eine Uhrzeit oder einen Termin, wenn keine genannt wurde!
+                                1. TERMIN VS. TO-DO UNTERSCHEIDUNG (STRENG!): 
+                                - Erstelle einen Kalender-Eintrag (Typ "calendar") NUR dann, wenn der Nutzer eine konkrete UHRZEIT genannt hat (z.B. "morgen um 15 Uhr", "am Freitag um 10 Uhr").
+                                - Wenn der Nutzer eine Aufgabe oder Absicht mit einem Datum oder Frist (wie "morgen", "am Dienstag", "nächste Woche"), aber OHNE konkrete Uhrzeit äußert (z.B. "Ich muss morgen einkaufen gehen" oder "Ich muss morgen meine Tochter abholen"), ist das ZWINGEND eine Notiz/To-Do (Typ "note"). Das genannte Datum/Frist (z.B. "Morgen") MUSS zwingend im Text bei "note_text" erhalten bleiben! Erfinde niemals eigenmächtig eine Uhrzeit oder einen Kalendereintrag, wenn keine Uhrzeit genannt wurde!
                                 2. KEINE FRAGEN ALS TO-DO SPEICHERN: Wenn der Nutzer fragt "Welche Termine habe ich?", "Brauche ich einen Regenschirm?" oder allgemeine Fragen stellt, wähle niemals den Typ "note"!
                                 3. SPRACH-STIL: Sag NIEMALS "Ich habe gemerkt...". Antworte immer natürlich und flüssig.
                                 4. GRAMMATIK: Achte bei Gegenständen streng auf die deutsche Grammatik.
@@ -835,9 +834,9 @@
                                 - "item_name": string (Name des Gegenstands bei store/query)
                                 - "item_location": string (Der genaue Ort im Zustand)
                                 - "item_category": string (Kategorie: "Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer", "Sonstiges")
-                                - "note_text": string (Nur bei echten To-Dos oder Notizen)
+                                - "note_text": string (Der vollständige To-Do-Text inklusive Frist/Datum wie "Morgen einkaufen gehen")
                                 - "summary": string (Titel für Kalender)
-                                - "start_time": string (Exaktes ISO-Datum im Format YYYY-MM-DDTHH:mm:ss für Kalender, nur bei explizitem Zeitbezug)
+                                - "start_time": string (Exaktes ISO-Datum im Format YYYY-MM-DDTHH:mm:ss für Kalender, nur bei explizitem Zeitbezug mit Uhrzeit)
                                 - "calendar_delete_query": string (Suchbegriff des zu löschenden Termins bei Typ calendar_delete)
                                 - "reply": string (Deine komplette, natürliche, fehlerfreie Antwort auf Deutsch, die per Sprachausgabe vorgelesen wird!)`
                             },
@@ -917,10 +916,11 @@
                     calendarEntries.unshift(newCalEntry);
                     calendarEntries.sort((a, b) => new Date(a.isoDate) - new Date(b.isoDate));
                     setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
-                    renderAllLists(); // Direktes Rendern nach dem Hinzufügen!
+                    renderAllLists();
                 } else if (aiData.type === 'note') {
+                    // Das Datum/Morgen bleibt nun im To-Do Text erhalten!
                     let noteContent = aiData.note_text || text;
-                    noteContent = noteContent.replace(/\s+(am|um)\s+.*/gi, '').trim();
+                    noteContent = noteContent.charAt(0).toUpperCase() + noteContent.slice(1);
 
                     const newTodoEntry = {
                         id: Date.now(),
