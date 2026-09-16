@@ -129,7 +129,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.30</span>
+        <span>Version 4.31</span>
     </footer>
 
     <!-- JavaScript -->
@@ -275,7 +275,6 @@
         let tokenClient;
         let accessToken = getPersistentData('google_access_token', '');
 
-        // Automatischer Check beim Start: Wenn Token vorhanden, direkt Kalender abrufen
         window.addEventListener('load', () => {
             if (accessToken) {
                 connectionStatus.textContent = "✅ Mit Google Kalender verbunden!";
@@ -333,7 +332,6 @@
                 });
 
                 if (response.status === 401) {
-                    // Token abgelaufen
                     accessToken = '';
                     localStorage.removeItem('google_access_token');
                     sessionStorage.removeItem('google_access_token');
@@ -406,7 +404,6 @@
             }
         }
 
-        // --- AUDIO-SPRACHAUSGABE ---
         let currentAudio = null;
 
         function speak(text, onComplete) {
@@ -610,7 +607,6 @@
             const currentTimeStr = nowBriefing.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
             let briefingText = `Guten Tag, ${currentUserName}. Es ist jetzt ${currentTimeStr} Uhr. Hier ist dein kurzer Überblick. ${weatherText} ${weatherAdvice}`;
 
-            // NUR Termine für diesen Tag (heute)
             const todayStr = nowBriefing.toLocaleDateString('en-CA');
             const todayCalendarEntries = calendarEntries.filter(e => {
                 if (!e.isoDate) return false;
@@ -993,7 +989,8 @@
                 todoList.innerHTML = '';
                 todoEntries.forEach(entry => {
                     const li = document.createElement('li');
-                    li.className = "bg-slate-50 p-3 නොව p-3 rounded-xl border border-slate-100 flex justify-between items-center text-base">
+                    li.className = "bg-slate-50 p-3 rounded-xl border border-slate-100 flex justify-between items-center text-base";
+                    li.innerHTML = `
                         <div>
                             <span>📝 ${entry.text}</span>
                         </div>
