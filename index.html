@@ -49,6 +49,11 @@
             </div>
 
             <div>
+                <label class="block text-sm font-bold text-amber-900 mb-1">Modell-Name (z.B. llama-3.3-70b-versatile):</label>
+                <input type="text" id="modelInput" placeholder="Modell eingeben..." class="w-full p-2 border border-amber-300 rounded-lg text-base bg-white">
+            </div>
+
+            <div>
                 <label class="block text-sm font-bold text-amber-900 mb-1">Google Client-ID:</label>
                 <input type="text" id="googleClientIdInput" placeholder="Client ID..." class="w-full p-2 border border-amber-300 rounded-lg text-base bg-white">
             </div>
@@ -129,7 +134,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.24</span>
+        <span id="activeModelDisplay" class="font-mono text-xs text-slate-500">Modell: Lade...</span>
     </footer>
 
     <!-- JavaScript -->
@@ -143,10 +148,12 @@
         const settingsBox = document.getElementById('settingsBox');
         
         const apiKeyInput = document.getElementById('apiKeyInput');
+        const modelInput = document.getElementById('modelInput');
         const googleClientIdInput = document.getElementById('googleClientIdInput');
         const userNameInput = document.getElementById('userNameInput');
         const userNameDisplay = document.getElementById('userNameDisplay');
         const connectionStatus = document.getElementById('connectionStatus');
+        const activeModelDisplay = document.getElementById('activeModelDisplay');
         
         const contactNameInput = document.getElementById('contactNameInput');
         const contactPhoneInput = document.getElementById('contactPhoneInput');
@@ -180,6 +187,11 @@
         let savedKey = getPersistentData('user_api_key', '');
         if (savedKey) apiKeyInput.value = savedKey;
 
+        let savedModel = getPersistentData('user_model_name', 'llama-3.3-70b-versatile');
+        modelInput.value = savedModel;
+        setPersistentData('user_model_name', savedModel);
+        updateActiveModelDisplay();
+
         let savedClientId = getPersistentData('google_client_id', '399573320370-qka01ghj0s88eoair7lla665cbj10o4g.apps.googleusercontent.com');
         googleClientIdInput.value = savedClientId;
         setPersistentData('google_client_id', savedClientId);
@@ -203,6 +215,18 @@
             setPersistentData('user_api_key', apiKeyInput.value.trim());
         });
 
+        modelInput.addEventListener('input', () => {
+            const newModel = modelInput.value.trim() || 'llama-3.3-70b-versatile';
+            setPersistentData('user_model_name', newModel);
+            connectionStatus.textContent = "Modell gespeichert.";
+            updateActiveModelDisplay();
+        });
+        modelInput.addEventListener('change', () => {
+            const newModel = modelInput.value.trim() || 'llama-3.3-70b-versatile';
+            setPersistentData('user_model_name', newModel);
+            updateActiveModelDisplay();
+        });
+
         googleClientIdInput.addEventListener('input', () => {
             setPersistentData('google_client_id', googleClientIdInput.value.trim());
             connectionStatus.textContent = "Client-ID gespeichert.";
@@ -213,6 +237,13 @@
 
         function updateUserGreeting() {
             userNameDisplay.textContent = `Hallo, ${currentUserName}!`;
+        }
+
+        function updateActiveModelDisplay() {
+            if (activeModelDisplay) {
+                const currentModel = getPersistentData('user_model_name', 'llama-3.3-70b-versatile');
+                activeModelDisplay.textContent = `Modell: ${currentModel}`;
+            }
         }
 
         let calendarEntries = JSON.parse(getPersistentData('helfer_calendar_entries', '[]')) || [];
@@ -587,6 +618,7 @@
 
         async function sendToGroqSmart(text) {
             const key = getPersistentData('user_api_key', '');
+            const modelName = getPersistentData('user_model_name', 'llama-3.3-70b-versatile');
             statusMessage.textContent = "Verarbeite...";
 
             const now = new Date();
@@ -616,7 +648,7 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: "llama-3.3-70b-versatile", 
+                        model: modelName, 
                         response_format: { type: "json_object" },
                         messages: [
                             {
@@ -641,7 +673,7 @@
                                 - "item_category": string (Kategorie: "Flur", "Schlafzimmer", "Wohnzimmer", "Badezimmer", "Sonstiges")
                                 - "note_text": string (Nur bei echten To-Dos oder Notizen – NIEMALS bei Fragen!)
                                 - "summary": string (Titel für Kalender)
-                                - "start_time": string (Exaktes ISO-Datum im Format YYYY-MM-DDTHH:mm:ss für Kalender)
+                                - "start_time": string (Exaktes ISO-Datum im Format YYYY-MM-DDTHH:mm:ss for Kalender)
                                 - "reply": string (Deine komplette, natürliche, fehlerfreie Antwort auf Deutsch, die per Sprachausgabe vorgelesen wird!)`
                             },
                             {
