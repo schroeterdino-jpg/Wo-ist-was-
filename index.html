@@ -186,7 +186,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 7.5 (Location & Weather Fixed)</span>
+        <span>Version 7.6 (Briefing Fixed)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -315,7 +315,6 @@
             );
         }
 
-        // Sekundengenauer Check für lokale App-Erinnerungen inklusive Audio & Benachrichtigung
         setInterval(() => {
             if (reminderEntries.length === 0) return;
             const now = new Date();
@@ -340,7 +339,6 @@
             }
         }, 1000);
 
-        // --- GOOGLE OAUTH & SILENT REFRESH LOGIK ---
         let tokenClient = null;
         let accessToken = getPersistentData('google_access_token', '');
         let pendingAction = null;
@@ -404,7 +402,6 @@
             }
         }, 50 * 60 * 1000);
 
-        // 1. ECHTER TERMIN
         async function addGoogleCalendarEvent(text, isoStartString) {
             let eventDate = isoStartString ? new Date(isoStartString) : new Date();
             if (isNaN(eventDate.getTime())) eventDate = new Date();
@@ -453,7 +450,6 @@
             renderAllLists();
         }
 
-        // 2. ERINNERUNG
         async function addGoogleCalendarReminder(text, isoTimeString) {
             let remDate = isoTimeString ? new Date(isoTimeString) : new Date();
             if (isNaN(remDate.getTime())) remDate = new Date();
@@ -658,7 +654,6 @@
             renderAllLists();
         }
 
-        // STANDORT-ABFRAGE
         async function fetchLocationData() {
             return new Promise((resolve) => {
                 if (!navigator.geolocation) {
@@ -685,7 +680,6 @@
             });
         }
 
-        // WETTER-ABFRAGE (Robust mit Fallback)
         async function fetchWeatherData() {
             return new Promise((resolve) => {
                 const getMeteo = async (lat, lon) => {
@@ -708,7 +702,7 @@
                 if (navigator.geolocation) {
                     navigator.geolocation.getCurrentPosition(
                         (pos) => getMeteo(pos.coords.latitude, pos.coords.longitude),
-                        () => getMeteo(53.5511, 9.9937), // Fallback Hamburg / Deutschland
+                        () => getMeteo(53.5511, 9.9937),
                         { timeout: 5000 }
                     );
                 } else {
@@ -783,42 +777,49 @@
             if (recordText) recordText.textContent = "SPRECHEN";
         }
 
+        // --- OPTIMIERTE TAGES-BRIEFING LOGIK ---
         async function triggerDailyBriefing() {
             const timeStr = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
             let text = `Guten Tag ${currentUserName}. Es ist ${timeStr} Uhr. `;
             
-            // Termine vorlesen
-            if (calendarEntries.length > 0) {
-                const termList = calendarEntries.map(e => `${e.text} um ${e.date}`).join(', ');
-                text += `Du hast folgende Termine: ${termList}. `;
+            // 1. Termine vorlesen
+            if (calendarEntries && calendarEntries.length > 0) {
+                const termList = calendarEntries.map(e => `${e.text} am ${e.date}`).join(', ');
+                text += `Deine Termine sind: ${termList}. `;
             } else {
-                text += "Du hast heute keine anstehenden Termine. ";
+                text += "Du hast aktuell keine anstehenden Termine. ";
             }
 
-            // Erinnerungen vorlesen
-            if (reminderEntries.length > 0) {
+            // 2. Erinnerungen vorlesen
+            if (reminderEntries && reminderEntries.length > 0) {
                 const remList = reminderEntries.map(e => {
                     const timeFormatted = new Date(e.time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
                     return `${e.text} um ${timeFormatted} Uhr`;
                 }).join(', ');
-                text += `Deine aktiven Erinnerungen sind: ${remList}. `;
+                text += `Deine aktiven Erinnerungen lauten: ${remList}. `;
+            } else {
+                text += "Du hast keine aktiven Erinnerungen. ";
             }
 
-            // Einkaufsliste vorlesen
-            if (shoppingEntries.length > 0) {
+            // 3. Offene Aufgaben vorlesen
+            if (todoEntries && todoEntries.length > 0) {
+                const todoListTexts = todoEntries.map(e => e.text).join(', ');
+                text += `Folgende Aufgaben stehen an: ${todoListTexts}. `;
+            } else {
+                text += "Du hast keine offenen Aufgaben. ";
+            }
+
+            // 4. Einkaufsliste vorlesen
+            if (shoppingEntries && shoppingEntries.length > 0) {
                 const shopList = shoppingEntries.map(e => e.text).join(', ');
                 text += `Auf deiner Einkaufsliste steht: ${shopList}. `;
             }
 
-            // Aufgaben-Anzahl vorlesen
-            if (todoEntries.length > 0) {
-                text += `Es gibt noch ${todoEntries.length} offene Aufgaben. `;
-            }
-            
+            // 5. Wetter holen und anfügen
             if (statusMessage) statusMessage.textContent = "Hole Wetter...";
             const weather = await fetchWeatherData();
-            if (!weather.fehler) {
-                text += `Aktuell hast du ${weather.temperatur} Grad. `;
+            if (weather && !weather.fehler) {
+                text += `Das Wetter aktuell: Es sind ${weather.temperatur} Grad. `;
             }
 
             if (statusMessage) statusMessage.textContent = "Briefing aktiv.";
@@ -833,13 +834,11 @@
             let locationInfo = null;
             const lowerText = text.toLowerCase();
 
-            // Automatische Erkennung aller Standortfragen (auch wenn Oma verwirrt ist)
             if (lowerText.includes('wo bin ich') || lowerText.includes('wo befinde ich') || lowerText.includes('mein standort') || lowerText.includes('aktueller ort') || lowerText.includes('welche straße') || lowerText.includes('welcher ort') || lowerText.includes('wo bin') || lowerText.includes('wo sind wir')) {
                 if (statusMessage) statusMessage.textContent = "Bestimme Standort...";
                 locationInfo = await fetchLocationData();
             }
 
-            // Erkennung von Wetterfragen
             if (lowerText.includes('wetter') || lowerText.includes('regenschirm') || lowerText.includes('regen') || lowerText.includes('draußen') || lowerText.includes('grad') || lowerText.includes('temperatur')) {
                 if (statusMessage) statusMessage.textContent = "Hole Wetter...";
                 weatherInfo = await fetchWeatherData();
