@@ -26,28 +26,26 @@
 <body class="bg-slate-100 text-slate-900 min-h-screen flex flex-col justify-between">
 
     <!-- Kopfbereich -->
-    <header class="bg-blue-700 text-white p-5 text-center shadow-md relative">
+    <header class="bg-blue-700 text-white p-4 text-center shadow-md relative">
         <div class="flex justify-between items-center max-w-md mx-auto">
             <div></div>
             <div>
                 <h1 class="text-2xl font-bold">Mein Alltags-Helfer</h1>
                 <p id="userNameDisplay" class="text-sm text-blue-100 mt-0.5">Hallo, Dino!</p>
             </div>
-            <button onclick="switchSection('settings')" class="bg-blue-800 hover:bg-blue-900 text-white px-3 py-2 rounded-lg text-sm shadow">
-                ⚙️ Einstellungen
+            <button onclick="switchSection('settings')" class="bg-blue-800 hover:bg-blue-900 text-white px-3 py-2 rounded-lg text-sm shadow flex items-center gap-1">
+                ⚙️ <span class="hidden sm:inline">Einstellungen</span>
             </button>
         </div>
     </header>
 
-    <!-- Hauptnavigation / Reiter (Die 7 Kernbereiche) -->
-    <nav class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-50 overflow-x-auto">
-        <div class="flex max-w-md mx-auto px-1 py-2 gap-1 text-xs font-bold whitespace-nowrap">
-            <button id="navSpeak" onclick="switchSection('speak')" class="flex-1 py-2 px-2 rounded-lg bg-blue-600 text-white shadow transition">🎙️ Sprechen</button>
-            <button id="navToday" onclick="switchSection('today')" class="flex-1 py-2 px-2 rounded-lg text-slate-600 hover:bg-slate-100 transition">📅 Heute</button>
-            <button id="navReminders" onclick="switchSection('reminders')" class="flex-1 py-2 px-2 rounded-lg text-slate-600 hover:bg-slate-100 transition">🔔 Erinnerungen</button>
-            <button id="navTodos" onclick="switchSection('todos')" class="flex-1 py-2 px-2 rounded-lg text-slate-600 hover:bg-slate-100 transition">📝 Aufgaben</button>
-            <button id="navMemory" onclick="switchSection('memory')" class="flex-1 py-2 px-2 rounded-lg text-slate-600 hover:bg-slate-100 transition">🧠 Gedächtnis</button>
-            <button id="navShopping" onclick="switchSection('shopping')" class="flex-1 py-2 px-2 rounded-lg text-slate-600 hover:bg-slate-100 transition">🛒 Einkaufsliste</button>
+    <!-- Hauptnavigation / Reiter (Optimiert auf 4 Kernbereiche) -->
+    <nav class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-50">
+        <div class="flex max-w-md mx-auto px-1 py-2 gap-1 text-xs font-bold">
+            <button id="navSpeak" onclick="switchSection('speak')" class="flex-1 py-2.5 px-1 rounded-lg bg-blue-600 text-white shadow transition text-center">🎙️ Sprechen</button>
+            <button id="navPlanner" onclick="switchSection('planner')" class="flex-1 py-2.5 px-1 rounded-lg text-slate-600 hover:bg-slate-100 transition text-center">📅 Planer</button>
+            <button id="navLists" onclick="switchSection('lists')" class="flex-1 py-2.5 px-1 rounded-lg text-slate-600 hover:bg-slate-100 transition text-center">📝 Listen</button>
+            <button id="navMemory" onclick="switchSection('memory')" class="flex-1 py-2.5 px-1 rounded-lg text-slate-600 hover:bg-slate-100 transition text-center">🧠 Gedächtnis</button>
         </div>
     </nav>
 
@@ -55,15 +53,15 @@
     <main class="container mx-auto p-4 max-w-md flex-grow flex flex-col space-y-4">
 
         <!-- Sektion 1: SPRECHEN -->
-        <section id="sec-speak" class="flex flex-col items-center justify-center space-y-5 my-auto py-4">
+        <section id="sec-speak" class="flex flex-col items-center justify-between space-y-4 my-auto py-2">
             
-            <!-- PHASE 1: Intelligente Start-Übersicht Card -->
-            <div id="overviewCard" class="w-full bg-white p-4 rounded-2xl shadow-md border border-slate-200 space-y-2 text-sm">
-                <h3 class="font-bold text-blue-800 border-b pb-1 text-base flex justify-between items-center">
-                    <span>⚡ Tages-Übersicht</span>
-                    <span class="text-xs font-normal text-slate-500">Live</span>
-                </h3>
-                <div class="space-y-1.5 text-slate-700">
+            <!-- Intelligente Tages-Übersicht Card (Kompakt & Einklappbar) -->
+            <div id="overviewCard" class="w-full bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden text-sm transition-all">
+                <button onclick="toggleOverviewDetails()" class="w-full bg-slate-50 p-3.5 border-b border-slate-100 font-bold text-blue-800 flex justify-between items-center text-left">
+                    <span class="flex items-center gap-1.5">⚡ Tages-Übersicht <span class="text-xs font-normal text-slate-500">(Live)</span></span>
+                    <span id="overviewToggleIcon" class="text-xs text-slate-400">▼ Klappen</span>
+                </button>
+                <div id="overviewDetails" class="p-4 space-y-2 text-slate-700">
                     <p class="flex items-start gap-2">
                         <span>📅</span> 
                         <span><b>Nächster Termin:</b> <span id="ovNextCalendar" class="text-slate-800">Lädt...</span></span>
@@ -72,7 +70,7 @@
                         <span>🔔</span> 
                         <span><b>Nächste Erinnerung:</b> <span id="ovNextReminder" class="text-slate-800">Lädt...</span></span>
                     </p>
-                    <div class="grid grid-cols-3 gap-2 pt-1 border-t text-center text-xs font-semibold">
+                    <div class="grid grid-cols-3 gap-2 pt-2 border-t text-center text-xs font-semibold">
                         <div class="bg-blue-50 p-2 rounded-lg border border-blue-100">
                             <span class="block text-slate-500 text-[10px]">AUFGABEN</span>
                             <span id="ovCountTodos" class="text-blue-700 text-sm font-bold">0</span>
@@ -89,35 +87,37 @@
                 </div>
             </div>
 
-            <button id="recordBtn" onclick="toggleSpeechRecognition()" class="w-40 h-40 bg-red-600 hover:bg-red-700 text-white rounded-full flex flex-col items-center justify-center shadow-2xl transition transform active:scale-95 border-4 border-white cursor-pointer">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-                <span id="recordText" class="text-sm font-semibold tracking-wide">SPRECHEN</span>
-            </button>
-            <p id="statusMessage" class="text-center font-medium text-slate-700 h-6">Drücken und sprechen...</p>
+            <!-- Haupt-Aktionsbutton -->
+            <div class="my-auto flex flex-col items-center space-y-3 py-2">
+                <button id="recordBtn" onclick="toggleSpeechRecognition()" class="w-44 h-44 bg-red-600 hover:bg-red-700 text-white rounded-full flex flex-col items-center justify-center shadow-2xl transition transform active:scale-95 border-4 border-white cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    </svg>
+                    <span id="recordText" class="text-sm font-semibold tracking-wide">SPRECHEN</span>
+                </button>
+                <p id="statusMessage" class="text-center font-medium text-slate-700 h-6">Drücken und sprechen...</p>
+            </div>
 
-            <button onclick="triggerDailyBriefing()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-xl shadow-md font-bold text-base flex items-center justify-center gap-2">
+            <button onclick="triggerDailyBriefing()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 px-4 rounded-xl shadow-md font-bold text-base flex items-center justify-center gap-2">
                 🌅 Intelligentes Tages-Briefing starten
             </button>
         </section>
 
-        <!-- Sektion 2: HEUTE (Termine & Übersicht) -->
-        <section id="sec-today" class="hidden space-y-4">
+        <!-- Sektion 2: PLANER (Termine + Erinnerungen) -->
+        <section id="sec-planner" class="hidden space-y-4">
+            <!-- Termine -->
             <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200">
                 <h2 class="text-xl font-bold text-blue-800 mb-3">📅 Heutige Termine:</h2>
                 <ul id="calendarList" class="space-y-2 text-base">
                     <li class="text-slate-500">Keine Termine eingetragen.</li>
                 </ul>
             </div>
-        </section>
 
-        <!-- Sektion 3: ERINNERUNGEN -->
-        <section id="sec-reminders" class="hidden space-y-4">
+            <!-- Erinnerungen -->
             <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
                 <div class="flex justify-between items-center">
                     <h2 class="text-xl font-bold text-blue-800">🔔 Aktive Erinnerungen:</h2>
-                    <button onclick="requestNotificationPermission()" class="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg font-semibold">Benachrichtigungen erlauben</button>
+                    <button onclick="requestNotificationPermission()" class="bg-blue-600 text-white text-xs px-2.5 py-1.5 rounded-lg font-semibold">Erlauben</button>
                 </div>
                 <div class="flex gap-2">
                     <input type="text" id="manualReminderText" placeholder="Was soll erinnert werden?" class="flex-grow p-2 border rounded-lg text-sm">
@@ -130,36 +130,21 @@
             </div>
         </section>
 
-        <!-- Sektion 4: AUFGABEN (To-Dos) -->
-        <section id="sec-todos" class="hidden space-y-4">
+        <!-- Sektion 3: LISTEN (Aufgaben + Einkaufsliste) -->
+        <section id="sec-lists" class="hidden space-y-4">
+            <!-- Aufgaben -->
             <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
                 <h2 class="text-xl font-bold text-blue-800">📝 Aufgaben & Notizen:</h2>
                 <div class="flex gap-2">
                     <input type="text" id="manualTodoInput" placeholder="Neue Aufgabe..." class="flex-grow p-2 border rounded-lg text-sm">
-                    <button onclick="addManualTodo()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">Hinzufügen</button>
+                    <button onclick="addManualTodo()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">＋</button>
                 </div>
                 <ul id="todoList" class="space-y-2 text-base mt-2">
                     <li class="text-slate-500">Keine offenen To-Dos.</li>
                 </ul>
             </div>
-        </section>
 
-        <!-- Sektion 5: GEDÄCHTNIS (Gegenstände & Infos) -->
-        <section id="sec-memory" class="hidden space-y-4">
-            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-blue-800">🧠 Digitales Langzeitgedächtnis:</h2>
-                    <button onclick="clearAllMemory()" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold">🗑️ Leeren</button>
-                </div>
-                <p class="text-xs text-slate-500">Erzähl mir beliebige Fakten, Orte oder Notizen (z.B. „Der Ersatzschlüssel hängt am Klemmbrett“).</p>
-                <div id="categoryContainer" class="space-y-3 text-sm bg-slate-50 p-3 rounded-lg border border-slate-200 max-h-64 overflow-y-auto">
-                    <p class="text-slate-500 text-xs">Noch nichts im Gedächtnis gespeichert.</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Sektion 6: EINKAUFSLISTE -->
-        <section id="sec-shopping" class="hidden space-y-4">
+            <!-- Einkaufsliste -->
             <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
                 <h2 class="text-xl font-bold text-blue-800">🛒 Einkaufsliste:</h2>
                 <div class="flex gap-2">
@@ -172,46 +157,87 @@
             </div>
         </section>
 
-        <!-- Sektion 7: EINSTELLUNGEN -->
-        <section id="sec-settings" class="hidden space-y-4">
-            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-4">
-                <h2 class="text-xl font-bold text-blue-800">⚙️ Einstellungen</h2>
-                <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-1">Wie soll ich dich nennen?:</label>
-                    <input type="text" id="userNameInput" placeholder="Dein Name..." class="w-full p-2 border rounded-lg text-sm bg-slate-50">
+        <!-- Sektion 4: GEDÄCHTNIS (Gegenstände & Infos) -->
+        <section id="sec-memory" class="hidden space-y-4">
+            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-blue-800">🧠 Digitales Langzeitgedächtnis:</h2>
+                    <button onclick="clearAllMemory()" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold">🗑️ Leeren</button>
                 </div>
-                <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-1">Groq API-Key (gsk_...):</label>
-                    <input type="password" id="apiKeyInput" placeholder="gsk_..." class="w-full p-2 border rounded-lg text-sm bg-slate-50">
+                <p class="text-xs text-slate-500">Erzähl mir beliebige Fakten, Orte oder Notizen (z.B. „Der Ersatzschlüssel hängt am Klemmbrett“).</p>
+                <div id="categoryContainer" class="space-y-3 text-sm bg-slate-50 p-3 rounded-lg border border-slate-200 max-h-80 overflow-y-auto">
+                    <p class="text-slate-500 text-xs">Noch nichts im Gedächtnis gespeichert.</p>
                 </div>
-                <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-1">Google Client-ID:</label>
-                    <input type="text" id="googleClientIdInput" placeholder="Client ID..." class="w-full p-2 border rounded-lg text-sm bg-slate-50">
+            </div>
+        </section>
+
+        <!-- Sektion 5: EINSTELLUNGEN (Mit strukturierten Akkordeons) -->
+        <section id="sec-settings" class="hidden space-y-3">
+            <h2 class="text-xl font-bold text-blue-800 px-1">⚙️ Einstellungen</h2>
+
+            <!-- Profil & Namen -->
+            <details class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden" open>
+                <summary class="p-4 font-bold text-slate-800 cursor-pointer bg-slate-50 flex justify-between items-center">
+                    <span>👤 Profil & Anrede</span>
+                </summary>
+                <div class="p-4 space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Wie soll ich dich nennen?:</label>
+                        <input type="text" id="userNameInput" placeholder="Dein Name..." class="w-full p-2 border rounded-lg text-sm bg-slate-50">
+                    </div>
                 </div>
-                <!-- Standort-Berechtigung -->
-                <div class="border-t pt-3">
-                    <label class="block text-sm font-bold text-slate-700 mb-1">📍 GPS & Standort:</label>
+            </details>
+
+            <!-- API Keys & Zugänge -->
+            <details class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <summary class="p-4 font-bold text-slate-800 cursor-pointer bg-slate-50 flex justify-between items-center">
+                    <span>🔑 Schnittstellen & Konten</span>
+                </summary>
+                <div class="p-4 space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Groq API-Key (gsk_...):</label>
+                        <input type="password" id="apiKeyInput" placeholder="gsk_..." class="w-full p-2 border rounded-lg text-sm bg-slate-50">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Google Client-ID:</label>
+                        <input type="text" id="googleClientIdInput" placeholder="Client ID..." class="w-full p-2 border rounded-lg text-sm bg-slate-50">
+                    </div>
+                    <div class="pt-2 border-t">
+                        <button onclick="loginWithGoogle(false)" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
+                            📅 Mit Google Kalender verbinden
+                        </button>
+                    </div>
+                    <p id="connectionStatus" class="text-xs text-slate-600 font-medium break-all"></p>
+                </div>
+            </details>
+
+            <!-- Berechtigungen (GPS & Standort) -->
+            <details class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <summary class="p-4 font-bold text-slate-800 cursor-pointer bg-slate-50 flex justify-between items-center">
+                    <span>📍 Standort & GPS</span>
+                </summary>
+                <div class="p-4 space-y-3">
+                    <p class="text-xs text-slate-500">Erforderlich für Ortsabfragen ("Wo bin ich?") und lokales Wetter.</p>
                     <button onclick="requestLocationPermission()" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-2 rounded-lg text-sm font-semibold">
                         Standort-Zugriff aktivieren
                     </button>
                 </div>
-                <!-- Kontakte -->
-                <div class="border-t pt-3">
-                    <label class="block text-sm font-bold text-slate-700 mb-1">📞 Schnell-Anruf Kontakte:</label>
-                    <div class="flex gap-2 mb-2">
+            </details>
+
+            <!-- Schnellwahl-Kontakte -->
+            <details class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <summary class="p-4 font-bold text-slate-800 cursor-pointer bg-slate-50 flex justify-between items-center">
+                    <span>📞 Schnell-Anruf Kontakte</span>
+                </summary>
+                <div class="p-4 space-y-3">
+                    <div class="flex gap-2">
                         <input type="text" id="contactNameInput" placeholder="Name (z.B. Simone)" class="w-1/2 p-2 border rounded-lg text-sm bg-slate-50">
                         <input type="text" id="contactPhoneInput" placeholder="Nummer..." class="w-1/2 p-2 border rounded-lg text-sm bg-slate-50">
                     </div>
                     <button onclick="saveContact()" class="w-full bg-slate-700 text-white py-2 rounded-lg text-sm font-semibold">Kontakt hinzufügen</button>
                     <div id="contactListDisplay" class="mt-2 text-xs text-slate-600 space-y-1"></div>
                 </div>
-                <div class="border-t pt-3">
-                    <button onclick="loginWithGoogle(false)" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
-                        📅 Mit Google Kalender verbinden
-                    </button>
-                </div>
-                <p id="connectionStatus" class="text-xs text-slate-600 font-medium break-all"></p>
-            </div>
+            </details>
         </section>
 
     </main>
@@ -219,7 +245,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 8.2 (Grammatik-Fix)</span>
+        <span>Version 8.3 (UI-Optimiert)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -230,20 +256,34 @@
             });
         }
 
+        // Navigation umschalten (Auf 4 Hauptgruppen angepasst)
         function switchSection(sectionId) {
-            const sections = ['speak', 'today', 'reminders', 'todos', 'memory', 'shopping', 'settings'];
+            const sections = ['speak', 'planner', 'lists', 'memory', 'settings'];
             sections.forEach(s => {
                 const el = document.getElementById(`sec-${s}`);
                 if (el) el.classList.add('hidden');
                 const navBtn = document.getElementById(`nav${s.charAt(0).toUpperCase() + s.slice(1)}`);
-                if (navBtn) navBtn.className = "flex-1 py-2 px-2 rounded-lg text-slate-600 hover:bg-slate-100 transition";
+                if (navBtn) navBtn.className = "flex-1 py-2.5 px-1 rounded-lg text-slate-600 hover:bg-slate-100 transition text-center";
             });
 
             const targetSec = document.getElementById(`sec-${sectionId}`);
             if (targetSec) targetSec.classList.remove('hidden');
             
             const activeNav = document.getElementById(`nav${sectionId.charAt(0).toUpperCase() + sectionId.slice(1)}`);
-            if (activeNav) activeNav.className = "flex-1 py-2 px-2 rounded-lg bg-blue-600 text-white shadow transition";
+            if (activeNav) activeNav.className = "flex-1 py-2.5 px-1 rounded-lg bg-blue-600 text-white shadow transition text-center";
+        }
+
+        // Auf- und Zuklappen der Tages-Übersicht
+        function toggleOverviewDetails() {
+            const details = document.getElementById('overviewDetails');
+            const icon = document.getElementById('overviewToggleIcon');
+            if (details.classList.contains('hidden')) {
+                details.classList.remove('hidden');
+                icon.textContent = "▼ Klappen";
+            } else {
+                details.classList.add('hidden');
+                icon.textContent = "▲ Zeigen";
+            }
         }
 
         const recordBtn = document.getElementById('recordBtn');
@@ -328,7 +368,7 @@
         renderAllLists();
         renderContactList();
 
-        // --- PHASE 1: Intelligente Start-Übersicht Logik ---
+        // --- Start-Übersicht Logik ---
         function getAssistantOverview() {
             const now = new Date();
             
@@ -633,7 +673,7 @@
         function renderContactList() {
             if (!contactListDisplay) return;
             const keys = Object.keys(savedContacts);
-            contactListDisplay.innerHTML = keys.length === 0 ? 'Keine Kontakte.' : keys.map(k => `<div class="flex justify-between items-center"><span>${savedContacts[k].originalName}: ${savedContacts[k].phone}</span><button onclick="deleteContact('${k}')" class="text-red-600 font-bold">Löschen</button></div>`).join('');
+            contactListDisplay.innerHTML = keys.length === 0 ? 'Keine Kontakte.' : keys.map(k => `<div class="flex justify-between items-center bg-slate-50 p-2 rounded border my-1"><span>${savedContacts[k].originalName}: ${savedContacts[k].phone}</span><button onclick="deleteContact('${k}')" class="text-red-600 font-bold">Löschen</button></div>`).join('');
         }
 
         async function fetchGoogleCalendarEvents() {
@@ -1220,7 +1260,6 @@
                 }).join('');
             }
 
-            // Start-Übersicht Widget nach jedem Listen-Update neu rendern
             renderAssistantOverview();
         }
     </script>
