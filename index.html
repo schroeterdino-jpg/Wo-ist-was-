@@ -307,6 +307,7 @@
             }
         }
 
+        // Hintergrund-Intervall für lokale Benachrichtigungen (Fallback)
         setInterval(() => {
             if (reminderEntries.length === 0) return;
             const now = new Date();
@@ -324,18 +325,72 @@
             });
         }, 30000);
 
-        function addManualReminder() {
+        // Google Kalender Termin anlegen (für Termine und Erinnerungen)
+        async function addGoogleCalendarEvent(text, isoStartString, isAllDay = false) {
+            let eventData = {};
+            if (isAllDay) {
+                eventData = {
+                    summary: text,
+                    start: { date: isoStartString.split('T')[0] },
+                    end: { date: isoStartString.split('T')[0] }
+                };
+            } else {
+                const startDate = new Date(isoStartString);
+                const endDate = new Date(startDate.getTime() + 60 * 60000); // Standard 1 Stunde
+                eventData = {
+                    summary: text,
+                    start: { dateTime: startDate.toISOString() },
+                    end: { dateTime: endDate.toISOString() }
+                };
+            }
+
+            if (accessToken) {
+                try {
+                    const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(eventData)
+                    });
+                    if (res.ok) {
+                        fetchGoogleCalendarEvents();
+                        return;
+                    }
+                } catch (e) {
+                    console.error("Fehler beim Erstellen im Google Kalender", e);
+                }
+            }
+
+            // Fallback lokal, falls nicht online
+            calendarEntries.push({
+                id: 'local_' + Date.now(),
+                text: text,
+                date: new Date(isoStartString).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }),
+                isoDate: isoStartString
+            });
+            setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
+            renderAllLists();
+        }
+
+        async function addGoogleCalendarReminder(text, isoTimeString) {
+            reminderEntries.push({ id: Date.now(), text, time: isoTimeString, triggered: false });
+            setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
+            await addGoogleCalendarEvent(`🔔 ${text}`, isoTimeString, false);
+        }
+
+        async function addManualReminder() {
             const textEl = document.getElementById('manualReminderText');
             const timeEl = document.getElementById('manualReminderTime');
             if (!textEl || !timeEl) return;
             const text = textEl.value.trim();
             const time = timeEl.value;
             if (text && time) {
-                reminderEntries.push({ id: Date.now(), text, time, triggered: false });
-                setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
+                const isoTime = new Date(time).toISOString();
+                await addGoogleCalendarReminder(text, isoTime);
                 textEl.value = '';
                 timeEl.value = '';
-                renderAllLists();
             }
         }
 
@@ -431,10 +486,17 @@
                 if (res.ok) {
                     const data = await res.json();
                     if (data.items) {
-                        calendarEntries = data.items.map(item => ({
+                        // FILTER: Ganztägige Geburtstage / Serien herausfiltern
+                        const filteredItems = data.items.filter(item => {
+                            const summary = (item.summary || '').toLowerCase();
+                            if (summary.includes('geburtstag') && item.start.date) return false;
+                            return true;
+                        });
+
+                        calendarEntries = filteredItems.map(item => ({
                             id: item.id,
                             text: item.summary || 'Termin',
-                            date: new Date(item.start.dateTime || item.start.date).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }),
+                            date: new Date(item.start.dateTime || item.start.date).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: item.start.dateTime ? 'short' : undefined }),
                             isoDate: item.start.dateTime || item.start.date
                         }));
                         setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
@@ -445,7 +507,7 @@
         }
 
         async function deleteCalendarEntry(id) {
-            if (accessToken && typeof id === 'string' && id.length > 10) {
+            if (accessToken && typeof id === 'string' && !id.startsWith('local_')) {
                 const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${id}`;
                 try {
                     await fetch(url, {
@@ -581,7 +643,7 @@
 
         async function sendToGroqSmart(text) {
             const key = getPersistentData('user_api_key', '');
-            if (statusMessage) statusMessage.textContent = "Prüfe Wetter & Daten...";
+            if (statusMessage) statusMessage.textContent = "Verarbeite Befehl...";
 
             let weatherInfo = null;
             const lowerText = text.toLowerCase();
@@ -606,15 +668,16 @@
                         messages: [
                             {
                                 role: "system",
-                                content: `Du bist ${currentUserName}s smarter, persönlicher Alltags-Assistent und digitales Langzeitgedächtnis. Aktueller Kontext: ${JSON.stringify(contextData)}.
+                                content: `Du bist ${currentUserName}s smarter, persönlicher Alltags-Assistent. Aktueller Kontext: ${JSON.stringify(contextData)}.
                                 Analysiere den Sprachbefehl des Benutzers und gib ein JSON-Objekt zurück mit:
                                 - type: "chat", "memory_store", "memory_query", "todo", "calendar", "reminder", "shopping", "call", "weather"
                                 - memory_key, memory_value
                                 - todo_text
                                 - shopping_item
-                                - reminder_text, reminder_time
+                                - reminder_text, reminder_time (ISO-String für Erinnerungen)
+                                - calendar_text, calendar_time (ISO-String für normale Termine, falls der Nutzer einen Termin eintragen möchte)
                                 - call_contact
-                                - reply: Natürliche, menschliche Antwort auf Deutsch, die dem Benutzer direkt vorgelesen wird. Beziehe Wetterdaten (Temperatur, Niederschlag) aktiv mit ein, wenn danach gefragt wird.`
+                                - reply: Natürliche, menschliche Antwort auf Deutsch.`
                             },
                             { role: "user", content: text }
                         ]
@@ -634,8 +697,11 @@
                     memoryItems[ai.memory_key.toLowerCase()] = ai.memory_value || "gespeichert";
                     setPersistentData('helfer_memory', JSON.stringify(memoryItems));
                 } else if (ai.type === 'reminder' && ai.reminder_text) {
-                    reminderEntries.push({ id: Date.now(), text: ai.reminder_text, time: ai.reminder_time || new Date(Date.now() + 3600000).toISOString(), triggered: false });
-                    setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
+                    const rTime = ai.reminder_time ? new Date(ai.reminder_time).toISOString() : new Date(Date.now() + 3600000).toISOString();
+                    await addGoogleCalendarReminder(ai.reminder_text, rTime);
+                } else if (ai.type === 'calendar' && ai.calendar_text) {
+                    const cTime = ai.calendar_time ? new Date(ai.calendar_time).toISOString() : new Date().toISOString();
+                    await addGoogleCalendarEvent(ai.calendar_text, cTime, false);
                 } else if (ai.type === 'call' && ai.call_contact) {
                     const foundKey = Object.keys(savedContacts).find(k => k.includes(ai.call_contact.toLowerCase()));
                     if (foundKey) {
