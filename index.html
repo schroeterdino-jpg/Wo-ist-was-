@@ -179,7 +179,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 6.4 (Fix)</span>
+        <span>Version 6.5 (Clean Sync & No Series)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -459,8 +459,9 @@
             if (!accessToken) return;
             const nowIso = new Date().toISOString();
             
+            // Nur die nächsten 14 Tage abrufen, um Serien- / Geburtstags-Spam komplett fernzuhalten
             const futureDate = new Date();
-            futureDate.setDate(futureDate.getDate() + 90);
+            futureDate.setDate(futureDate.getDate() + 14);
             const maxIso = futureDate.toISOString();
 
             const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${nowIso}&timeMax=${maxIso}&singleEvents=true&orderBy=startTime`;
@@ -474,11 +475,14 @@
                 if (res.ok) {
                     const data = await res.json();
                     if (data.items) {
+                        // Strenge Filterung gegen Serien, Geburtstage und Jahrestage
                         const filteredItems = data.items.filter(item => {
                             const summary = (item.summary || '').toLowerCase();
                             const id = (item.id || '');
-                            if (summary.includes('geburtstag') || summary.includes('geb.') || summary.includes('jahrestag')) return false;
+                            if (summary.includes('geburtstag') || summary.includes('geb.') || summary.includes('jahrestag') || summary.includes('feier')) return false;
                             if (id.includes('_R') || item.recurringEventId) return false;
+                            // Ganztägige Serientermine ausschließen, die sich jahrelang wiederholen
+                            if (item.start && item.start.date && !item.start.dateTime) return false;
                             return true;
                         });
 
@@ -703,7 +707,7 @@
                 }
 
                 renderAllLists();
-                speak(ai.reply || "Erledigt, Dino.");
+                speak(ai.reply || `Erledigt, ${currentUserName}.`);
                 if (statusMessage) statusMessage.textContent = "Fertig.";
             } catch (e) {
                 await addGoogleCalendarEvent(text, null);
