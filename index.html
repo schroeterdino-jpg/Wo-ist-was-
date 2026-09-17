@@ -55,9 +55,42 @@
     <main class="container mx-auto p-4 max-w-md flex-grow flex flex-col space-y-4">
 
         <!-- Sektion 1: SPRECHEN -->
-        <section id="sec-speak" class="flex flex-col items-center justify-center space-y-6 my-auto py-6">
-            <button id="recordBtn" onclick="toggleSpeechRecognition()" class="w-44 h-44 bg-red-600 hover:bg-red-700 text-white rounded-full flex flex-col items-center justify-center shadow-2xl transition transform active:scale-95 border-4 border-white cursor-pointer">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <section id="sec-speak" class="flex flex-col items-center justify-center space-y-5 my-auto py-4">
+            
+            <!-- PHASE 1: Intelligente Start-Übersicht Card -->
+            <div id="overviewCard" class="w-full bg-white p-4 rounded-2xl shadow-md border border-slate-200 space-y-2 text-sm">
+                <h3 class="font-bold text-blue-800 border-b pb-1 text-base flex justify-between items-center">
+                    <span>⚡ Tages-Übersicht</span>
+                    <span class="text-xs font-normal text-slate-500">Live</span>
+                </h3>
+                <div class="space-y-1.5 text-slate-700">
+                    <p class="flex items-start gap-2">
+                        <span>📅</span> 
+                        <span><b>Nächster Termin:</b> <span id="ovNextCalendar" class="text-slate-800">Lädt...</span></span>
+                    </p>
+                    <p class="flex items-start gap-2">
+                        <span>🔔</span> 
+                        <span><b>Nächste Erinnerung:</b> <span id="ovNextReminder" class="text-slate-800">Lädt...</span></span>
+                    </p>
+                    <div class="grid grid-cols-3 gap-2 pt-1 border-t text-center text-xs font-semibold">
+                        <div class="bg-blue-50 p-2 rounded-lg border border-blue-100">
+                            <span class="block text-slate-500 text-[10px]">AUFGABEN</span>
+                            <span id="ovCountTodos" class="text-blue-700 text-sm font-bold">0</span>
+                        </div>
+                        <div class="bg-amber-50 p-2 rounded-lg border border-amber-100">
+                            <span class="block text-slate-500 text-[10px]">EINKAUF</span>
+                            <span id="ovCountShopping" class="text-amber-700 text-sm font-bold">0</span>
+                        </div>
+                        <div class="bg-emerald-50 p-2 rounded-lg border border-emerald-100">
+                            <span class="block text-slate-500 text-[10px]">GEDÄCHTNIS</span>
+                            <span id="ovCountMemory" class="text-emerald-700 text-sm font-bold">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="recordBtn" onclick="toggleSpeechRecognition()" class="w-40 h-40 bg-red-600 hover:bg-red-700 text-white rounded-full flex flex-col items-center justify-center shadow-2xl transition transform active:scale-95 border-4 border-white cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                 </svg>
                 <span id="recordText" class="text-sm font-semibold tracking-wide">SPRECHEN</span>
@@ -186,7 +219,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 8.0 (Multi-Item Upgrade)</span>
+        <span>Version 8.1 (Start-Übersicht)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -294,6 +327,62 @@
 
         renderAllLists();
         renderContactList();
+
+        // --- PHASE 1: Intelligente Start-Übersicht Logik ---
+        function getAssistantOverview() {
+            const now = new Date();
+            
+            // Nächster Termin
+            let nextCal = "Keine anstehenden Termine";
+            if (calendarEntries && calendarEntries.length > 0) {
+                const validCal = calendarEntries
+                    .filter(c => c.isoDate && new Date(c.isoDate) >= now)
+                    .sort((a, b) => new Date(a.isoDate) - new Date(b.isoDate));
+                if (validCal.length > 0) {
+                    const topCal = validCal[0];
+                    const dateFormatted = new Date(topCal.isoDate).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+                    nextCal = `${topCal.text} (${dateFormatted})`;
+                } else if (calendarEntries[0].text) {
+                    nextCal = calendarEntries[0].text;
+                }
+            }
+
+            // Nächste Erinnerung
+            let nextRem = "Keine aktiven Erinnerungen";
+            if (reminderEntries && reminderEntries.length > 0) {
+                const validRem = reminderEntries
+                    .filter(r => !r.triggered && r.time && new Date(r.time) >= now)
+                    .sort((a, b) => new Date(a.time) - new Date(b.time));
+                if (validRem.length > 0) {
+                    const topRem = validRem[0];
+                    const remFormatted = new Date(topRem.time).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+                    nextRem = `${topRem.text} (${remFormatted})`;
+                }
+            }
+
+            return {
+                nextCalendar: nextCal,
+                nextReminder: nextRem,
+                todoCount: todoEntries ? todoEntries.length : 0,
+                shoppingCount: shoppingEntries ? shoppingEntries.length : 0,
+                memoryCount: memoryItems ? Object.keys(memoryItems).length : 0
+            };
+        }
+
+        function renderAssistantOverview() {
+            const ov = getAssistantOverview();
+            const elCal = document.getElementById('ovNextCalendar');
+            const elRem = document.getElementById('ovNextReminder');
+            const elTodos = document.getElementById('ovCountTodos');
+            const elShopping = document.getElementById('ovCountShopping');
+            const elMemory = document.getElementById('ovCountMemory');
+
+            if (elCal) elCal.textContent = ov.nextCalendar;
+            if (elRem) elRem.textContent = ov.nextReminder;
+            if (elTodos) elTodos.textContent = ov.todoCount;
+            if (elShopping) elShopping.textContent = ov.shoppingCount;
+            if (elMemory) elMemory.textContent = ov.memoryCount;
+        }
 
         function requestNotificationPermission() {
             if ('Notification' in window) {
@@ -801,7 +890,6 @@
 
                 text += `Draußen sind es aktuell ${temp} Grad. `;
 
-                // Empfehlungen zur Bekleidung
                 if (temp < 10) {
                     text += "Es ist recht kalt, zieh dir am besten eine dicke Winterjacke an. ";
                 } else if (temp < 18) {
@@ -812,12 +900,10 @@
                     text += "Es ist schön warm, du brauchst heute keine Jacke! ";
                 }
 
-                // Hinweis auf Regenschirm / Niederschlag
                 if (regen > 0) {
                     text += "Es regnet aktuell oder ist Regen gemeldet – nimm unbedingt einen Regenschirm mit! ";
                 }
 
-                // Hinweis auf Wind
                 if (wind > 25) {
                     text += "Achte darauf, dass es draußen ziemlich windig ist. ";
                 }
@@ -1124,9 +1210,10 @@
                 const memKeys = Object.keys(memoryItems);
                 categoryContainer.innerHTML = memKeys.length === 0 ? '<p class="text-slate-500 text-xs">Noch nichts im Gedächtnis gespeichert.</p>' : memKeys.map(k => `<div class="flex justify-between items-center text-xs py-1 border-b"><span>• <b>${k}</b>: ${memoryItems[k]}</span><button onclick="deleteMemoryItem('${k}')" class="text-red-600 font-bold">Löschen</button></div>`).join('');
             }
+
+            // Start-Übersicht Widget nach jedem Listen-Update neu rendern
+            renderAssistantOverview();
         }
     </script>
 </body>
 </html>
- 
-      
