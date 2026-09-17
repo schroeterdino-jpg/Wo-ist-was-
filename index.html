@@ -179,7 +179,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 6.6 (Voice Delete Fixed)</span>
+        <span>Version 6.7 (Strict Separation)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -356,10 +356,11 @@
             renderAllLists();
         }
 
-        async function addGoogleCalendarReminder(text, isoTimeString) {
+        // NEU: Erinnerungen werden rein intern/in Reminders gespeichert und NICHT mehr als doppelter Termin in den Google Kalender geschrieben
+        function addAppReminder(text, isoTimeString) {
             reminderEntries.unshift({ id: Date.now(), text, time: isoTimeString || new Date().toISOString(), triggered: false });
             setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
-            await addGoogleCalendarEvent(`🔔 ${text}`, isoTimeString);
+            renderAllLists();
         }
 
         async function addManualReminder() {
@@ -370,7 +371,7 @@
             const time = timeEl.value;
             if (text && time) {
                 const isoTime = new Date(time).toISOString();
-                await addGoogleCalendarReminder(text, isoTime);
+                addAppReminder(text, isoTime);
                 textEl.value = '';
                 timeEl.value = '';
             }
@@ -660,14 +661,20 @@
                             {
                                 role: "system",
                                 content: `Du bist ${currentUserName}s smarter, persönlicher Alltags-Assistent. Aktueller Kontext: ${JSON.stringify(contextData)}.
-                                Analysiere den Sprachbefehl des Benutzers und gib IMMER ein valides JSON-Objekt zurück mit:
-                                - type: "chat", "memory_store", "memory_query", "todo", "calendar", "calendar_delete", "reminder", "shopping", "call", "weather"
+                                Analysiere den Sprachbefehl des Benutzers und unterscheide STRIKT zwischen:
+                                - "calendar" (feste Termine/Verabredungen, z.B. "Arzttermin", "Treffen mit X")
+                                - "reminder" (Erinnerungen an Aufgaben/Aktivitäten, z.B. "Erinnere mich an...", "Hole X ab", "Kauf Milch")
+                                - "calendar_delete" (Termin löschen)
+                                - "todo", "shopping", "memory_store", "call", "weather", "chat"
+
+                                Gib IMMER ein valides JSON-Objekt zurück mit:
+                                - type: "chat", "memory_store", "todo", "calendar", "calendar_delete", "reminder", "shopping", "call"
                                 - memory_key, memory_value
                                 - todo_text
                                 - shopping_item
-                                - reminder_text, reminder_time (ISO-String)
-                                - calendar_text, calendar_time (ISO-String für Termine erstellen)
-                                - calendar_delete_query (Suchbegriff des Termins der gelöscht werden soll, z.B. "friseur" wenn der Nutzer sagt "lösche den Friseurtermin")
+                                - reminder_text, reminder_time (ISO-String. WICHTIG: Wenn der Nutzer "um 10 Uhr" sagt, trage hier die exakte Uhrzeit ein!)
+                                - calendar_text, calendar_time (ISO-String für echte Termine)
+                                - calendar_delete_query
                                 - call_contact
                                 - reply: Natürliche, menschliche Antwort auf Deutsch.`
                             },
@@ -688,16 +695,16 @@
                 } else if (ai.type === 'memory_store' && ai.memory_key) {
                     memoryItems[ai.memory_key.toLowerCase()] = ai.memory_value || "gespeichert";
                     setPersistentData('helfer_memory', JSON.stringify(memoryItems));
-                } else if (ai.type === 'reminder' && ai.reminder_text) {
-                    await addGoogleCalendarReminder(ai.reminder_text, ai.reminder_time);
+                } else if (ai.type === 'reminder' || ai.reminder_text) {
+                    // Strikt nur in Erinnerungen eintragen, KEIN Kalendereintrag!
+                    const rText = ai.reminder_text || text;
+                    addAppReminder(rText, ai.reminder_time);
                 } else if (ai.type === 'calendar_delete' || ai.calendar_delete_query || lowerText.includes('lösch') || lowerText.includes('entfern')) {
-                    // Sprachbefehl zum Löschen ausführen
                     const query = (ai.calendar_delete_query || text).toLowerCase();
                     const match = calendarEntries.find(e => e.text.toLowerCase().includes(query.replace('lösche', '').replace('termin', '').trim()));
                     if (match) {
                         await deleteCalendarEntry(match.id);
                     } else if (calendarEntries.length > 0) {
-                        // Falls kein exakter Treffer, lösche den neuesten/ersten passenden
                         await deleteCalendarEntry(calendarEntries[0].id);
                     }
                 } else if (ai.type === 'calendar' || ai.calendar_text) {
@@ -709,21 +716,22 @@
                         window.location.href = `tel:${savedContacts[foundKey].phone}`;
                     }
                 } else {
-                    if (lowerText.includes('trage') || lowerText.includes('termin') || lowerText.includes('notiere') || lowerText.includes('erinnere')) {
+                    if (lowerText.includes('trage') || lowerText.includes('termin')) {
                         await addGoogleCalendarEvent(text, null);
+                    } else {
+                        addAppReminder(text, new Date().toISOString());
                     }
                 }
 
-                // Nach Änderungen Kalender frisch von Google holen
                 await fetchGoogleCalendarEvents();
                 renderAllLists();
                 speak(ai.reply || `Erledigt, ${currentUserName}.`);
                 if (statusMessage) statusMessage.textContent = "Fertig.";
             } catch (e) {
-                await addGoogleCalendarEvent(text, null);
+                addAppReminder(text, new Date().toISOString());
                 renderAllLists();
-                speak("Ich habe es direkt für dich eingetragen.");
-                if (statusMessage) statusMessage.textContent = "Notfall-Eintrag erstellt.";
+                speak("Ich habe es als Erinnerung für dich gespeichert.");
+                if (statusMessage) statusMessage.textContent = "Erinnerung erstellt.";
             }
         }
 
