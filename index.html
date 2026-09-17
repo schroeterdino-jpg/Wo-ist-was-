@@ -406,7 +406,6 @@
                     if (data.items) {
                         calendarEntries = data.items.map(item => ({
                             id: item.id,
-                            calendarId: item.id,
                             text: item.summary || 'Termin',
                             date: new Date(item.start.dateTime || item.start.date).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }),
                             isoDate: item.start.dateTime || item.start.date
@@ -416,6 +415,25 @@
                     }
                 }
             } catch (e) {}
+        }
+
+        // Termin direkt aus dem Google Kalender (und der App) löschen
+        async function deleteCalendarEntry(id) {
+            if (accessToken && typeof id === 'string' && id.length > 10) {
+                const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${id}`;
+                try {
+                    await fetch(url, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+                } catch (e) {
+                    console.error("Fehler beim Löschen im Google Kalender", e);
+                }
+            }
+
+            calendarEntries = calendarEntries.filter(e => e.id !== id);
+            setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
+            renderAllLists();
         }
 
         // Sprachausgabe via window.speechSynthesis
@@ -499,7 +517,6 @@
             const key = getPersistentData('user_api_key', '');
             statusMessage.textContent = "Verarbeite...";
 
-            // Gedächtnis und Kontakte mit an die KI übergeben, damit sie darauf zugreifen kann
             const contextData = {
                 gedächtnis: memoryItems,
                 kontakte: savedContacts,
@@ -524,7 +541,7 @@
                                 - shopping_item (Einkaufsartikel)
                                 - reminder_text, reminder_time (ISO-String für Erinnerung)
                                 - call_contact (Name des anzurufenden Kontakts)
-                                - reply: Natürliche, menschliche Antwort auf Deutsch, die dem Benutzer direkt vorgelesen wird. Wenn nach einer Info aus dem Gedächtnis gefragt wird, antworte direkt mit dem gespeicherten Wert in der reply.`
+                                - reply: Natürliche, menschliche Antwort auf Deutsch, die dem Benutzer direkt vorgelesen wird.`
                             },
                             { role: "user", content: text }
                         ]
@@ -534,7 +551,6 @@
                 const data = await res.json();
                 const ai = JSON.parse(data.choices[0].message.content);
 
-                // Aktionen ausführen
                 if (ai.type === 'shopping' && ai.shopping_item) {
                     shoppingEntries.unshift({ id: Date.now(), text: ai.shopping_item });
                     setPersistentData('helfer_shopping', JSON.stringify(shoppingEntries));
@@ -562,11 +578,6 @@
             }
         }
 
-        function deleteCalendarEntry(id) {
-            calendarEntries = calendarEntries.filter(e => e.id !== id);
-            setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
-            renderAllLists();
-        }
         function deleteTodoEntry(id) {
             todoEntries = todoEntries.filter(e => e.id !== id);
             setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
