@@ -39,7 +39,7 @@
         </div>
     </header>
 
-    <!-- Hauptnavigation / Reiter (Optimiert auf 4 Kernbereiche) -->
+    <!-- Hauptnavigation / Reiter -->
     <nav class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-50">
         <div class="flex max-w-md mx-auto px-1 py-2 gap-1 text-xs font-bold">
             <button id="navSpeak" onclick="switchSection('speak')" class="flex-1 py-2.5 px-1 rounded-lg bg-blue-600 text-white shadow transition text-center">🎙️ Sprechen</button>
@@ -55,7 +55,7 @@
         <!-- Sektion 1: SPRECHEN -->
         <section id="sec-speak" class="flex flex-col items-center justify-between space-y-4 my-auto py-2">
             
-            <!-- Intelligente Tages-Übersicht Card (Kompakt & Einklappbar) -->
+            <!-- Tages-Übersicht Card -->
             <div id="overviewCard" class="w-full bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden text-sm transition-all">
                 <button onclick="toggleOverviewDetails()" class="w-full bg-slate-50 p-3.5 border-b border-slate-100 font-bold text-blue-800 flex justify-between items-center text-left">
                     <span class="flex items-center gap-1.5">⚡ Tages-Übersicht <span class="text-xs font-normal text-slate-500">(Live)</span></span>
@@ -103,9 +103,8 @@
             </button>
         </section>
 
-        <!-- Sektion 2: PLANER (Termine + Erinnerungen) -->
+        <!-- Sektion 2: PLANER -->
         <section id="sec-planner" class="hidden space-y-4">
-            <!-- Termine -->
             <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200">
                 <h2 class="text-xl font-bold text-blue-800 mb-3">📅 Heutige Termine:</h2>
                 <ul id="calendarList" class="space-y-2 text-base">
@@ -113,7 +112,6 @@
                 </ul>
             </div>
 
-            <!-- Erinnerungen -->
             <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
                 <div class="flex justify-between items-center">
                     <h2 class="text-xl font-bold text-blue-800">🔔 Aktive Erinnerungen:</h2>
@@ -130,9 +128,8 @@
             </div>
         </section>
 
-        <!-- Sektion 3: LISTEN (Aufgaben + Einkaufsliste) -->
+        <!-- Sektion 3: LISTEN -->
         <section id="sec-lists" class="hidden space-y-4">
-            <!-- Aufgaben -->
             <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
                 <h2 class="text-xl font-bold text-blue-800">📝 Aufgaben & Notizen:</h2>
                 <div class="flex gap-2">
@@ -144,7 +141,6 @@
                 </ul>
             </div>
 
-            <!-- Einkaufsliste -->
             <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
                 <h2 class="text-xl font-bold text-blue-800">🛒 Einkaufsliste:</h2>
                 <div class="flex gap-2">
@@ -157,7 +153,7 @@
             </div>
         </section>
 
-        <!-- Sektion 4: GEDÄCHTNIS (Gegenstände & Infos) -->
+        <!-- Sektion 4: GEDÄCHTNIS -->
         <section id="sec-memory" class="hidden space-y-4">
             <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
                 <div class="flex justify-between items-center">
@@ -171,11 +167,10 @@
             </div>
         </section>
 
-        <!-- Sektion 5: EINSTELLUNGEN (Mit strukturierten Akkordeons) -->
+        <!-- Sektion 5: EINSTELLUNGEN -->
         <section id="sec-settings" class="hidden space-y-3">
             <h2 class="text-xl font-bold text-blue-800 px-1">⚙️ Einstellungen</h2>
 
-            <!-- Profil & Namen -->
             <details class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden" open>
                 <summary class="p-4 font-bold text-slate-800 cursor-pointer bg-slate-50 flex justify-between items-center">
                     <span>👤 Profil & Anrede</span>
@@ -188,7 +183,6 @@
                 </div>
             </details>
 
-            <!-- API Keys & Zugänge -->
             <details class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <summary class="p-4 font-bold text-slate-800 cursor-pointer bg-slate-50 flex justify-between items-center">
                     <span>🔑 Schnittstellen & Konten</span>
@@ -211,7 +205,6 @@
                 </div>
             </details>
 
-            <!-- Berechtigungen (GPS & Standort) -->
             <details class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <summary class="p-4 font-bold text-slate-800 cursor-pointer bg-slate-50 flex justify-between items-center">
                     <span>📍 Standort & GPS</span>
@@ -224,7 +217,6 @@
                 </div>
             </details>
 
-            <!-- Schnellwahl-Kontakte -->
             <details class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <summary class="p-4 font-bold text-slate-800 cursor-pointer bg-slate-50 flex justify-between items-center">
                     <span>📞 Schnell-Anruf Kontakte</span>
@@ -245,7 +237,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 8.3 (UI-Optimiert)</span>
+        <span>Version 8.4 (Fix: Löschen & Abfragen)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -256,7 +248,6 @@
             });
         }
 
-        // Navigation umschalten (Auf 4 Hauptgruppen angepasst)
         function switchSection(sectionId) {
             const sections = ['speak', 'planner', 'lists', 'memory', 'settings'];
             sections.forEach(s => {
@@ -273,7 +264,6 @@
             if (activeNav) activeNav.className = "flex-1 py-2.5 px-1 rounded-lg bg-blue-600 text-white shadow transition text-center";
         }
 
-        // Auf- und Zuklappen der Tages-Übersicht
         function toggleOverviewDetails() {
             const details = document.getElementById('overviewDetails');
             const icon = document.getElementById('overviewToggleIcon');
@@ -368,11 +358,9 @@
         renderAllLists();
         renderContactList();
 
-        // --- Start-Übersicht Logik ---
         function getAssistantOverview() {
             const now = new Date();
             
-            // Nächster Termin
             let nextCal = "Keine anstehenden Termine";
             if (calendarEntries && calendarEntries.length > 0) {
                 const validCal = calendarEntries
@@ -387,7 +375,6 @@
                 }
             }
 
-            // Nächste Erinnerung
             let nextRem = "Keine aktiven Erinnerungen";
             if (reminderEntries && reminderEntries.length > 0) {
                 const validRem = reminderEntries
@@ -909,7 +896,6 @@
             if (recordText) recordText.textContent = "SPRECHEN";
         }
 
-        // --- NATÜRLICHES & FREUNDLICHES TAGES-BRIEFING ---
         async function triggerDailyBriefing() {
             const now = new Date();
             const hour = now.getHours();
@@ -1058,12 +1044,15 @@
                 weatherInfo = await fetchWeatherData();
             }
 
+            // Vollständiger Kontext für Abfragen
             const contextData = {
                 heute_datum: new Date().toISOString(),
                 gedächtnis: memoryItems,
                 kontakte: savedContacts,
                 termine: calendarEntries,
                 erinnerungen: reminderEntries,
+                einkauf: shoppingEntries.map(s => s.text),
+                aufgaben: todoEntries.map(t => t.text),
                 wetter: weatherInfo,
                 standort: locationInfo
             };
@@ -1078,29 +1067,28 @@
                         messages: [
                             {
                                 role: "system",
-                                content: `Du bist ${currentUserName}s smarter, persönlicher Alltags-Assistent. Aktueller Kontext: ${JSON.stringify(contextData)}.
+                                content: `Du bist ${currentUserName}s smarter, persönlicher Alltags-Assistent. 
+                                Aktueller Daten-Kontext: ${JSON.stringify(contextData)}.
+                                
                                 Analysiere den Sprachbefehl des Benutzers und unterscheide PRÄZISE:
                                 
                                 STRIKTE CATEGORY-REGELN:
-                                - "name_change": Wenn der Benutzer sagt, wie er genannt werden möchte (z.B. "Nenn mich Silvia", "Ich heiße jetzt Dino"). Gib im Feld new_name NUR den reinen neuen Namen zurück.
+                                - "chat": Fragen nach Inhalten aus den Listen (z. B. "Was steht auf meiner Einkaufsliste?", "Welche Aufgaben habe ich?", "Welche Termine stehen an?"). Nutze die Daten aus dem Daten-Kontext, um in 'reply' eine präzise und freundliche Antwort zu formulieren!
                                 
-                                - "location": Fragen nach dem aktuellen physischen Standort ("Wo bin ich?"). Nenne in der 'reply' immer eine sehr beruhigende, klare Antwort.
+                                - "shopping": Wenn der Benutzer NEUE Artikel zur Einkaufsliste HINZUFÜGEN möchte (z. B. "Setz Milch auf den Einkaufszettel").
                                 
-                                - "memory_store": Wenn der Benutzer sagt, wo er einen Gegenstand abgelegt/aufgehängt hat ODER Fragen nach gespeicherten Orten stellt.
-                                  WICHTIG FÜR MEMORY_KEY: Speichere den Gegenstand IMMER mit dem passenden Possessivpronomen/Artikel ab (z. B. "deine Brille", "dein Schlüssel", "deine Geldbörse").
-                                  WICHTIG FÜR MEMORY_VALUE: Speichere den Ort/Zustand grammatikalisch korrekt als einfachen String ohne doppelte Verben! 
-                                  Beispiele für korrekte memory_value Strings:
-                                  - "hängt am Klemmbrett"
-                                  - "liegt auf dem Tisch"
-                                  - "steht im Schrank"
-                                  - "ist in der Tasche"
-                                  (NIEMALS Verben doppeln wie "liegt hängt am"!)
+                                - "calendar_delete": Wenn der Benutzer einen Termin LÖSCHEN oder ENTFERNEN möchte (z. B. "Lösche den Arbeitsamt Termin", "Entferne den Arzttermin"). 
+                                  Gib im Feld 'calendar_delete_query' das Kern-Suchwort des Termins an (z. B. "arbeitsamt").
                                 
-                                - "reminder": NUR bei ausdrücklicher ERINNERUNG mit Uhrzeit/Aufforderung. Filtere Füllwörter stramm heraus.
-                                - "calendar": Feste Termine. Reiner Text ohne Füllwörter.
-                                - "todo": Eine oder MEHRERE Aufgaben.
-                                - "shopping": Einen oder MEHRERE Einkaufsartikel.
-                                - "calendar_delete", "reminder_delete", "call", "chat".
+                                - "reminder_delete": Wenn der Benutzer eine Erinnerung löschen möchte. Gib 'reminder_delete_query' zurück.
+                                
+                                - "name_change": Wenn der Benutzer sagt, wie er genannt werden möchte.
+                                - "location": Fragen nach dem aktuellen physischen Standort.
+                                - "memory_store": Ablegen von Gegenständen/Notizen.
+                                - "reminder": Neue Erinnerung anlegen.
+                                - "calendar": Neuer Termin anlegen.
+                                - "todo": Neue Aufgaben anlegen.
+                                - "call": Telefonanruf starten.
 
                                 MEHRSPRACHIGKEIT:
                                 - Antworte immer in der Sprache des Benutzers.
@@ -1108,10 +1096,11 @@
                                 Gib IMMER ein valides JSON-Objekt zurück mit:
                                 - type: "chat", "location", "memory_store", "todo", "calendar", "calendar_delete", "reminder", "reminder_delete", "shopping", "call", "name_change"
                                 - new_name
-                                - memory_key (z. B. "dein Schlüssel")
-                                - memory_value (z. B. "hängt am Klemmbrett")
+                                - memory_key, memory_value
                                 - todo_items, shopping_items, reminder_text, reminder_time, calendar_text, calendar_time, call_contact
-                                - reply: Natürliche, grammatikalisch einwandfreie Antwort (z. B. "Ich habe mir gemerkt: Dein Schlüssel hängt am Klemmbrett.").`
+                                - calendar_delete_query (Kernwort des zu löschenden Termins)
+                                - reminder_delete_query (Kernwort der zu löschenden Erinnerung)
+                                - reply: Natürliche, grammatikalisch einwandfreie Antwort.`
                             },
                             { role: "user", content: text }
                         ]
@@ -1172,7 +1161,7 @@
                     setPersistentData('helfer_memory', JSON.stringify(memoryItems));
                 } else if (ai.type === 'reminder_delete') {
                     const query = (ai.reminder_delete_query || text).toLowerCase().replace('lösche', '').replace('lösch', '').replace('erinnerung', '').trim();
-                    const match = reminderEntries.find(e => e.text.toLowerCase().includes(query) || (query.length > 2 && e.text.toLowerCase().includes(query)));
+                    const match = reminderEntries.find(e => e.text.toLowerCase().includes(query) || (query.length > 2 && query.includes(e.text.toLowerCase())));
                     if (match) {
                         await deleteReminderEntry(match.id);
                     } else if (reminderEntries.length > 0) {
@@ -1186,11 +1175,23 @@
                     }
                     await addGoogleCalendarReminder(rText, ai.reminder_time);
                 } else if (ai.type === 'calendar_delete') {
-                    const query = (ai.calendar_delete_query || text).toLowerCase().replace('lösche', '').replace('lösch', '').replace('termin', '').trim();
-                    const match = calendarEntries.find(e => e.text.toLowerCase().includes(query));
+                    // VERBESSERTE LÖSCHLOGIK FÜR TERMINE:
+                    const query = (ai.calendar_delete_query || text).toLowerCase()
+                        .replace('lösche', '')
+                        .replace('lösch', '')
+                        .replace('entferne', '')
+                        .replace('termin', '')
+                        .trim();
+
+                    // Flexible Teilwort-Suche in beide Richtungen
+                    const match = calendarEntries.find(e => {
+                        const entryText = e.text.toLowerCase();
+                        return entryText.includes(query) || (query.length > 2 && query.includes(entryText));
+                    });
+
                     if (match) {
                         await deleteCalendarEntry(match.id);
-                    } else if (calendarEntries.length > 0) {
+                    } else if (calendarEntries.length > 0 && query.length < 3) {
                         await deleteCalendarEntry(calendarEntries[0].id);
                     }
                 } else if (ai.type === 'calendar' || ai.calendar_text) {
