@@ -179,7 +179,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 7.0 (Clean Termine vs Erinnerungen & Sync)</span>
+        <span>Version 7.1 (Erinnerung Sync-Löschung)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -371,9 +371,7 @@
             let remDate = isoTimeString ? new Date(isoTimeString) : new Date();
             if (isNaN(remDate.getTime())) remDate = new Date();
 
-            // In App-Erinnerungen speichern
-            reminderEntries.unshift({ id: Date.now(), text, time: remDate.toISOString(), triggered: false });
-            setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
+            let googleEventId = null;
 
             // Als Kalendereintrag bei Google speichern mit Präfix 🔔
             const eventData = {
@@ -384,13 +382,21 @@
 
             if (accessToken) {
                 try {
-                    await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+                    const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
                         method: 'POST',
                         headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify(eventData)
                     });
+                    if (res.ok) {
+                        const data = await res.json();
+                        googleEventId = data.id;
+                    }
                 } catch (e) {}
             }
+
+            // In App-Erinnerungen speichern (inklusive Google Event ID zum späteren Löschen)
+            reminderEntries.unshift({ id: Date.now(), googleId: googleEventId, text, time: remDate.toISOString(), triggered: false });
+            setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
             renderAllLists();
         }
 
@@ -549,6 +555,43 @@
             renderAllLists();
         }
 
+        // LÖSCHEN EINER ERINNERUNG (App + Google Kalender API per googleId oder Textsuche)
+        async function deleteReminderEntry(id) {
+            const rem = reminderEntries.find(e => e.id === id);
+            if (rem && accessToken) {
+                let targetGoogleId = rem.googleId;
+                
+                // Falls keine googleId hinterlegt war, suchen wir den passenden Termin im Google Kalender anhand des Textes
+                if (!targetGoogleId) {
+                    try {
+                        const nowIso = new Date().toISOString();
+                        const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${nowIso}&singleEvents=true`;
+                        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.items) {
+                                const match = data.items.find(item => item.summary && item.summary.includes(rem.text));
+                                if (match) targetGoogleId = match.id;
+                            }
+                        }
+                    } catch (e) {}
+                }
+
+                if (targetGoogleId) {
+                    try {
+                        await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${targetGoogleId}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': `Bearer ${accessToken}` }
+                        });
+                    } catch (e) {}
+                }
+            }
+
+            reminderEntries = reminderEntries.filter(e => e.id !== id);
+            setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
+            renderAllLists();
+        }
+
         async function fetchWeatherData() {
             return new Promise((resolve) => {
                 if (!navigator.geolocation) {
@@ -694,15 +737,17 @@
                                 Analysiere den Sprachbefehl des Benutzers und unterscheide PRÄZISE:
                                 - "calendar" (Feste Termine wie "Arzttermin", "Friseur", "Treffen mit X").
                                 - "reminder" (Erinnerungen an Aufgaben/Aktivitäten mit Aufforderung wie "Erinnere mich an...", "Hole X ab").
-                                - "calendar_delete" (Einen Termin löschen, z.B. "Lösch meinen Friseurtermin").
+                                - "calendar_delete" (Einen echten Termin löschen, z.B. "Lösch meinen Friseurtermin").
+                                - "reminder_delete" (Eine Erinnerung löschen, z.B. "Lösch meine Erinnerung").
                                 - "todo", "shopping", "memory_store", "call", "chat"
 
                                 Gib IMMER ein valides JSON-Objekt zurück mit:
-                                - type: "chat", "memory_store", "todo", "calendar", "calendar_delete", "reminder", "shopping", "call"
+                                - type: "chat", "memory_store", "todo", "calendar", "calendar_delete", "reminder", "reminder_delete", "shopping", "call"
                                 - memory_key, memory_value
                                 - todo_text
                                 - shopping_item
                                 - reminder_text, reminder_time (ISO-String)
+                                - reminder_delete_query (Suchbegriff der zu löschenden Erinnerung)
                                 - calendar_text, calendar_time (ISO-String für echte Termine)
                                 - calendar_delete_query (Suchbegriff des zu löschenden Termins)
                                 - call_contact
@@ -725,6 +770,14 @@
                 } else if (ai.type === 'memory_store' && ai.memory_key) {
                     memoryItems[ai.memory_key.toLowerCase()] = ai.memory_value || "gespeichert";
                     setPersistentData('helfer_memory', JSON.stringify(memoryItems));
+                } else if (ai.type === 'reminder_delete' || (lowerText.includes('lösch') && lowerText.includes('erinnerung'))) {
+                    const query = (ai.reminder_delete_query || text).toLowerCase().replace('lösche', '').replace('lösch', '').replace('erinnerung', '').trim();
+                    const match = reminderEntries.find(e => e.text.toLowerCase().includes(query) || (query.length > 2 && e.text.toLowerCase().includes(query)));
+                    if (match) {
+                        await deleteReminderEntry(match.id);
+                    } else if (reminderEntries.length > 0) {
+                        await deleteReminderEntry(reminderEntries[0].id);
+                    }
                 } else if (ai.type === 'reminder' || (lowerText.includes('erinnere') && !lowerText.includes('termin'))) {
                     const rText = ai.reminder_text || text;
                     await addGoogleCalendarReminder(rText, ai.reminder_time);
@@ -734,7 +787,6 @@
                     if (match) {
                         await deleteCalendarEntry(match.id);
                     } else if (calendarEntries.length > 0) {
-                        // Fallback: Lösche den ersten passenden Eintrag
                         await deleteCalendarEntry(calendarEntries[0].id);
                     }
                 } else if (ai.type === 'calendar' || ai.calendar_text || lowerText.includes('termin')) {
@@ -769,11 +821,6 @@
         function deleteShoppingEntry(id) {
             shoppingEntries = shoppingEntries.filter(e => e.id !== id);
             setPersistentData('helfer_shopping', JSON.stringify(shoppingEntries));
-            renderAllLists();
-        }
-        function deleteReminderEntry(id) {
-            reminderEntries = reminderEntries.filter(e => e.id !== id);
-            setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
             renderAllLists();
         }
         function deleteMemoryItem(key) {
