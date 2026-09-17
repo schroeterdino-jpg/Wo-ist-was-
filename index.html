@@ -744,7 +744,7 @@
             }
 
             // Erkennung der Standort-Frage
-            if (lowerText.includes('wo bin ich') || lowerText.includes('wo befinde ich') || lowerText.includes('mein standort') || lowerText.includes('aktueller ort')) {
+            if (lowerText.includes('wo bin ich') || lowerText.includes('wo befinde ich') || lowerText.includes('mein standort') || lowerText.includes('aktueller ort') || lowerText.includes('welche straße') || lowerText.includes('welcher ort')) {
                 if (statusMessage) statusMessage.textContent = "Bestimme Standort...";
                 locationInfo = await fetchLocationData();
             }
@@ -771,14 +771,17 @@
                                 role: "system",
                                 content: `Du bist ${currentUserName}s smarter, persönlicher Alltags-Assistent. Aktueller Kontext: ${JSON.stringify(contextData)}.
                                 Analysiere den Sprachbefehl des Benutzers und unterscheide PRÄZISE:
+                                - "location" (Fragen nach dem Standort wie "Wo bin ich?", "Welche Straße ist das?", "Wo befinde ich mich?").
                                 - "calendar" (Feste Termine wie "Arzttermin", "Friseur", "Treffen mit X").
                                 - "reminder" (Erinnerungen an Aufgaben/Aktivitäten mit Aufforderung wie "Erinnere mich an...", "Hole X ab").
                                 - "calendar_delete" (Einen echten Termin löschen, z.B. "Lösch meinen Friseurtermin").
                                 - "reminder_delete" (Eine Erinnerung löschen, z.B. "Lösch meine Erinnerung").
                                 - "todo", "shopping", "memory_store", "call", "chat"
 
+                                WICHTIG FÜR LOCATION: Wenn der Typ "location" ist, nenne in der 'reply' klar und einfach verständlich die Straße, Hausnummer und den Ort aus den Standort-Daten (z.B. "Du befindest dich aktuell in der Hauptstraße 12 in Schwarzenbek.").
+
                                 Gib IMMER ein valides JSON-Objekt zurück mit:
-                                - type: "chat", "memory_store", "todo", "calendar", "calendar_delete", "reminder", "reminder_delete", "shopping", "call"
+                                - type: "chat", "location", "memory_store", "todo", "calendar", "calendar_delete", "reminder", "reminder_delete", "shopping", "call"
                                 - memory_key, memory_value
                                 - todo_text
                                 - shopping_item
@@ -787,7 +790,7 @@
                                 - calendar_text, calendar_time (ISO-String für echte Termine)
                                 - calendar_delete_query (Suchbegriff des zu löschenden Termins)
                                 - call_contact
-                                - reply: Natürliche, menschliche Antwort auf Deutsch.`
+                                - reply: Natürliche, menschliche und deutliche Antwort auf Deutsch.`
                             },
                             { role: "user", content: text }
                         ]
@@ -797,7 +800,29 @@
                 const data = await res.json();
                 const ai = JSON.parse(data.choices[0].message.content);
 
-                if (ai.type === 'shopping' && ai.shopping_item) {
+                if (ai.type === 'location' || locationInfo) {
+                    let responseText = ai.reply;
+                    
+                    // Fallback, falls die KI keine eigene Formulierung generiert hat:
+                    if (!responseText && locationInfo) {
+                        if (locationInfo.fehler) {
+                            responseText = locationInfo.fehler;
+                        } else if (locationInfo.details) {
+                            const road = locationInfo.details.road || locationInfo.details.pedestrian || "einer unbekannten Straße";
+                            const houseNumber = locationInfo.details.house_number ? ` Nummer ${locationInfo.details.house_number}` : "";
+                            const city = locationInfo.details.city || locationInfo.details.town || locationInfo.details.village || "";
+                            
+                            responseText = `Du bist aktuell in ${road}${houseNumber}${city ? ' in ' + city : ''}.`;
+                        } else {
+                            responseText = `Dein Standort ist: ${locationInfo.adresse}`;
+                        }
+                    }
+                    
+                    renderAllLists();
+                    speak(responseText || `Ich konnte deinen aktuellen Standort leider nicht ermitteln.`);
+                    if (statusMessage) statusMessage.textContent = "Standort vorgelesen.";
+                    return;
+                } else if (ai.type === 'shopping' && ai.shopping_item) {
                     shoppingEntries.unshift({ id: Date.now(), text: ai.shopping_item });
                     setPersistentData('helfer_shopping', JSON.stringify(shoppingEntries));
                 } else if (ai.type === 'todo' && ai.todo_text) {
@@ -833,9 +858,6 @@
                     if (foundKey) {
                         window.location.href = `tel:${savedContacts[foundKey].phone}`;
                     }
-                } else if (locationInfo) {
-                    // Fallback, falls Typ "chat" ist und Standort abgefragt wurde
-                    renderAllLists();
                 } else {
                     await addGoogleCalendarReminder(text, new Date().toISOString());
                 }
