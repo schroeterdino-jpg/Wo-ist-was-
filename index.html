@@ -151,7 +151,7 @@
                     <h2 class="text-xl font-bold text-blue-800">🧠 Digitales Langzeitgedächtnis:</h2>
                     <button onclick="clearAllMemory()" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold">🗑️ Leeren</button>
                 </div>
-                <p class="text-xs text-slate-500">Erzähl mir beliebige Fakten, Orte oder Notizen (z.B. „Der Ersatzschlüssel ist in der Schublade“).</p>
+                <p class="text-xs text-slate-500">Erzähl mir beliebige Fakten, Orte oder Notizen (z.B. „Der Ersatzschlüssel hängt am Klemmbrett“).</p>
                 <div id="categoryContainer" class="space-y-3 text-sm bg-slate-50 p-3 rounded-lg border border-slate-200 max-h-64 overflow-y-auto">
                     <p class="text-slate-500 text-xs">Noch nichts im Gedächtnis gespeichert.</p>
                 </div>
@@ -219,7 +219,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 8.1 (Start-Übersicht)</span>
+        <span>Version 8.2 (Grammatik-Fix)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -952,8 +952,10 @@
 
             if (importantMemoryItems.length > 0) {
                 const memList = importantMemoryItems.map(k => {
-                    const val = typeof memoryItems[k] === 'object' ? JSON.stringify(memoryItems[k]) : memoryItems[k];
-                    return `${k} liegt ${val}`;
+                    const rawVal = typeof memoryItems[k] === 'object' ? JSON.stringify(memoryItems[k]) : memoryItems[k];
+                    const valText = String(rawVal).trim();
+                    const prefix = (valText.startsWith('hängt') || valText.startsWith('liegt') || valText.startsWith('steht') || valText.startsWith('ist')) ? '' : 'liegt ';
+                    return `${k} ${prefix}${valText}`;
                 }).join(', und ');
                 text += `Kurzer Hinweis für unterwegs: ${memList}. `;
             }
@@ -1040,43 +1042,36 @@
                                 Analysiere den Sprachbefehl des Benutzers und unterscheide PRÄZISE:
                                 
                                 STRIKTE CATEGORY-REGELN:
-                                - "name_change": Wenn der Benutzer sagt, wie er genannt werden möchte (z.B. "Nenn mich Silvia", "Ich heiße jetzt Dino", "Sprich mich mit Silvia an"). Gib im Feld new_name NUR den reinen neuen Namen zurück (z.B. "Silvia").
+                                - "name_change": Wenn der Benutzer sagt, wie er genannt werden möchte (z.B. "Nenn mich Silvia", "Ich heiße jetzt Dino"). Gib im Feld new_name NUR den reinen neuen Namen zurück.
                                 
-                                - "location": Fragen nach dem aktuellen physischen Standort ("Wo bin ich?", "Wo sind wir?", "Welche Straße ist das?"). Nenne in der 'reply' immer eine sehr beruhigende, klare und einfache Antwort mit Straße, Hausnummer und Ort aus den Standort-Daten.
+                                - "location": Fragen nach dem aktuellen physischen Standort ("Wo bin ich?"). Nenne in der 'reply' immer eine sehr beruhigende, klare Antwort.
                                 
-                                - "memory_store": Wenn der Benutzer sagt, wo er einen Gegenstand abgelegt hat ODER Fragen nach gespeicherten Orten stellt.
-                                  WICHTIG FÜR MEMORY_KEY: Speichere den Gegenstand IMMER mit dem passenden Possessivpronomen/Artikel ab (z. B. "deine Brille", "dein Schlüssel", "deine Geldbörse", "dein Brillenpass"). Speichere niemals nur das bloße Nomen ohne Artikel!
-                                  WICHTIG: Verwende dafür NIEMALS "reminder" oder "calendar"! Speichere Gegenstände/Ablageorte IMMER unter memory_store.
-                                  WICHTIG FÜR MEMORY_VALUE: Gib den Ort IMMER als einfachen String zurück (z. B. "auf dem Tisch" oder "in der Küche"), NIEMALS als verschachteltes JSON-Objekt!
+                                - "memory_store": Wenn der Benutzer sagt, wo er einen Gegenstand abgelegt/aufgehängt hat ODER Fragen nach gespeicherten Orten stellt.
+                                  WICHTIG FÜR MEMORY_KEY: Speichere den Gegenstand IMMER mit dem passenden Possessivpronomen/Artikel ab (z. B. "deine Brille", "dein Schlüssel", "deine Geldbörse").
+                                  WICHTIG FÜR MEMORY_VALUE: Speichere den Ort/Zustand grammatikalisch korrekt als einfachen String ohne doppelte Verben! 
+                                  Beispiele für korrekte memory_value Strings:
+                                  - "hängt am Klemmbrett"
+                                  - "liegt auf dem Tisch"
+                                  - "steht im Schrank"
+                                  - "ist in der Tasche"
+                                  (NIEMALS Verben doppeln wie "liegt hängt am"!)
                                 
-                                - "reminder": NUR wenn der Benutzer ausdrücklich eine ERINNERUNG mit Uhrzeit/Aufforderung verlangt (z. B. "Erinnere mich um 14 Uhr, Isabelle abzuholen").
-                                  WICHTIG FÜR ERINNERUNGSTEXT & KALENDERTEXT: Filtere Füllwörter wie "Erinnere mich daran", "Erinnere mich", "Ich muss" STRIKT HERAUS! Speichere in reminder_text NUR den reinen Inhalt (z.B. "Isabelle abholen").
-                                
-                                - "calendar": Feste Termine ("Arzttermin um 10 Uhr", "Friseur am Dienstag"). Speichere in calendar_text NUR die Kern-Bezeichnung ohne Füllwörter.
-                                
-                                - "todo": Eine oder MEHRERE Aufgaben. Trenne mehrfache Aufgaben sauber auf!
-                                
-                                - "shopping": Einen oder MEHRERE Einkaufsartikel. Trenne Mehrfachbegriffe (z. B. getrennt durch Komma, "und" oder Aufzählungen) sauber in Einzelteile auf!
-                                
+                                - "reminder": NUR bei ausdrücklicher ERINNERUNG mit Uhrzeit/Aufforderung. Filtere Füllwörter stramm heraus.
+                                - "calendar": Feste Termine. Reiner Text ohne Füllwörter.
+                                - "todo": Eine oder MEHRERE Aufgaben.
+                                - "shopping": Einen oder MEHRERE Einkaufsartikel.
                                 - "calendar_delete", "reminder_delete", "call", "chat".
 
-                                MEHRSPRACHIGKEIT & SPRACHWECHSEL:
-                                - Der Benutzer kann dich in jeder beliebigen Sprache ansprechen oder dich bitten, die Sprache zu wechseln (z. B. "Rede Spanisch mit mir", "Speak English").
-                                - Die 'reply' MUSS immer in der Sprache geantwortet werden, in der der Benutzer spricht ODER in die er dich zu wechseln bittet.
+                                MEHRSPRACHIGKEIT:
+                                - Antworte immer in der Sprache des Benutzers.
 
                                 Gib IMMER ein valides JSON-Objekt zurück mit:
                                 - type: "chat", "location", "memory_store", "todo", "calendar", "calendar_delete", "reminder", "reminder_delete", "shopping", "call", "name_change"
-                                - new_name (wenn type === "name_change")
-                                - memory_key (z. B. "deine Brille", "dein Schlüssel")
-                                - memory_value (z. B. "unter dem Tisch", "auf der Couch")
-                                - todo_items (Array aus Strings, z. B. ["Müll rausbringen", "Rasen mähen"])
-                                - shopping_items (Array aus Strings, z. B. ["Milch", "Schokolade", "Käse"])
-                                - reminder_text (REINER TEXT ohne "Erinnere mich", z.B. "Isabelle abholen"), reminder_time (ISO-String)
-                                - reminder_delete_query
-                                - calendar_text (REINER TEXT), calendar_time (ISO-String)
-                                - calendar_delete_query
-                                - call_contact
-                                - reply: Natürliche, menschliche und deutliche Antwort (in der gewünschten/gesprochenen Sprache des Benutzers).`
+                                - new_name
+                                - memory_key (z. B. "dein Schlüssel")
+                                - memory_value (z. B. "hängt am Klemmbrett")
+                                - todo_items, shopping_items, reminder_text, reminder_time, calendar_text, calendar_time, call_contact
+                                - reply: Natürliche, grammatikalisch einwandfreie Antwort (z. B. "Ich habe mir gemerkt: Dein Schlüssel hängt am Klemmbrett.").`
                             },
                             { role: "user", content: text }
                         ]
