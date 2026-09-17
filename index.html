@@ -186,7 +186,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 7.6 (Briefing Fixed)</span>
+        <span>Version 7.7 (Briefing & Clean Reminders)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -801,7 +801,22 @@
                 text += "Du hast keine aktiven Erinnerungen. ";
             }
 
-            // 3. Offene Aufgaben vorlesen
+            // 3. Wichtige Gegenstände aus dem Gedächtnis vorlesen (Schlüssel, Portemonnaie, etc.)
+            const memoryKeys = Object.keys(memoryItems);
+            const importantKeywords = ['schlüssel', 'schluessel', 'portemonnaie', 'börse', 'geldbörse', 'geld', 'ausweis', 'pass', 'brille', 'handy', 'telefon', 'papiere', 'wichtig'];
+            
+            const importantMemoryItems = memoryKeys.filter(key => {
+                const lowerKey = key.toLowerCase();
+                const lowerVal = String(memoryItems[key]).toLowerCase();
+                return importantKeywords.some(kw => lowerKey.includes(kw) || lowerVal.includes(kw));
+            });
+
+            if (importantMemoryItems.length > 0) {
+                const memList = importantMemoryItems.map(k => `${k} ist ${memoryItems[k]}`).join(', ');
+                text += `Denk daran: ${memList}. `;
+            }
+
+            // 4. Offene Aufgaben vorlesen
             if (todoEntries && todoEntries.length > 0) {
                 const todoListTexts = todoEntries.map(e => e.text).join(', ');
                 text += `Folgende Aufgaben stehen an: ${todoListTexts}. `;
@@ -809,13 +824,13 @@
                 text += "Du hast keine offenen Aufgaben. ";
             }
 
-            // 4. Einkaufsliste vorlesen
+            // 5. Einkaufsliste vorlesen
             if (shoppingEntries && shoppingEntries.length > 0) {
                 const shopList = shoppingEntries.map(e => e.text).join(', ');
                 text += `Auf deiner Einkaufsliste steht: ${shopList}. `;
             }
 
-            // 5. Wetter holen und anfügen
+            // 6. Wetter holen und anfügen
             if (statusMessage) statusMessage.textContent = "Hole Wetter...";
             const weather = await fetchWeatherData();
             if (weather && !weather.fehler) {
@@ -873,9 +888,10 @@
                                 - "memory_store": Wenn der Benutzer sagt, wo er einen Gegenstand abgelegt hat (z. B. "Ich habe meinen Schlüssel unter/auf die Couch gelegt", "Der Brillenpass liegt in der Schublade") ODER Fragen nach gespeicherten Orten/Fakten stellt ("Wo ist mein Schlüssel?").
                                   WICHTIG: Verwende dafür NIEMALS "reminder" oder "calendar"! Speichere Gegenstände/Ablageorte IMMER unter memory_store.
                                 
-                                - "reminder": NUR wenn der Benutzer ausdrücklich eine ERINNERUNG mit Uhrzeit/Aufforderung verlangt (z. B. "Erinnere mich um 17 Uhr, meine Tochter abzuholen", "Erinnere mich morgen an X").
+                                - "reminder": NUR wenn der Benutzer ausdrücklich eine ERINNERUNG mit Uhrzeit/Aufforderung verlangt (z. B. "Erinnere mich um 14 Uhr, Isabelle abzuholen").
+                                  WICHTIG FÜR ERINNERUNGSTEXT & KALENDERTEXT: Filtere Füllwörter wie "Erinnere mich daran", "Erinnere mich", "Ich muss" STRIKT HERAUS! Speichere in reminder_text NUR den reinen Inhalt (z.B. "Isabelle abholen").
                                 
-                                - "calendar": Feste Termine ("Arzttermin um 10 Uhr", "Friseur am Dienstag").
+                                - "calendar": Feste Termine ("Arzttermin um 10 Uhr", "Friseur am Dienstag"). Speichere in calendar_text NUR die Kern-Bezeichnung ohne Füllwörter.
                                 
                                 - "calendar_delete", "reminder_delete", "todo", "shopping", "call", "chat".
 
@@ -885,9 +901,9 @@
                                 - memory_value (z. B. "unter der Couch")
                                 - todo_text
                                 - shopping_item
-                                - reminder_text, reminder_time (ISO-String)
+                                - reminder_text (REINER TEXT ohne "Erinnere mich", z.B. "Isabelle abholen"), reminder_time (ISO-String)
                                 - reminder_delete_query
-                                - calendar_text, calendar_time (ISO-String)
+                                - calendar_text (REINER TEXT), calendar_time (ISO-String)
                                 - calendar_delete_query
                                 - call_contact
                                 - reply: Natürliche, menschliche und deutliche Antwort auf Deutsch.`
@@ -939,7 +955,12 @@
                         await deleteReminderEntry(reminderEntries[0].id);
                     }
                 } else if (ai.type === 'reminder') {
-                    const rText = ai.reminder_text || text;
+                    // Bereinige Füllwörter zur Sicherheit auch direkt im JS
+                    let rText = ai.reminder_text || text;
+                    rText = rText.replace(/^(erinnere mich daran|erinnere mich|erinnere|denk daran|ich muss)\s*,?\s*(dass\s+)?/i, '').trim();
+                    if (rText.length > 0) {
+                        rText = rText.charAt(0).toUpperCase() + rText.slice(1);
+                    }
                     await addGoogleCalendarReminder(rText, ai.reminder_time);
                 } else if (ai.type === 'calendar_delete') {
                     const query = (ai.calendar_delete_query || text).toLowerCase().replace('lösche', '').replace('lösch', '').replace('termin', '').trim();
@@ -950,7 +971,11 @@
                         await deleteCalendarEntry(calendarEntries[0].id);
                     }
                 } else if (ai.type === 'calendar' || ai.calendar_text) {
-                    const cText = ai.calendar_text || text;
+                    let cText = ai.calendar_text || text;
+                    cText = cText.replace(/^(trage|trage ein|erstelle|neuer termin|termin)\s*,?\s*/i, '').trim();
+                    if (cText.length > 0) {
+                        cText = cText.charAt(0).toUpperCase() + cText.slice(1);
+                    }
                     await addGoogleCalendarEvent(cText, ai.calendar_time);
                 } else if (ai.type === 'call' && ai.call_contact) {
                     const foundKey = Object.keys(savedContacts).find(k => k.includes(ai.call_contact.toLowerCase()));
