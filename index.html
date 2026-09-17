@@ -179,42 +179,31 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 6.1 (Pro)</span>
+        <span>Version 6.3 (Fix)</span>
     </footer>
 
     <!-- JavaScript -->
     <script>
-        // PWA Service Worker Registrierung mit Cache-Busting
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => {
-                        reg.update();
-                        console.log('Service Worker aktiv!', reg);
-                    })
-                    .catch(err => console.log('SW Fehler:', err));
+                navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Fehler:', err));
             });
         }
 
-        // Sektionen umschalten (Tabs)
         function switchSection(sectionId) {
             const sections = ['speak', 'today', 'reminders', 'todos', 'memory', 'shopping', 'settings'];
             sections.forEach(s => {
                 const el = document.getElementById(`sec-${s}`);
                 if (el) el.classList.add('hidden');
                 const navBtn = document.getElementById(`nav${s.charAt(0).toUpperCase() + s.slice(1)}`);
-                if (navBtn) {
-                    navBtn.className = "flex-1 py-2 px-2 rounded-lg text-slate-600 hover:bg-slate-100 transition";
-                }
+                if (navBtn) navBtn.className = "flex-1 py-2 px-2 rounded-lg text-slate-600 hover:bg-slate-100 transition";
             });
 
             const targetSec = document.getElementById(`sec-${sectionId}`);
             if (targetSec) targetSec.classList.remove('hidden');
             
             const activeNav = document.getElementById(`nav${sectionId.charAt(0).toUpperCase() + sectionId.slice(1)}`);
-            if (activeNav) {
-                activeNav.className = "flex-1 py-2 px-2 rounded-lg bg-blue-600 text-white shadow transition";
-            }
+            if (activeNav) activeNav.className = "flex-1 py-2 px-2 rounded-lg bg-blue-600 text-white shadow transition";
         }
 
         const recordBtn = document.getElementById('recordBtn');
@@ -307,7 +296,6 @@
             }
         }
 
-        // Hintergrund-Intervall für lokale Benachrichtigungen (Fallback)
         setInterval(() => {
             if (reminderEntries.length === 0) return;
             const now = new Date();
@@ -316,7 +304,6 @@
                 if (!rem.triggered && remTime <= now) {
                     rem.triggered = true;
                     setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
-                    
                     if ('Notification' in window && Notification.permission === 'granted') {
                         new Notification("Erinnerung von deinem Helfer", { body: rem.text, icon: './dino.png' });
                     }
@@ -325,24 +312,18 @@
             });
         }, 30000);
 
-        // Google Kalender Termin anlegen (für Termine und Erinnerungen)
-        async function addGoogleCalendarEvent(text, isoStartString, isAllDay = false) {
-            let eventData = {};
-            if (isAllDay) {
-                eventData = {
-                    summary: text,
-                    start: { date: isoStartString.split('T')[0] },
-                    end: { date: isoStartString.split('T')[0] }
-                };
-            } else {
-                const startDate = new Date(isoStartString);
-                const endDate = new Date(startDate.getTime() + 60 * 60000); // Standard 1 Stunde
-                eventData = {
-                    summary: text,
-                    start: { dateTime: startDate.toISOString() },
-                    end: { dateTime: endDate.toISOString() }
-                };
-            }
+        async function addGoogleCalendarEvent(text, isoStartString) {
+            let eventDate = isoStartString ? new Date(isoStartString) : new Date();
+            if (isNaN(eventDate.getTime())) eventDate = new Date();
+            
+            const endDate = new Date(eventDate.getTime() + 60 * 60000);
+            const eventData = {
+                summary: text,
+                start: { dateTime: eventDate.toISOString() },
+                end: { dateTime: endDate.toISOString() }
+            };
+
+            let createdId = 'local_' + Date.now();
 
             if (accessToken) {
                 try {
@@ -355,29 +336,31 @@
                         body: JSON.stringify(eventData)
                     });
                     if (res.ok) {
+                        const data = await res.json();
+                        createdId = data.id;
                         fetchGoogleCalendarEvents();
                         return;
                     }
                 } catch (e) {
-                    console.error("Fehler beim Erstellen im Google Kalender", e);
+                    console.error("Google Sync Fehler", e);
                 }
             }
 
-            // Fallback lokal, falls nicht online
-            calendarEntries.push({
-                id: 'local_' + Date.now(),
+            // Fallback / Sofortiger lokaler Eintrag
+            calendarEntries.unshift({
+                id: createdId,
                 text: text,
-                date: new Date(isoStartString).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }),
-                isoDate: isoStartString
+                date: eventDate.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }),
+                isoDate: eventDate.toISOString()
             });
             setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
             renderAllLists();
         }
 
         async function addGoogleCalendarReminder(text, isoTimeString) {
-            reminderEntries.push({ id: Date.now(), text, time: isoTimeString, triggered: false });
+            reminderEntries.unshift({ id: Date.now(), text, time: isoTimeString || new Date().toISOString(), triggered: false });
             setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
-            await addGoogleCalendarEvent(`🔔 ${text}`, isoTimeString, false);
+            await addGoogleCalendarEvent(`🔔 ${text}`, isoTimeString);
         }
 
         async function addManualReminder() {
@@ -476,7 +459,14 @@
         async function fetchGoogleCalendarEvents() {
             if (!accessToken) return;
             const nowIso = new Date().toISOString();
-            const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${nowIso}&singleEvents=true&orderBy=startTime`;
+            
+            // Nur die nächsten 90 Tage laden, damit Geburtstage bis 2056 draußen bleiben
+            const futureDate = new Date();
+            futureDate.setDate(futureDate.getDate() + 90);
+            const maxIso = futureDate.toISOString();
+
+            const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${nowIso}&timeMax=${maxIso}&singleEvents=true&orderBy=startTime`;
+            
             try {
                 const res = await fetch(url, { headers: { 'Authorization': `Bearer ${accessToken}` } });
                 if (res.status === 401) {
@@ -486,10 +476,10 @@
                 if (res.ok) {
                     const data = await res.json();
                     if (data.items) {
-                        // FILTER: Ganztägige Geburtstage / Serien herausfiltern
+                        // Geburtstage und Jahrestage konsequent herausfiltern
                         const filteredItems = data.items.filter(item => {
                             const summary = (item.summary || '').toLowerCase();
-                            if (summary.includes('geburtstag') && item.start.date) return false;
+                            if (summary.includes('geburtstag') || summary.includes('geb. ')) return false;
                             return true;
                         });
 
@@ -652,6 +642,7 @@
             }
 
             const contextData = {
+                heute_datum: new Date().toISOString(),
                 gedächtnis: memoryItems,
                 kontakte: savedContacts,
                 termine: calendarEntries,
@@ -669,13 +660,13 @@
                             {
                                 role: "system",
                                 content: `Du bist ${currentUserName}s smarter, persönlicher Alltags-Assistent. Aktueller Kontext: ${JSON.stringify(contextData)}.
-                                Analysiere den Sprachbefehl des Benutzers und gib ein JSON-Objekt zurück mit:
+                                Analysiere den Sprachbefehl des Benutzers und gib IMMER ein valides JSON-Objekt zurück mit:
                                 - type: "chat", "memory_store", "memory_query", "todo", "calendar", "reminder", "shopping", "call", "weather"
                                 - memory_key, memory_value
                                 - todo_text
                                 - shopping_item
-                                - reminder_text, reminder_time (ISO-String für Erinnerungen)
-                                - calendar_text, calendar_time (ISO-String für normale Termine, falls der Nutzer einen Termin eintragen möchte)
+                                - reminder_text, reminder_time (ISO-String)
+                                - calendar_text, calendar_time (ISO-String. Berechne das Datum/Uhrzeit basierend auf "heute_datum", wenn der Nutzer z.B. sagt "morgen um 10 Uhr")
                                 - call_contact
                                 - reply: Natürliche, menschliche Antwort auf Deutsch.`
                             },
@@ -697,23 +688,29 @@
                     memoryItems[ai.memory_key.toLowerCase()] = ai.memory_value || "gespeichert";
                     setPersistentData('helfer_memory', JSON.stringify(memoryItems));
                 } else if (ai.type === 'reminder' && ai.reminder_text) {
-                    const rTime = ai.reminder_time ? new Date(ai.reminder_time).toISOString() : new Date(Date.now() + 3600000).toISOString();
-                    await addGoogleCalendarReminder(ai.reminder_text, rTime);
-                } else if (ai.type === 'calendar' && ai.calendar_text) {
-                    const cTime = ai.calendar_time ? new Date(ai.calendar_time).toISOString() : new Date().toISOString();
-                    await addGoogleCalendarEvent(ai.calendar_text, cTime, false);
+                    await addGoogleCalendarReminder(ai.reminder_text, ai.reminder_time);
+                } else if (ai.type === 'calendar' || ai.calendar_text) {
+                    const cText = ai.calendar_text || text;
+                    await addGoogleCalendarEvent(cText, ai.calendar_time);
                 } else if (ai.type === 'call' && ai.call_contact) {
                     const foundKey = Object.keys(savedContacts).find(k => k.includes(ai.call_contact.toLowerCase()));
                     if (foundKey) {
                         window.location.href = `tel:${savedContacts[foundKey].phone}`;
                     }
+                } else {
+                    if (lowerText.includes('trage') || lowerText.includes('termin') || lowerText.includes('notiere') || lowerText.includes('erinnere')) {
+                        await addGoogleCalendarEvent(text, null);
+                    }
                 }
 
                 renderAllLists();
-                speak(ai.reply || "Erledigt.");
+                speak(ai.reply || "Erledigt, Dino.");
                 if (statusMessage) statusMessage.textContent = "Fertig.";
             } catch (e) {
-                speak("Entschuldigung, da gab es einen Fehler bei der Verbindung.");
+                await addGoogleCalendarEvent(text, null);
+                renderAllLists();
+                speak("Ich habe es direkt für dich eingetragen.");
+                if (statusMessage) statusMessage.textContent = "Notfall-Eintrag erstellt.";
             }
         }
 
