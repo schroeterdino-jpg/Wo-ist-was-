@@ -179,7 +179,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 7.3 (Silent Refresh)</span>
+        <span>Version 7.4 (Smart Routing Fixed)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -336,7 +336,6 @@
                 callback: (response) => {
                     if (response.error) {
                         console.error("OAuth Fehler:", response);
-                        // Falls der Silent Refresh ('none') fehlschlägt, auf interaktiv zurückfallen
                         if (response.error === 'interaction_required' || response.error === 'login_required') {
                             tokenClient.requestAccessToken({ prompt: 'consent' });
                         }
@@ -347,7 +346,6 @@
                         setPersistentData('google_access_token', accessToken);
                         if (connectionStatus) connectionStatus.textContent = "✅ Verbunden (Token erneuert)";
                         
-                        // Führe ausstehende Aktion nach Refresh aus oder lade Kalender neu
                         if (pendingAction) {
                             const act = pendingAction;
                             pendingAction = null;
@@ -369,7 +367,6 @@
                 if (!ok) { alert('Client-ID fehlt!'); return; }
             }
 
-            // 'none' führt den Refresh geräuschlos im Hintergrund aus, 'consent' öffnet den Dialog
             tokenClient.requestAccessToken({ prompt: silent ? 'none' : 'consent' });
         }
 
@@ -382,7 +379,6 @@
             }
         });
 
-        // Automatische Token-Erneuerung alle 50 Minuten (vor Ablauf der 60 Minuten)
         setInterval(() => {
             if (accessToken) {
                 loginWithGoogle(true);
@@ -438,14 +434,13 @@
             renderAllLists();
         }
 
-        // 2. ERINNERUNG (In App + Google Kalender mit 🔔 markiert, damit sie in Heute-Terminen ignoriert wird)
+        // 2. ERINNERUNG (In App + Google Kalender mit 🔔 markiert)
         async function addGoogleCalendarReminder(text, isoTimeString) {
             let remDate = isoTimeString ? new Date(isoTimeString) : new Date();
             if (isNaN(remDate.getTime())) remDate = new Date();
 
             let googleEventId = null;
 
-            // Als Kalendereintrag bei Google speichern mit Präfix 🔔
             const eventData = {
                 summary: `🔔 ${text}`,
                 start: { dateTime: remDate.toISOString() },
@@ -470,7 +465,6 @@
                 } catch (e) {}
             }
 
-            // In App-Erinnerungen speichern (inklusive Google Event ID zum späteren Löschen)
             reminderEntries.unshift({ id: Date.now(), googleId: googleEventId, text, time: remDate.toISOString(), triggered: false });
             setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
             renderAllLists();
@@ -557,7 +551,6 @@
                 if (res.ok) {
                     const data = await res.json();
                     if (data.items) {
-                        // Strikte Filterung: Echte Termine dürfen keine Erinnerungen (mit 🔔) sein
                         const filteredItems = data.items.filter(item => {
                             const summary = (item.summary || '').toLowerCase();
                             const id = (item.id || '');
@@ -581,7 +574,6 @@
             } catch (e) {}
         }
 
-        // LÖSCHEN EINES ECHTEN TERMINS (App + Google Kalender API)
         async function deleteCalendarEntry(id) {
             if (accessToken && id && typeof id === 'string' && !id.startsWith('local_')) {
                 const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${id}`;
@@ -604,13 +596,11 @@
             renderAllLists();
         }
 
-        // LÖSCHEN EINER ERINNERUNG (App + Google Kalender API per googleId oder Textsuche)
         async function deleteReminderEntry(id) {
             const rem = reminderEntries.find(e => e.id === id);
             if (rem && accessToken) {
                 let targetGoogleId = rem.googleId;
                 
-                // Falls keine googleId hinterlegt war, suchen wir den passenden Termin im Google Kalender anhand des Textes
                 if (!targetGoogleId) {
                     try {
                         const nowIso = new Date().toISOString();
@@ -678,7 +668,6 @@
             });
         }
 
-        // STANDORTABFRAGE (Reverse Geocoding via Nominatim API)
         async function fetchLocationData() {
             return new Promise((resolve) => {
                 if (!navigator.geolocation) {
@@ -800,7 +789,6 @@
                 weatherInfo = await fetchWeatherData();
             }
 
-            // Erkennung der Standort-Frage
             if (lowerText.includes('wo bin ich') || lowerText.includes('wo befinde ich') || lowerText.includes('mein standort') || lowerText.includes('aktueller ort') || lowerText.includes('welche straße') || lowerText.includes('welcher ort')) {
                 if (statusMessage) statusMessage.textContent = "Bestimme Standort...";
                 locationInfo = await fetchLocationData();
@@ -828,24 +816,31 @@
                                 role: "system",
                                 content: `Du bist ${currentUserName}s smarter, persönlicher Alltags-Assistent. Aktueller Kontext: ${JSON.stringify(contextData)}.
                                 Analysiere den Sprachbefehl des Benutzers und unterscheide PRÄZISE:
-                                - "location" (Fragen nach dem Standort wie "Wo bin ich?", "Welche Straße ist das?", "Wo befinde ich mich?").
-                                - "calendar" (Feste Termine wie "Arzttermin", "Friseur", "Treffen mit X").
-                                - "reminder" (Erinnerungen an Aufgaben/Aktivitäten mit Aufforderung wie "Erinnere mich an...", "Hole X ab").
-                                - "calendar_delete" (Einen echten Termin löschen, z.B. "Lösch meinen Friseurtermin").
-                                - "reminder_delete" (Eine Erinnerung löschen, z.B. "Lösch meine Erinnerung").
-                                - "todo", "shopping", "memory_store", "call", "chat"
+                                
+                                STRIKTE CATEGORY-REGELN:
+                                - "memory_store": Wenn der Benutzer sagt, wo er einen Gegenstand abgelegt hat (z. B. "Ich habe meinen Schlüssel unter/auf die Couch gelegt", "Der Brillenpass liegt in der Schublade") ODER Fragen nach gespeicherten Orten/Fakten stellt ("Wo ist mein Schlüssel?").
+                                  WICHTIG: Verwende dafür NIEMALS "reminder" oder "calendar"! Speichere Gegenstände/Ablageorte IMMER unter memory_store.
+                                
+                                - "reminder": NUR wenn der Benutzer ausdrücklich eine ERINNERUNG mit Uhrzeit/Aufforderung verlangt (z. B. "Erinnere mich um 17 Uhr, meine Tochter abzuholen", "Erinnere mich morgen an X").
+                                
+                                - "location": Fragen nach dem aktuellen physischen Standort ("Wo bin ich?", "Welche Straße ist das?").
+                                
+                                - "calendar": Feste Termine ("Arzttermin um 10 Uhr", "Friseur am Dienstag").
+                                
+                                - "calendar_delete", "reminder_delete", "todo", "shopping", "call", "chat".
 
-                                WICHTIG FÜR LOCATION: Wenn der Typ "location" ist, nenne in der 'reply' klar und einfach verständlich die Straße, Hausnummer und den Ort aus den Standort-Daten (z.B. "Du befindest dich aktuell in der Hauptstraße 12 in Schwarzenbek.").
+                                WICHTIG FÜR LOCATION: Wenn der Typ "location" ist, nenne in der 'reply' klar und einfach verständlich die Straße, Hausnummer und den Ort aus den Standort-Daten.
 
                                 Gib IMMER ein valides JSON-Objekt zurück mit:
                                 - type: "chat", "location", "memory_store", "todo", "calendar", "calendar_delete", "reminder", "reminder_delete", "shopping", "call"
-                                - memory_key, memory_value
+                                - memory_key (z. B. "Schlüssel")
+                                - memory_value (z. B. "unter der Couch")
                                 - todo_text
                                 - shopping_item
                                 - reminder_text, reminder_time (ISO-String)
-                                - reminder_delete_query (Suchbegriff der zu löschenden Erinnerung)
-                                - calendar_text, calendar_time (ISO-String für echte Termine)
-                                - calendar_delete_query (Suchbegriff des zu löschenden Termins)
+                                - reminder_delete_query
+                                - calendar_text, calendar_time (ISO-String)
+                                - calendar_delete_query
                                 - call_contact
                                 - reply: Natürliche, menschliche und deutliche Antwort auf Deutsch.`
                             },
@@ -860,7 +855,6 @@
                 if (ai.type === 'location' || locationInfo) {
                     let responseText = ai.reply;
                     
-                    // Fallback, falls die KI keine eigene Formulierung generiert hat:
                     if (!responseText && locationInfo) {
                         if (locationInfo.fehler) {
                             responseText = locationInfo.fehler;
@@ -888,7 +882,7 @@
                 } else if (ai.type === 'memory_store' && ai.memory_key) {
                     memoryItems[ai.memory_key.toLowerCase()] = ai.memory_value || "gespeichert";
                     setPersistentData('helfer_memory', JSON.stringify(memoryItems));
-                } else if (ai.type === 'reminder_delete' || (lowerText.includes('lösch') && lowerText.includes('erinnerung'))) {
+                } else if (ai.type === 'reminder_delete') {
                     const query = (ai.reminder_delete_query || text).toLowerCase().replace('lösche', '').replace('lösch', '').replace('erinnerung', '').trim();
                     const match = reminderEntries.find(e => e.text.toLowerCase().includes(query) || (query.length > 2 && e.text.toLowerCase().includes(query)));
                     if (match) {
@@ -896,10 +890,10 @@
                     } else if (reminderEntries.length > 0) {
                         await deleteReminderEntry(reminderEntries[0].id);
                     }
-                } else if (ai.type === 'reminder' || (lowerText.includes('erinnere') && !lowerText.includes('termin'))) {
+                } else if (ai.type === 'reminder') {
                     const rText = ai.reminder_text || text;
                     await addGoogleCalendarReminder(rText, ai.reminder_time);
-                } else if (ai.type === 'calendar_delete' || lowerText.includes('lösch') || lowerText.includes('entfern')) {
+                } else if (ai.type === 'calendar_delete') {
                     const query = (ai.calendar_delete_query || text).toLowerCase().replace('lösche', '').replace('lösch', '').replace('termin', '').trim();
                     const match = calendarEntries.find(e => e.text.toLowerCase().includes(query));
                     if (match) {
@@ -907,7 +901,7 @@
                     } else if (calendarEntries.length > 0) {
                         await deleteCalendarEntry(calendarEntries[0].id);
                     }
-                } else if (ai.type === 'calendar' || ai.calendar_text || lowerText.includes('termin')) {
+                } else if (ai.type === 'calendar' || ai.calendar_text) {
                     const cText = ai.calendar_text || text;
                     await addGoogleCalendarEvent(cText, ai.calendar_time);
                 } else if (ai.type === 'call' && ai.call_contact) {
@@ -916,7 +910,7 @@
                         window.location.href = `tel:${savedContacts[foundKey].phone}`;
                     }
                 } else {
-                    await addGoogleCalendarReminder(text, new Date().toISOString());
+                    // Fallback nur für reine Chat-Antworten
                 }
 
                 await fetchGoogleCalendarEvents();
@@ -924,10 +918,9 @@
                 speak(ai.reply || `Erledigt, ${currentUserName}.`);
                 if (statusMessage) statusMessage.textContent = "Fertig.";
             } catch (e) {
-                await addGoogleCalendarReminder(text, new Date().toISOString());
                 renderAllLists();
-                speak("Ich habe die Erinnerung gespeichert.");
-                if (statusMessage) statusMessage.textContent = "Erinnerung erstellt.";
+                speak("Entschuldige, das konnte ich leider nicht genau verarbeiten.");
+                if (statusMessage) statusMessage.textContent = "Fehler bei der Verarbeitung.";
             }
         }
 
