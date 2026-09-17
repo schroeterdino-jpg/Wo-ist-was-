@@ -984,8 +984,12 @@
                     }
                 }
 
-                await fetchGoogleCalendarEvents();
-                renderAllLists();
+                if (ai.type === 'calendar' || ai.type === 'calendar_delete') {
+                    await fetchGoogleCalendarEvents();
+                } else {
+                    renderAllLists();
+                }
+
                 speak(ai.reply || `Erledigt, ${currentUserName}.`);
                 if (statusMessage) statusMessage.textContent = "Fertig.";
             } catch (e) {
