@@ -786,9 +786,34 @@
         async function triggerDailyBriefing() {
             const timeStr = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
             let text = `Guten Tag ${currentUserName}. Es ist ${timeStr} Uhr. `;
-            text += calendarEntries.length > 0 ? `Du hast ${calendarEntries.length} anstehende Termine. ` : "Du hast heute keine Termine. ";
-            text += todoEntries.length > 0 ? `Es gibt noch ${todoEntries.length} offene Aufgaben. ` : "";
-            text += reminderEntries.length > 0 ? `Du hast ${reminderEntries.length} aktive Erinnerungen. ` : "";
+            
+            // Termine vorlesen
+            if (calendarEntries.length > 0) {
+                const termList = calendarEntries.map(e => `${e.text} um ${e.date}`).join(', ');
+                text += `Du hast folgende Termine: ${termList}. `;
+            } else {
+                text += "Du hast heute keine anstehenden Termine. ";
+            }
+
+            // Erinnerungen vorlesen
+            if (reminderEntries.length > 0) {
+                const remList = reminderEntries.map(e => {
+                    const timeFormatted = new Date(e.time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                    return `${e.text} um ${timeFormatted} Uhr`;
+                }).join(', ');
+                text += `Deine aktiven Erinnerungen sind: ${remList}. `;
+            }
+
+            // Einkaufsliste vorlesen
+            if (shoppingEntries.length > 0) {
+                const shopList = shoppingEntries.map(e => e.text).join(', ');
+                text += `Auf deiner Einkaufsliste steht: ${shopList}. `;
+            }
+
+            // Aufgaben-Anzahl vorlesen
+            if (todoEntries.length > 0) {
+                text += `Es gibt noch ${todoEntries.length} offene Aufgaben. `;
+            }
             
             if (statusMessage) statusMessage.textContent = "Hole Wetter...";
             const weather = await fetchWeatherData();
