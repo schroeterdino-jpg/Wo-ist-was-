@@ -179,7 +179,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 7.1 (Erinnerung Sync-Löschung)</span>
+        <span>Version 7.2 (Standortabfrage)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -621,6 +621,33 @@
             });
         }
 
+        // STANDORTABFRAGE (Reverse Geocoding via Nominatim API)
+        async function fetchLocationData() {
+            return new Promise((resolve) => {
+                if (!navigator.geolocation) {
+                    resolve({ fehler: "Geolokalisierung wird von deinem Browser nicht unterstützt." });
+                    return;
+                }
+                navigator.geolocation.getCurrentPosition(async (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    try {
+                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`);
+                        const data = await res.json();
+                        resolve({
+                            adresse: data.display_name || "Unbekannte Adresse",
+                            details: data.address || {},
+                            koordinaten: { lat, lon }
+                        });
+                    } catch (e) {
+                        resolve({ fehler: "Adresse konnte nicht aus den Koordinaten ermittelt werden.", koordinaten: { lat, lon } });
+                    }
+                }, (err) => {
+                    resolve({ fehler: "Standortzugriff verweigert oder fehlgeschlagen." });
+                }, { timeout: 10000, enableHighAccuracy: true });
+            });
+        }
+
         let currentAudio = null;
         function speak(text, onComplete) {
             if ('speechSynthesis' in window) {
@@ -709,9 +736,17 @@
             if (statusMessage) statusMessage.textContent = "Verarbeite Befehl...";
 
             let weatherInfo = null;
+            let locationInfo = null;
             const lowerText = text.toLowerCase();
+
             if (lowerText.includes('wetter') || lowerText.includes('regenschirm') || lowerText.includes('regen') || lowerText.includes('draußen')) {
                 weatherInfo = await fetchWeatherData();
+            }
+
+            // Erkennung der Standort-Frage
+            if (lowerText.includes('wo bin ich') || lowerText.includes('wo befinde ich') || lowerText.includes('mein standort') || lowerText.includes('aktueller ort')) {
+                if (statusMessage) statusMessage.textContent = "Bestimme Standort...";
+                locationInfo = await fetchLocationData();
             }
 
             const contextData = {
@@ -720,7 +755,8 @@
                 kontakte: savedContacts,
                 termine: calendarEntries,
                 erinnerungen: reminderEntries,
-                wetter: weatherInfo
+                wetter: weatherInfo,
+                standort: locationInfo
             };
 
             try {
@@ -797,6 +833,9 @@
                     if (foundKey) {
                         window.location.href = `tel:${savedContacts[foundKey].phone}`;
                     }
+                } else if (locationInfo) {
+                    // Fallback, falls Typ "chat" ist und Standort abgefragt wurde
+                    renderAllLists();
                 } else {
                     await addGoogleCalendarReminder(text, new Date().toISOString());
                 }
