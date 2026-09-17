@@ -1,187 +1,3 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mein Alltags-Helfer</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Identity Services (OAuth / Login) -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    
-    <!-- Eigenes Icon direkt aus dem Projektordner -->
-    <link rel="icon" type="image/png" href="./dino.png">
-    <link rel="apple-touch-icon" href="./dino.png">
-    
-    <!-- PWA Manifest & App-Modus -->
-    <link rel="manifest" href="./manifest.json">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#1d4ed8">
-
-    <style>
-        body { font-size: 1.15rem; }
-    </style>
-</head>
-<body class="bg-slate-100 text-slate-900 min-h-screen flex flex-col justify-between">
-
-    <!-- Kopfbereich -->
-    <header class="bg-blue-700 text-white p-5 text-center shadow-md relative">
-        <div class="flex justify-between items-center max-w-md mx-auto">
-            <div></div>
-            <div>
-                <h1 class="text-2xl font-bold">Mein Alltags-Helfer</h1>
-                <p id="userNameDisplay" class="text-sm text-blue-100 mt-0.5">Hallo, Dino!</p>
-            </div>
-            <button onclick="switchSection('settings')" class="bg-blue-800 hover:bg-blue-900 text-white px-3 py-2 rounded-lg text-sm shadow">
-                ⚙️ Einstellungen
-            </button>
-        </div>
-    </header>
-
-    <!-- Hauptnavigation / Reiter (Die 7 Kernbereiche) -->
-    <nav class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-50 overflow-x-auto">
-        <div class="flex max-w-md mx-auto px-1 py-2 gap-1 text-xs font-bold whitespace-nowrap">
-            <button id="navSpeak" onclick="switchSection('speak')" class="flex-1 py-2 px-2 rounded-lg bg-blue-600 text-white shadow transition">🎙️ Sprechen</button>
-            <button id="navToday" onclick="switchSection('today')" class="flex-1 py-2 px-2 rounded-lg text-slate-600 hover:bg-slate-100 transition">📅 Heute</button>
-            <button id="navReminders" onclick="switchSection('reminders')" class="flex-1 py-2 px-2 rounded-lg text-slate-600 hover:bg-slate-100 transition">🔔 Erinnerungen</button>
-            <button id="navTodos" onclick="switchSection('todos')" class="flex-1 py-2 px-2 rounded-lg text-slate-600 hover:bg-slate-100 transition">📝 Aufgaben</button>
-            <button id="navMemory" onclick="switchSection('memory')" class="flex-1 py-2 px-2 rounded-lg text-slate-600 hover:bg-slate-100 transition">🧠 Gedächtnis</button>
-            <button id="navShopping" onclick="switchSection('shopping')" class="flex-1 py-2 px-2 rounded-lg text-slate-600 hover:bg-slate-100 transition">🛒 Einkaufsliste</button>
-        </div>
-    </nav>
-
-    <!-- Hauptbereich -->
-    <main class="container mx-auto p-4 max-w-md flex-grow flex flex-col space-y-4">
-
-        <!-- Sektion 1: SPRECHEN -->
-        <section id="sec-speak" class="flex flex-col items-center justify-center space-y-6 my-auto py-6">
-            <button id="recordBtn" onclick="toggleSpeechRecognition()" class="w-44 h-44 bg-red-600 hover:bg-red-700 text-white rounded-full flex flex-col items-center justify-center shadow-2xl transition transform active:scale-95 border-4 border-white cursor-pointer">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-                <span id="recordText" class="text-sm font-semibold tracking-wide">SPRECHEN</span>
-            </button>
-            <p id="statusMessage" class="text-center font-medium text-slate-700 h-6">Drücken und sprechen...</p>
-
-            <button onclick="triggerDailyBriefing()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-xl shadow-md font-bold text-base flex items-center justify-center gap-2">
-                🌅 Intelligentes Tages-Briefing starten
-            </button>
-        </section>
-
-        <!-- Sektion 2: HEUTE (Termine & Übersicht) -->
-        <section id="sec-today" class="hidden space-y-4">
-            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200">
-                <h2 class="text-xl font-bold text-blue-800 mb-3">📅 Heutige Termine:</h2>
-                <ul id="calendarList" class="space-y-2 text-base">
-                    <li class="text-slate-500">Keine Termine eingetragen.</li>
-                </ul>
-            </div>
-        </section>
-
-        <!-- Sektion 3: ERINNERUNGEN -->
-        <section id="sec-reminders" class="hidden space-y-4">
-            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-blue-800">🔔 Aktive Erinnerungen:</h2>
-                    <button onclick="requestNotificationPermission()" class="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg font-semibold">Benachrichtigungen erlauben</button>
-                </div>
-                <div class="flex gap-2">
-                    <input type="text" id="manualReminderText" placeholder="Was soll erinnert werden?" class="flex-grow p-2 border rounded-lg text-sm">
-                    <input type="datetime-local" id="manualReminderTime" class="p-2 border rounded-lg text-sm">
-                </div>
-                <button onclick="addManualReminder()" class="w-full bg-blue-700 text-white py-2 rounded-lg text-sm font-semibold">Erinnerung speichern</button>
-                <ul id="reminderList" class="space-y-2 text-sm mt-3">
-                    <li class="text-slate-500">Keine aktiven Erinnerungen.</li>
-                </ul>
-            </div>
-        </section>
-
-        <!-- Sektion 4: AUFGABEN (To-Dos) -->
-        <section id="sec-todos" class="hidden space-y-4">
-            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
-                <h2 class="text-xl font-bold text-blue-800">📝 Aufgaben & Notizen:</h2>
-                <div class="flex gap-2">
-                    <input type="text" id="manualTodoInput" placeholder="Neue Aufgabe..." class="flex-grow p-2 border rounded-lg text-sm">
-                    <button onclick="addManualTodo()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">Hinzufügen</button>
-                </div>
-                <ul id="todoList" class="space-y-2 text-base mt-2">
-                    <li class="text-slate-500">Keine offenen To-Dos.</li>
-                </ul>
-            </div>
-        </section>
-
-        <!-- Sektion 5: GEDÄCHTNIS (Gegenstände & Infos) -->
-        <section id="sec-memory" class="hidden space-y-4">
-            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-blue-800">🧠 Digitales Langzeitgedächtnis:</h2>
-                    <button onclick="clearAllMemory()" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold">🗑️ Leeren</button>
-                </div>
-                <p class="text-xs text-slate-500">Erzähl mir beliebige Fakten, Orte oder Notizen (z.B. „Der Ersatzschlüssel ist in der Schublade“).</p>
-                <div id="categoryContainer" class="space-y-3 text-sm bg-slate-50 p-3 rounded-lg border border-slate-200 max-h-64 overflow-y-auto">
-                    <p class="text-slate-500 text-xs">Noch nichts im Gedächtnis gespeichert.</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Sektion 6: EINKAUFSLISTE -->
-        <section id="sec-shopping" class="hidden space-y-4">
-            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
-                <h2 class="text-xl font-bold text-blue-800">🛒 Einkaufsliste:</h2>
-                <div class="flex gap-2">
-                    <input type="text" id="manualShoppingInput" placeholder="Artikel hinzufügen..." class="flex-grow p-2 border rounded-lg text-sm">
-                    <button onclick="addManualShoppingItem()" class="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">＋</button>
-                </div>
-                <ul id="shoppingList" class="space-y-2 text-base mt-2">
-                    <li class="text-slate-500">Einkaufsliste ist leer.</li>
-                </ul>
-            </div>
-        </section>
-
-        <!-- Sektion 7: EINSTELLUNGEN -->
-        <section id="sec-settings" class="hidden space-y-4">
-            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-4">
-                <h2 class="text-xl font-bold text-blue-800">⚙️ Einstellungen</h2>
-                <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-1">Wie soll ich dich nennen?:</label>
-                    <input type="text" id="userNameInput" placeholder="Dein Name..." class="w-full p-2 border rounded-lg text-sm bg-slate-50">
-                </div>
-                <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-1">Groq API-Key (gsk_...):</label>
-                    <input type="password" id="apiKeyInput" placeholder="gsk_..." class="w-full p-2 border rounded-lg text-sm bg-slate-50">
-                </div>
-                <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-1">Google Client-ID:</label>
-                    <input type="text" id="googleClientIdInput" placeholder="Client ID..." class="w-full p-2 border rounded-lg text-sm bg-slate-50">
-                </div>
-                <!-- Kontakte -->
-                <div class="border-t pt-3">
-                    <label class="block text-sm font-bold text-slate-700 mb-1">📞 Schnell-Anruf Kontakte:</label>
-                    <div class="flex gap-2 mb-2">
-                        <input type="text" id="contactNameInput" placeholder="Name (z.B. Simone)" class="w-1/2 p-2 border rounded-lg text-sm bg-slate-50">
-                        <input type="text" id="contactPhoneInput" placeholder="Nummer..." class="w-1/2 p-2 border rounded-lg text-sm bg-slate-50">
-                    </div>
-                    <button onclick="saveContact()" class="w-full bg-slate-700 text-white py-2 rounded-lg text-sm font-semibold">Kontakt hinzufügen</button>
-                    <div id="contactListDisplay" class="mt-2 text-xs text-slate-600 space-y-1"></div>
-                </div>
-                <div class="border-t pt-3">
-                    <button onclick="loginWithGoogle()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
-                        📅 Mit Google Kalender verbinden
-                    </button>
-                </div>
-                <p id="connectionStatus" class="text-xs text-slate-600 font-medium break-all"></p>
-            </div>
-        </section>
-
-    </main>
-
-    <!-- Fußbereich -->
-    <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
-        <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 6.3 (Fix)</span>
-    </footer>
-
     <!-- JavaScript -->
     <script>
         if ('serviceWorker' in navigator) {
@@ -346,7 +162,6 @@
                 }
             }
 
-            // Fallback / Sofortiger lokaler Eintrag
             calendarEntries.unshift({
                 id: createdId,
                 text: text,
@@ -460,12 +275,11 @@
             if (!accessToken) return;
             const nowIso = new Date().toISOString();
             
-            // Nur die nächsten 90 Tage laden, damit Geburtstage bis 2056 draußen bleiben
             const futureDate = new Date();
             futureDate.setDate(futureDate.getDate() + 90);
             const maxIso = futureDate.toISOString();
 
-            const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${nowIso}&timeMax=${maxIso}&singleEvents=true&orderBy=startTime`;
+            const url = `https://api.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${nowIso}&timeMax=${maxIso}&singleEvents=true&orderBy=startTime`;
             
             try {
                 const res = await fetch(url, { headers: { 'Authorization': `Bearer ${accessToken}` } });
@@ -476,10 +290,13 @@
                 if (res.ok) {
                     const data = await res.json();
                     if (data.items) {
-                        // Geburtstage und Jahrestage konsequent herausfiltern
+                        // Strikter Filter gegen Geburtstage, Jahrestage und Serien-IDs (_R)
                         const filteredItems = data.items.filter(item => {
                             const summary = (item.summary || '').toLowerCase();
-                            if (summary.includes('geburtstag') || summary.includes('geb. ')) return false;
+                            const id = (item.id || '');
+                            if (summary.includes('geburtstag') || summary.includes('geb.') || summary.includes('jahrestag')) return false;
+                            // Google generiert für wiederkehrende Instanzen oft IDs mit Unterstrich und R (z.B. _2026...)
+                            if (id.includes('_R') || item.recurringEventId) return false;
                             return true;
                         });
 
@@ -497,7 +314,8 @@
         }
 
         async function deleteCalendarEntry(id) {
-            if (accessToken && typeof id === 'string' && !id.startsWith('local_')) {
+            // Direkt bei Google löschen, wenn es eine valide API-ID ist
+            if (accessToken && id && typeof id === 'string' && !id.startsWith('local_')) {
                 const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${id}`;
                 try {
                     await fetch(url, {
@@ -752,5 +570,3 @@
             }
         }
     </script>
-</body>
-</html>
