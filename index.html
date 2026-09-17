@@ -765,7 +765,10 @@
             const memoryKeys = Object.keys(memoryItems);
             const essential = memoryKeys.filter(k => k.includes('schlüssel') || k.includes('brille') || k.includes('geld') || k.includes('ausweis'));
             if (essential.length > 0) {
-                text += `Wichtige Ablageorte: ${essential.map(k => `${k} ist${memoryItems[k]}`).join(', ')}. `;
+                text += `Wichtige Ablageorte: ${essential.map(k => {
+                    const itemVal = typeof memoryItems[k] === 'object' ? memoryItems[k].val : memoryItems[k];
+                    return `${k} ist${itemVal}`;
+                }).join(', ')}. `;
             }
 
             text += "Du bist startklar!";
@@ -799,9 +802,15 @@
             const key = getPersistentData('user_api_key', '');
             if (statusMessage) statusMessage.textContent = "Verarbeite...";
 
+            // Gedächtnis für den KI-Kontext sauber in Textform aufbereiten, damit kein [object Object] gesendet wird
+            const plainMemory = {};
+            Object.keys(memoryItems).forEach(k => {
+                plainMemory[k] = typeof memoryItems[k] === 'object' ? memoryItems[k].val : memoryItems[k];
+            });
+
             const contextData = {
                 heute_datum: new Date().toISOString(),
-                gedächtnis: memoryItems,
+                gedächtnis: plainMemory,
                 kontakte: savedContacts,
                 termine: calendarEntries,
                 erinnerungen: reminderEntries,
@@ -824,7 +833,7 @@
                                 
                                 KATEGORIEN:
                                 - "query_info": Wenn der Benutzer wissen möchte, was auf Listen steht oder wo Dinge sind ("Was muss ich einkaufen?", "Wo ist meine Brille?", "Was steht morgen an?"). Beantworte die Frage in 'reply' direkt aus den Kontextdaten!
-                                - "memory_store": Dinge merken ("Der Schlüssel ist im Flur"). Speichere mit Artikel ("dein Schlüssel") und weise eine Kategorie zu: "🔑 Schlüssel", "📄 Dokumente", "🔧 Werkzeug", "🏠 Haushalt", "🚗 Auto", "📦 Sonstiges".
+                                - "memory_store": Dinge merken ("Der Schlüssel ist im Flur", "Ich packe den Schlüssel ans Klemmbrett am Kühlschrank"). Speichere mit präzisem Begriff ("dein Schlüssel") und als 'memory_value' den genauen Ablageort (z.B. "hängt am Klemmbrett am Kühlschrank"). Weise eine Kategorie zu: "🔑 Schlüssel", "📄 Dokumente", "🔧 Werkzeug", "🏠 Haushalt", "🚗 Auto", "📦 Sonstiges".
                                 - "shopping": Einkaufsartikel.
                                 - "todo": Aufgaben.
                                 - "reminder": Erinnerung ("Erinnere mich um 15 Uhr"). Extrahiere 'repeat' ("none", "daily", "weekly", "monthly").
@@ -834,7 +843,7 @@
 
                                 Return JSON:
                                 - type
-                                - reply (Natürliche Antwort zum Vorlesen)
+                                - reply (Natürliche Antwort zum Vorlesen, z.B. "Alles klar, ich habe mir gemerkt, dass dein Schlüssel am Klemmbrett am Kühlschrank hängt.")
                                 - memory_key, memory_value, memory_category
                                 - shopping_items (Array), shopping_list ("Allgemein", "Supermarkt", "Baumarkt")
                                 - todo_items (Array)
