@@ -64,40 +64,45 @@
         }
 
         let currentUserName = getPersistentData('user_custom_name', 'Dino');
-        userNameInput.value = currentUserName;
+        if (userNameInput) userNameInput.value = currentUserName;
         updateUserGreeting();
 
         let savedKey = getPersistentData('user_api_key', '');
-        if (savedKey) apiKeyInput.value = savedKey;
+        if (savedKey && apiKeyInput) apiKeyInput.value = savedKey;
 
-        // Fester Standard-Fallback für deine Client-ID, damit sie nie leer ist
         const DEFAULT_CLIENT_ID = '399573320370-qka01ghj0s88eoair7lla665cbj10o4g.apps.googleusercontent.com';
         let savedClientId = getPersistentData('google_client_id', DEFAULT_CLIENT_ID);
         if (!savedClientId || savedClientId === "null") {
             savedClientId = DEFAULT_CLIENT_ID;
             setPersistentData('google_client_id', savedClientId);
         }
-        googleClientIdInput.value = savedClientId;
+        if (googleClientIdInput) googleClientIdInput.value = savedClientId;
 
-        userNameInput.addEventListener('input', () => {
-            currentUserName = userNameInput.value.trim() || "Dino";
-            setPersistentData('user_custom_name', currentUserName);
-            updateUserGreeting();
-        });
+        if (userNameInput) {
+            userNameInput.addEventListener('input', () => {
+                currentUserName = userNameInput.value.trim() || "Dino";
+                setPersistentData('user_custom_name', currentUserName);
+                updateUserGreeting();
+            });
+        }
 
-        apiKeyInput.addEventListener('input', () => {
-            setPersistentData('user_api_key', apiKeyInput.value.trim());
-            connectionStatus.textContent = "API-Key gespeichert.";
-        });
+        if (apiKeyInput) {
+            apiKeyInput.addEventListener('input', () => {
+                setPersistentData('user_api_key', apiKeyInput.value.trim());
+                if (connectionStatus) connectionStatus.textContent = "API-Key gespeichert.";
+            });
+        }
 
-        googleClientIdInput.addEventListener('input', () => {
-            const val = googleClientIdInput.value.trim() || DEFAULT_CLIENT_ID;
-            setPersistentData('google_client_id', val);
-            connectionStatus.textContent = "Client-ID gespeichert.";
-        });
+        if (googleClientIdInput) {
+            googleClientIdInput.addEventListener('input', () => {
+                const val = googleClientIdInput.value.trim() || DEFAULT_CLIENT_ID;
+                setPersistentData('google_client_id', val);
+                if (connectionStatus) connectionStatus.textContent = "Client-ID gespeichert.";
+            });
+        }
 
         function updateUserGreeting() {
-            userNameDisplay.textContent = `Hallo, ${currentUserName}!`;
+            if (userNameDisplay) userNameDisplay.textContent = `Hallo, ${currentUserName}!`;
         }
 
         let calendarEntries = JSON.parse(getPersistentData('helfer_calendar_entries', '[]')) || [];
@@ -137,33 +142,40 @@
         }, 30000);
 
         function addManualReminder() {
-            const text = document.getElementById('manualReminderText').value.trim();
-            const time = document.getElementById('manualReminderTime').value;
+            const textEl = document.getElementById('manualReminderText');
+            const timeEl = document.getElementById('manualReminderTime');
+            if (!textEl || !timeEl) return;
+            const text = textEl.value.trim();
+            const time = timeEl.value;
             if (text && time) {
                 reminderEntries.push({ id: Date.now(), text, time, triggered: false });
                 setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
-                document.getElementById('manualReminderText').value = '';
-                document.getElementById('manualReminderTime').value = '';
+                textEl.value = '';
+                timeEl.value = '';
                 renderAllLists();
             }
         }
 
         function addManualTodo() {
-            const val = document.getElementById('manualTodoInput').value.trim();
+            const inputEl = document.getElementById('manualTodoInput');
+            if (!inputEl) return;
+            const val = inputEl.value.trim();
             if (val) {
                 todoEntries.unshift({ id: Date.now(), text: val, createdDate: 'Manuell' });
                 setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
-                document.getElementById('manualTodoInput').value = '';
+                inputEl.value = '';
                 renderAllLists();
             }
         }
 
         function addManualShoppingItem() {
-            const val = document.getElementById('manualShoppingInput').value.trim();
+            const inputEl = document.getElementById('manualShoppingInput');
+            if (!inputEl) return;
+            const val = inputEl.value.trim();
             if (val) {
                 shoppingEntries.unshift({ id: Date.now(), text: val });
                 setPersistentData('helfer_shopping', JSON.stringify(shoppingEntries));
-                document.getElementById('manualShoppingInput').value = '';
+                inputEl.value = '';
                 renderAllLists();
             }
         }
@@ -187,6 +199,7 @@
         }
 
         function renderContactList() {
+            if (!contactListDisplay) return;
             const keys = Object.keys(savedContacts);
             contactListDisplay.innerHTML = keys.length === 0 ? 'Keine Kontakte.' : keys.map(k => `<div class="flex justify-between items-center"><span>${savedContacts[k].originalName}: ${savedContacts[k].phone}</span><button onclick="deleteContact('${k}')" class="text-red-600 font-bold">Löschen</button></div>`).join('');
         }
@@ -194,13 +207,12 @@
         let tokenClient;
         let accessToken = getPersistentData('google_access_token', '');
 
-        // Automatischer Login-Versuch im Hintergrund beim Start, falls Token existiert
         window.addEventListener('load', () => {
             if (accessToken) {
-                connectionStatus.textContent = "✅ Verbunden (Sitzung aktiv)";
+                if (connectionStatus) connectionStatus.textContent = "✅ Verbunden (Sitzung aktiv)";
                 fetchGoogleCalendarEvents();
             } else {
-                connectionStatus.textContent = "Nicht verbunden. Klicke auf Verbinden.";
+                if (connectionStatus) connectionStatus.textContent = "Nicht verbunden. Klicke auf Verbinden.";
             }
         });
 
@@ -215,14 +227,11 @@
                     if (response.access_token) {
                         accessToken = response.access_token;
                         setPersistentData('google_access_token', accessToken);
-                        connectionStatus.textContent = "✅ Verbunden!";
+                        if (connectionStatus) connectionStatus.textContent = "✅ Verbunden!";
                         fetchGoogleCalendarEvents();
                     }
                 }
             });
-            
-            // prompt: '' versucht im Hintergrund den Token zu erneuern, ohne dass ein Pop-up stört, 
-            // falls der Nutzer bereits eingeloggt war.
             tokenClient.requestAccessToken({ prompt: silent ? '' : 'consent' });
         }
 
@@ -233,7 +242,6 @@
             try {
                 const res = await fetch(url, { headers: { 'Authorization': `Bearer ${accessToken}` } });
                 if (res.status === 401) {
-                    // Token abgelaufen -> Versuche einmal leise im Hintergrund zu erneuern
                     loginWithGoogle(true);
                     return;
                 }
@@ -271,7 +279,6 @@
             renderAllLists();
         }
 
-        // Wetter-Hilfsfunktion (holt Live-Daten via Standort)
         async function fetchWeatherData() {
             return new Promise((resolve) => {
                 if (!navigator.geolocation) {
@@ -301,7 +308,6 @@
             });
         }
 
-        // Sprachausgabe via window.speechSynthesis
         let currentAudio = null;
         function speak(text, onComplete) {
             if ('speechSynthesis' in window) {
@@ -329,14 +335,16 @@
             recognition.lang = 'de-DE';
             recognition.onstart = () => {
                 isRecording = true;
-                statusMessage.textContent = "Höre zu...";
-                recordBtn.classList.replace('bg-red-600', 'bg-emerald-600');
-                recordBtn.classList.add('animate-pulse');
-                recordText.textContent = "HÖRE...";
+                if (statusMessage) statusMessage.textContent = "Höre zu...";
+                if (recordBtn) {
+                    recordBtn.classList.replace('bg-red-600', 'bg-emerald-600');
+                    recordBtn.classList.add('animate-pulse');
+                }
+                if (recordText) recordText.textContent = "HÖRE...";
             };
             recognition.onresult = (event) => {
                 const text = event.results[0][0].transcript;
-                statusMessage.textContent = `Erkannt: "${text}"`;
+                if (statusMessage) statusMessage.textContent = `Erkannt: "${text}"`;
                 sendToGroqSmart(text);
             };
             recognition.onerror = () => resetButton();
@@ -349,15 +357,21 @@
                 switchSection('settings');
                 return;
             }
+            if (!recognition) {
+                alert('Spracherkennung wird von diesem Browser leider nicht unterstützt.');
+                return;
+            }
             if (isRecording) recognition.stop();
             else recognition.start();
         }
 
         function resetButton() {
             isRecording = false;
-            recordBtn.classList.replace('bg-emerald-600', 'bg-red-600');
-            recordBtn.classList.remove('animate-pulse');
-            recordText.textContent = "SPRECHEN";
+            if (recordBtn) {
+                recordBtn.classList.replace('bg-emerald-600', 'bg-red-600');
+                recordBtn.classList.remove('animate-pulse');
+            }
+            if (recordText) recordText.textContent = "SPRECHEN";
         }
 
         async function triggerDailyBriefing() {
@@ -367,7 +381,7 @@
             text += todoEntries.length > 0 ? `Es gibt noch ${todoEntries.length} offene Aufgaben. ` : "";
             text += reminderEntries.length > 0 ? `Du hast ${reminderEntries.length} aktive Erinnerungen. ` : "";
             
-            statusMessage.textContent = "Hole Wetter...";
+            if (statusMessage) statusMessage.textContent = "Hole Wetter...";
             const weather = await fetchWeatherData();
             if (!weather.fehler) {
                 text += `Aktuell hast du ${weather.temperatur} Grad. `;
@@ -378,13 +392,13 @@
                 }
             }
 
-            statusMessage.textContent = "Briefing aktiv.";
+            if (statusMessage) statusMessage.textContent = "Briefing aktiv.";
             speak(text);
         }
 
         async function sendToGroqSmart(text) {
             const key = getPersistentData('user_api_key', '');
-            statusMessage.textContent = "Prüfe Wetter & Daten...";
+            if (statusMessage) statusMessage.textContent = "Prüfe Wetter & Daten...";
 
             let weatherInfo = null;
             const lowerText = text.toLowerCase();
@@ -448,7 +462,7 @@
 
                 renderAllLists();
                 speak(ai.reply || "Erledigt.");
-                statusMessage.textContent = "Fertig.";
+                if (statusMessage) statusMessage.textContent = "Fertig.";
             } catch (e) {
                 speak("Entschuldigung, da gab es einen Fehler bei der Verbindung.");
             }
@@ -481,12 +495,14 @@
         }
 
         function renderAllLists() {
-            calendarList.innerHTML = calendarEntries.length === 0 ? '<li class="text-slate-500">Keine Termine.</li>' : calendarEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border">📅 ${e.text} (${e.date}) <button onclick="deleteCalendarEntry('${e.id}')" class="text-red-600 font-bold text-xs">Löschen</button></li>`).join('');
-            todoList.innerHTML = todoEntries.length === 0 ? '<li class="text-slate-500">Keine offenen Aufgaben.</li>' : todoEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border">📝 ${e.text} <button onclick="deleteTodoEntry(${e.id})" class="text-emerald-600 font-bold text-xs">Erledigt</button></li>`).join('');
-            shoppingList.innerHTML = shoppingEntries.length === 0 ? '<li class="text-slate-500">Liste ist leer.</li>' : shoppingEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border">🛒 ${e.text} <button onclick="deleteShoppingEntry(${e.id})" class="text-emerald-600 font-bold text-xs">Gekauft</button></li>`).join('');
-            reminderList.innerHTML = reminderEntries.length === 0 ? '<li class="text-slate-500">Keine Erinnerungen.</li>' : reminderEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border">🔔 ${e.text} (${new Date(e.time).toLocaleString('de-DE', {dateStyle:'short', timeStyle:'short'})}) <button onclick="deleteReminderEntry(${e.id})" class="text-red-600 font-bold text-xs">Löschen</button></li>`).join('');
+            if (calendarList) calendarList.innerHTML = calendarEntries.length === 0 ? '<li class="text-slate-500">Keine Termine.</li>' : calendarEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border"><span>📅 ${e.text} (${e.date})</span><button onclick="deleteCalendarEntry('${e.id}')" class="text-red-600 font-bold text-xs">Löschen</button></li>`).join('');
+            if (todoList) todoList.innerHTML = todoEntries.length === 0 ? '<li class="text-slate-500">Keine offenen Aufgaben.</li>' : todoEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border"><span>📝 ${e.text}</span><button onclick="deleteTodoEntry(${e.id})" class="text-emerald-600 font-bold text-xs">Erledigt</button></li>`).join('');
+            if (shoppingList) shoppingList.innerHTML = shoppingEntries.length === 0 ? '<li class="text-slate-500">Liste ist leer.</li>' : shoppingEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border"><span>🛒 ${e.text}</span><button onclick="deleteShoppingEntry(${e.id})" class="text-emerald-600 font-bold text-xs">Gekauft</button></li>`).join('');
+            if (reminderList) reminderList.innerHTML = reminderEntries.length === 0 ? '<li class="text-slate-500">Keine Erinnerungen.</li>' : reminderEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border"><span>🔔 ${e.text} (${new Date(e.time).toLocaleString('de-DE', {dateStyle:'short', timeStyle:'short'})})</span><button onclick="deleteReminderEntry(${e.id})" class="text-red-600 font-bold text-xs">Löschen</button></li>`).join('');
 
-            const memKeys = Object.keys(memoryItems);
-            categoryContainer.innerHTML = memKeys.length === 0 ? '<p class="text-slate-500 text-xs">Noch nichts im Gedächtnis gespeichert.</p>' : memKeys.map(k => `<div class="flex justify-between items-center text-xs py-1 border-b"><span>• <b>${k}</b>: ${memoryItems[k]}</span><button onclick="deleteMemoryItem('${k}')" class="text-red-600 font-bold">Löschen</button></li>`).join('');
+            if (categoryContainer) {
+                const memKeys = Object.keys(memoryItems);
+                categoryContainer.innerHTML = memKeys.length === 0 ? '<p class="text-slate-500 text-xs">Noch nichts im Gedächtnis gespeichert.</p>' : memKeys.map(k => `<div class="flex justify-between items-center text-xs py-1 border-b"><span>• <b>${k}</b>: ${memoryItems[k]}</span><button onclick="deleteMemoryItem('${k}')" class="text-red-600 font-bold">Löschen</button></div>`).join('');
+            }
         }
     </script>
