@@ -179,7 +179,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 5.0</span>
+        <span>Version 5.1</span>
     </footer>
 
     <!-- JavaScript -->
@@ -399,13 +399,29 @@
             } catch (e) {}
         }
 
+        // Aktualisierte Sprachausgabe mit window.speechSynthesis
         let currentAudio = null;
         function speak(text, onComplete) {
-            if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-            currentAudio = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=de&client=tw-ob`);
-            currentAudio.playbackRate = 1.35;
-            currentAudio.play().catch(() => {});
-            currentAudio.onended = () => { currentAudio = null; if (onComplete) onComplete(); };
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'de-DE';
+                utterance.rate = 1.15; // Zügige, angenehme Sprechgeschwindigkeit
+                
+                utterance.onend = () => {
+                    if (onComplete) onComplete();
+                };
+                
+                window.speechSynthesis.speak(utterance);
+            } else {
+                // Fallback für ältere Browser
+                if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+                currentAudio = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=de&client=tw-ob`);
+                currentAudio.playbackRate = 1.35;
+                currentAudio.play().catch(() => {});
+                currentAudio.onended = () => { currentAudio = null; if (onComplete) onComplete(); };
+            }
         }
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
