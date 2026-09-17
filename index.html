@@ -186,7 +186,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 7.8 (Optimized Briefing & Timezone Fix)</span>
+        <span>Version 7.9 (Friendly Briefing Upgrade)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -690,7 +690,7 @@
                         const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m`);
                         const data = await res.json();
                         resolve({
-                            temperatur: data.current.temperature_2m,
+                            temperatur: Math.round(data.current.temperature_2m),
                             einheit: data.current_units.temperature_2m,
                             niederschlag: data.current.precipitation,
                             windstärke: data.current.wind_speed_10m,
@@ -720,13 +720,13 @@
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'de-DE';
-                utterance.rate = 1.15;
+                utterance.rate = 1.05; // Etwas natürlicher & entspannter im Tempo
                 utterance.onend = () => { if (onComplete) onComplete(); };
                 window.speechSynthesis.speak(utterance);
             } else {
                 if (currentAudio) { currentAudio.pause(); currentAudio = null; }
                 currentAudio = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=de&client=tw-ob`);
-                currentAudio.playbackRate = 1.35;
+                currentAudio.playbackRate = 1.2;
                 currentAudio.play().catch(() => {});
                 currentAudio.onended = () => { currentAudio = null; if (onComplete) onComplete(); };
             }
@@ -780,22 +780,27 @@
             if (recordText) recordText.textContent = "SPRECHEN";
         }
 
-        // --- OPTIMIERTE TAGES-BRIEFING LOGIK (Ausschließlich hier angepasst) ---
+        // --- NATÜRLICHES & FREUNDLICHES TAGES-BRIEFING ---
         async function triggerDailyBriefing() {
-            const timeStr = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+            const now = new Date();
+            const hour = now.getHours();
+            const timeStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
             
-            // 1. UHRZEIT vorlesen (Als erstes)
-            let text = `Guten Tag ${currentUserName}. Es ist ${timeStr} Uhr. `;
+            // Tageszeit-Greeting
+            let greeting = "Guten Morgen";
+            if (hour >= 12 && hour < 18) greeting = "Hallo";
+            if (hour >= 18) greeting = "Guten Abend";
+
+            let text = `${greeting} ${currentUserName}! Es ist jetzt ${timeStr} Uhr. `;
             
-            // 2. WETTER vorlesen (Direkt nach der Uhrzeit)
+            // Wetter einbauen
             if (statusMessage) statusMessage.textContent = "Hole Wetter...";
             const weather = await fetchWeatherData();
             if (weather && !weather.fehler) {
-                text += `Das Wetter aktuell: Es sind ${weather.temperatur} Grad. `;
+                text += `Draußen sind es aktuell rund ${weather.temperatur} Grad. `;
             }
 
-            // 3. TERMINE vorlesen (NUR für HEUTE und MORGEN)
-            const now = new Date();
+            // Termine heute & morgen
             const todayStr = now.toDateString();
             const tomorrow = new Date();
             tomorrow.setDate(now.getDate() + 1);
@@ -814,24 +819,22 @@
                     const isToday = eDateObj.toDateString() === todayStr;
                     const dayLabel = isToday ? 'heute' : 'morgen';
                     return `${e.text} ${dayLabel} um ${timeFormatted} Uhr`;
-                }).join(', ');
-                text += `Deine anstehenden Termine für heute und morgen sind: ${termList}. `;
+                }).join(', sowie ');
+                text += `Hier ist deine Übersicht: Du hast anstehende Termine: ${termList}. `;
             } else {
-                text += "Du hast heute und morgen keine anstehenden Termine. ";
+                text += "Was deine Termine angeht: Für heute und morgen steht nichts weiter im Kalender. ";
             }
 
-            // 4. ERINNERUNGEN vorlesen
+            // Erinnerungen
             if (reminderEntries && reminderEntries.length > 0) {
                 const remList = reminderEntries.map(e => {
                     const timeFormatted = new Date(e.time).toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' });
                     return `${e.text} um ${timeFormatted} Uhr`;
-                }).join(', ');
-                text += `Deine aktiven Erinnerungen lauten: ${remList}. `;
-            } else {
-                text += "Du hast keine aktiven Erinnerungen. ";
+                }).join(' und ');
+                text += `Denk bitte an deine aktiven Erinnerungen: ${remList}. `;
             }
 
-            // 5. WICHTIGE GEGENSTÄNDE aus dem Gedächtnis vorlesen
+            // Wichtige Gegenstände aus dem Gedächtnis
             const memoryKeys = Object.keys(memoryItems);
             const importantKeywords = ['schlüssel', 'schluessel', 'portemonnaie', 'börse', 'geldbörse', 'geld', 'ausweis', 'pass', 'brille', 'handy', 'telefon', 'papiere', 'wichtig'];
             
@@ -842,23 +845,35 @@
             });
 
             if (importantMemoryItems.length > 0) {
-                const memList = importantMemoryItems.map(k => `${k} ist ${memoryItems[k]}`).join(', ');
-                text += `Denk daran: ${memList}. `;
+                const memList = importantMemoryItems.map(k => `dein ${k} liegt ${memoryItems[k]}`).join(', und ');
+                text += `Kurzer Hinweis für unterwegs: ${memList}. `;
             }
 
-            // 6. OFFENE AUFGABEN vorlesen
+            // Offene Aufgaben
             if (todoEntries && todoEntries.length > 0) {
-                const todoListTexts = todoEntries.map(e => e.text).join(', ');
-                text += `Folgende Aufgaben stehen an: ${todoListTexts}. `;
-            } else {
-                text += "Du hast keine offenen Aufgaben. ";
+                if (todoEntries.length === 1) {
+                    text += `Auf deiner Aufgabenliste steht noch: ${todoEntries[0].text}. `;
+                } else {
+                    const todoListTexts = todoEntries.map(e => e.text).join(', ');
+                    text += `Offene Aufgaben hast du aktuell folgende: ${todoListTexts}. `;
+                }
             }
 
-            // 7. EINKAUFSLISTE vorlesen
+            // Einkaufsliste
             if (shoppingEntries && shoppingEntries.length > 0) {
                 const shopList = shoppingEntries.map(e => e.text).join(', ');
-                text += `Auf deiner Einkaufsliste steht: ${shopList}. `;
+                text += `Auf dem Einkaufszettel steht übrigens: ${shopList}. `;
             }
+
+            // Lockerer Abschlusssatz
+            const closingPhrases = [
+                `Das war’s erst mal von mir! Ich wünsche dir noch einen wunderbaren Tag, ${currentUserName}.`,
+                `Damit bist du bestens informiert. Hab einen fantastischen Tag!`,
+                `Das ist der aktuelle Stand. Mach dir einen entspannten Tag, ${currentUserName}!`,
+                `Damit bist du startklar für den Tag. Wir hören uns später!`
+            ];
+            const randomClosing = closingPhrases[Math.floor(Math.random() * closingPhrases.length)];
+            text += randomClosing;
 
             if (statusMessage) statusMessage.textContent = "Briefing aktiv.";
             speak(text);
