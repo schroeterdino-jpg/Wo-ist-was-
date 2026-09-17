@@ -179,7 +179,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 6.7 (Strict Separation)</span>
+        <span>Version 6.9 (Calendar Sync & Clean Separation)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -296,21 +296,30 @@
             }
         }
 
+        // Sekundengenauer Check für lokale App-Erinnerungen inklusive Audio & Benachrichtigung
         setInterval(() => {
             if (reminderEntries.length === 0) return;
             const now = new Date();
+            let updated = false;
+
             reminderEntries.forEach(rem => {
                 const remTime = new Date(rem.time);
                 if (!rem.triggered && remTime <= now) {
                     rem.triggered = true;
-                    setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
+                    updated = true;
+                    
                     if ('Notification' in window && Notification.permission === 'granted') {
-                        new Notification("Erinnerung von deinem Helfer", { body: rem.text, icon: './dino.png' });
+                        new Notification(`Erinnerung für ${currentUserName}`, { body: rem.text, icon: './dino.png' });
                     }
-                    speak(`Erinnerung: ${rem.text}`);
+                    speak(`Erinnerung, ${currentUserName}: ${rem.text}`);
                 }
             });
-        }, 30000);
+
+            if (updated) {
+                setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
+                renderAllLists();
+            }
+        }, 1000);
 
         async function addGoogleCalendarEvent(text, isoStartString) {
             let eventDate = isoStartString ? new Date(isoStartString) : new Date();
@@ -356,10 +365,17 @@
             renderAllLists();
         }
 
-        // NEU: Erinnerungen werden rein intern/in Reminders gespeichert und NICHT mehr als doppelter Termin in den Google Kalender geschrieben
-        function addAppReminder(text, isoTimeString) {
-            reminderEntries.unshift({ id: Date.now(), text, time: isoTimeString || new Date().toISOString(), triggered: false });
+        // ERINNERUNGEN LAUFEN WIEDER ÜBER DEN KALENDER & APP
+        async function addGoogleCalendarReminder(text, isoTimeString) {
+            let remDate = isoTimeString ? new Date(isoTimeString) : new Date();
+            if (isNaN(remDate.getTime())) remDate = new Date();
+
+            // 1. In App-Erinnerungen speichern
+            reminderEntries.unshift({ id: Date.now(), text, time: remDate.toISOString(), triggered: false });
             setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
+
+            // 2. Als Kalendereintrag bei Google speichern (mit Emoji zur Kennzeichnung)
+            await addGoogleCalendarEvent(`🔔 ${text}`, remDate.toISOString());
             renderAllLists();
         }
 
@@ -371,7 +387,7 @@
             const time = timeEl.value;
             if (text && time) {
                 const isoTime = new Date(time).toISOString();
-                addAppReminder(text, isoTime);
+                await addGoogleCalendarReminder(text, isoTime);
                 textEl.value = '';
                 timeEl.value = '';
             }
@@ -481,6 +497,8 @@
                             if (summary.includes('geburtstag') || summary.includes('geb.') || summary.includes('jahrestag') || summary.includes('feier')) return false;
                             if (id.includes('_R') || item.recurringEventId) return false;
                             if (item.start && item.start.date && !item.start.dateTime) return false;
+                            // WICHTIG: Erinnerungen (die mit 🔔 markiert sind) NICHT in der heutigen Termin-Liste anzeigen!
+                            if (summary.includes('🔔') || summary.includes('erinnerung')) return false;
                             return true;
                         });
 
@@ -672,7 +690,7 @@
                                 - memory_key, memory_value
                                 - todo_text
                                 - shopping_item
-                                - reminder_text, reminder_time (ISO-String. WICHTIG: Wenn der Nutzer "um 10 Uhr" sagt, trage hier die exakte Uhrzeit ein!)
+                                - reminder_text, reminder_time (ISO-String)
                                 - calendar_text, calendar_time (ISO-String für echte Termine)
                                 - calendar_delete_query
                                 - call_contact
@@ -696,9 +714,8 @@
                     memoryItems[ai.memory_key.toLowerCase()] = ai.memory_value || "gespeichert";
                     setPersistentData('helfer_memory', JSON.stringify(memoryItems));
                 } else if (ai.type === 'reminder' || ai.reminder_text) {
-                    // Strikt nur in Erinnerungen eintragen, KEIN Kalendereintrag!
                     const rText = ai.reminder_text || text;
-                    addAppReminder(rText, ai.reminder_time);
+                    await addGoogleCalendarReminder(rText, ai.reminder_time);
                 } else if (ai.type === 'calendar_delete' || ai.calendar_delete_query || lowerText.includes('lösch') || lowerText.includes('entfern')) {
                     const query = (ai.calendar_delete_query || text).toLowerCase();
                     const match = calendarEntries.find(e => e.text.toLowerCase().includes(query.replace('lösche', '').replace('termin', '').trim()));
@@ -719,7 +736,7 @@
                     if (lowerText.includes('trage') || lowerText.includes('termin')) {
                         await addGoogleCalendarEvent(text, null);
                     } else {
-                        addAppReminder(text, new Date().toISOString());
+                        await addGoogleCalendarReminder(text, new Date().toISOString());
                     }
                 }
 
@@ -728,9 +745,9 @@
                 speak(ai.reply || `Erledigt, ${currentUserName}.`);
                 if (statusMessage) statusMessage.textContent = "Fertig.";
             } catch (e) {
-                addAppReminder(text, new Date().toISOString());
+                await addGoogleCalendarReminder(text, new Date().toISOString());
                 renderAllLists();
-                speak("Ich habe es als Erinnerung für dich gespeichert.");
+                speak("Ich habe die Erinnerung im Kalender gespeichert.");
                 if (statusMessage) statusMessage.textContent = "Erinnerung erstellt.";
             }
         }
