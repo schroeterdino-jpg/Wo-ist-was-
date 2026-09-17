@@ -12,8 +12,12 @@
     <!-- Eigenes Icon direkt aus dem Projektordner -->
     <link rel="icon" type="image/png" href="./dino.png">
     <link rel="apple-touch-icon" href="./dino.png">
+    
+    <!-- PWA Manifest & App-Modus -->
+    <link rel="manifest" href="./manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1d4ed8">
 
     <style>
         body { font-size: 1.25rem; }
@@ -129,11 +133,20 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-4 text-sm text-slate-600 flex justify-between items-center px-6">
         <span>Einfach bedienbare Web-App</span>
-        <span>Version 4.34</span>
+        <span>Version 4.35</span>
     </footer>
 
     <!-- JavaScript -->
     <script>
+        // Service Worker für PWA registrieren
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker registriert!', reg))
+                    .catch(err => console.log('Service Worker Fehler:', err));
+            });
+        }
+
         const recordBtn = document.getElementById('recordBtn');
         const recordText = document.getElementById('recordText');
         const statusMessage = document.getElementById('statusMessage');
@@ -847,7 +860,6 @@
                 } else if (aiData.type === 'note') {
                     let noteContent = aiData.note_text || text;
                     
-                    // Erstellungsdatum formatiern (z.B. "17.09.2026, 12:20 Uhr" oder "Heute, 12:20 Uhr")
                     const creationDateStr = now.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' });
                     const creationTimeStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
                     const fullCreationStamp = `Eingetragen am ${creationDateStr} um ${creationTimeStr} Uhr`;
@@ -1068,7 +1080,7 @@
                         let capitalizedName = i.key.charAt(0).toUpperCase() + i.key.slice(1);
                         catHtml += `<li class="flex justify-between items-center text-xs py-1 border-b border-slate-200 last:border-none">
                             <span>• <b>${capitalizedName}</b>: ${i.location}</span>
-                            <button onclick="deleteMemoryItem('${i.key}')" class="text-red-600 font-bold ml2">Löschen</button>
+                            <button onclick="deleteMemoryItem('${i.key}')" class="text-red-600 font-bold ml-2">Löschen</button>
                         </li>`;
                     });
 
