@@ -6,11 +6,14 @@
     <title>Mein Alltags-Helfer</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Identity Services -->
+    <!-- Google Identity Services (OAuth / Login) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     
+    <!-- Eigenes Icon direkt aus dem Projektordner -->
     <link rel="icon" type="image/png" href="./dino.png">
     <link rel="apple-touch-icon" href="./dino.png">
+    
+    <!-- PWA Manifest & App-Modus -->
     <link rel="manifest" href="./manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -31,53 +34,28 @@
                 <p id="userNameDisplay" class="text-sm text-blue-100 mt-0.5">Hallo, Dino!</p>
             </div>
             <button onclick="switchSection('settings')" class="bg-blue-800 hover:bg-blue-900 text-white px-3 py-2 rounded-lg text-sm shadow">
-                ⚙️
+                ⚙️ Einstellungen
             </button>
         </div>
     </header>
 
-    <!-- Hauptnavigation / Reiter -->
+    <!-- Hauptnavigation / Reiter (Die 7 Kernbereiche) -->
     <nav class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-50 overflow-x-auto">
         <div class="flex max-w-md mx-auto px-1 py-2 gap-1 text-xs font-bold whitespace-nowrap">
-            <button id="navNow" onclick="switchSection('now')" class="flex-1 py-2 px-2 rounded-lg bg-blue-600 text-white shadow transition">⚡ JETZT</button>
-            <button id="navSpeak" onclick="switchSection('speak')" class="flex-1 py-2 px-2 rounded-lg text-slate-600 hover:bg-slate-100 transition">🎙️ Sprechen</button>
+            <button id="navSpeak" onclick="switchSection('speak')" class="flex-1 py-2 px-2 rounded-lg bg-blue-600 text-white shadow transition">🎙️ Sprechen</button>
             <button id="navToday" onclick="switchSection('today')" class="flex-1 py-2 px-2 rounded-lg text-slate-600 hover:bg-slate-100 transition">📅 Heute</button>
             <button id="navReminders" onclick="switchSection('reminders')" class="flex-1 py-2 px-2 rounded-lg text-slate-600 hover:bg-slate-100 transition">🔔 Erinnerungen</button>
             <button id="navTodos" onclick="switchSection('todos')" class="flex-1 py-2 px-2 rounded-lg text-slate-600 hover:bg-slate-100 transition">📝 Aufgaben</button>
             <button id="navMemory" onclick="switchSection('memory')" class="flex-1 py-2 px-2 rounded-lg text-slate-600 hover:bg-slate-100 transition">🧠 Gedächtnis</button>
-            <button id="navShopping" onclick="switchSection('shopping')" class="flex-1 py-2 px-2 rounded-lg text-slate-600 hover:bg-slate-100 transition">🛒 Einkauf</button>
+            <button id="navShopping" onclick="switchSection('shopping')" class="flex-1 py-2 px-2 rounded-lg text-slate-600 hover:bg-slate-100 transition">🛒 Einkaufsliste</button>
         </div>
     </nav>
 
     <!-- Hauptbereich -->
     <main class="container mx-auto p-4 max-w-md flex-grow flex flex-col space-y-4">
 
-        <!-- Sektion 0: JETZT (Dashbaord) -->
-        <section id="sec-now" class="space-y-4">
-            <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-5 rounded-2xl shadow-lg space-y-3">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold">⚡ Aktueller Status</h2>
-                    <span id="nowWeatherWidget" class="text-sm font-medium bg-white/20 px-3 py-1 rounded-full">Lade Wetter...</span>
-                </div>
-                <div id="nowSummaryCard" class="bg-white/10 p-3 rounded-xl text-sm space-y-2">
-                    <p>🔄 Lade Übersicht...</p>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-                <button onclick="triggerForgetMeNot()" class="bg-amber-500 hover:bg-amber-600 text-white p-4 rounded-2xl shadow font-bold text-sm flex flex-col items-center justify-center gap-1">
-                    <span class="text-2xl">🧳</span>
-                    <span>Nicht vergessen!</span>
-                </button>
-                <button onclick="triggerDailyBriefing()" class="bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-2xl shadow font-bold text-sm flex flex-col items-center justify-center gap-1">
-                    <span class="text-2xl">🌅</span>
-                    <span>Tages-Briefing</span>
-                </button>
-            </div>
-        </section>
-
         <!-- Sektion 1: SPRECHEN -->
-        <section id="sec-speak" class="hidden flex flex-col items-center justify-center space-y-6 my-auto py-6">
+        <section id="sec-speak" class="flex flex-col items-center justify-center space-y-6 my-auto py-6">
             <button id="recordBtn" onclick="toggleSpeechRecognition()" class="w-44 h-44 bg-red-600 hover:bg-red-700 text-white rounded-full flex flex-col items-center justify-center shadow-2xl transition transform active:scale-95 border-4 border-white cursor-pointer">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
@@ -85,12 +63,16 @@
                 <span id="recordText" class="text-sm font-semibold tracking-wide">SPRECHEN</span>
             </button>
             <p id="statusMessage" class="text-center font-medium text-slate-700 h-6">Drücken und sprechen...</p>
+
+            <button onclick="triggerDailyBriefing()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-xl shadow-md font-bold text-base flex items-center justify-center gap-2">
+                🌅 Intelligentes Tages-Briefing starten
+            </button>
         </section>
 
-        <!-- Sektion 2: HEUTE (Termine) -->
+        <!-- Sektion 2: HEUTE (Termine & Übersicht) -->
         <section id="sec-today" class="hidden space-y-4">
             <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200">
-                <h2 class="text-xl font-bold text-blue-800 mb-3">📅 Anstehende Termine:</h2>
+                <h2 class="text-xl font-bold text-blue-800 mb-3">📅 Heutige Termine:</h2>
                 <ul id="calendarList" class="space-y-2 text-base">
                     <li class="text-slate-500">Keine Termine eingetragen.</li>
                 </ul>
@@ -102,19 +84,11 @@
             <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
                 <div class="flex justify-between items-center">
                     <h2 class="text-xl font-bold text-blue-800">🔔 Aktive Erinnerungen:</h2>
-                    <button onclick="requestNotificationPermission()" class="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg font-semibold">Erlauben</button>
+                    <button onclick="requestNotificationPermission()" class="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg font-semibold">Benachrichtigungen erlauben</button>
                 </div>
-                <div class="space-y-2">
-                    <input type="text" id="manualReminderText" placeholder="Was soll erinnert werden?" class="w-full p-2 border rounded-lg text-sm">
-                    <div class="flex gap-2">
-                        <input type="datetime-local" id="manualReminderTime" class="w-1/2 p-2 border rounded-lg text-sm">
-                        <select id="manualReminderRepeat" class="w-1/2 p-2 border rounded-lg text-sm bg-slate-50">
-                            <option value="none">Einmalig</option>
-                            <option value="daily">Täglich</option>
-                            <option value="weekly">Wöchentlich</option>
-                            <option value="monthly">Monatlich</option>
-                        </select>
-                    </div>
+                <div class="flex gap-2">
+                    <input type="text" id="manualReminderText" placeholder="Was soll erinnert werden?" class="flex-grow p-2 border rounded-lg text-sm">
+                    <input type="datetime-local" id="manualReminderTime" class="p-2 border rounded-lg text-sm">
                 </div>
                 <button onclick="addManualReminder()" class="w-full bg-blue-700 text-white py-2 rounded-lg text-sm font-semibold">Erinnerung speichern</button>
                 <ul id="reminderList" class="space-y-2 text-sm mt-3">
@@ -123,13 +97,13 @@
             </div>
         </section>
 
-        <!-- Sektion 4: AUFGABEN -->
+        <!-- Sektion 4: AUFGABEN (To-Dos) -->
         <section id="sec-todos" class="hidden space-y-4">
             <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
                 <h2 class="text-xl font-bold text-blue-800">📝 Aufgaben & Notizen:</h2>
                 <div class="flex gap-2">
                     <input type="text" id="manualTodoInput" placeholder="Neue Aufgabe..." class="flex-grow p-2 border rounded-lg text-sm">
-                    <button onclick="addManualTodo()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">＋</button>
+                    <button onclick="addManualTodo()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">Hinzufügen</button>
                 </div>
                 <ul id="todoList" class="space-y-2 text-base mt-2">
                     <li class="text-slate-500">Keine offenen To-Dos.</li>
@@ -137,14 +111,15 @@
             </div>
         </section>
 
-        <!-- Sektion 5: GEDÄCHTNIS -->
+        <!-- Sektion 5: GEDÄCHTNIS (Gegenstände & Infos) -->
         <section id="sec-memory" class="hidden space-y-4">
             <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
                 <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-blue-800">🧠 Digitales Gedächtnis:</h2>
+                    <h2 class="text-xl font-bold text-blue-800">🧠 Digitales Langzeitgedächtnis:</h2>
                     <button onclick="clearAllMemory()" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold">🗑️ Leeren</button>
                 </div>
-                <div id="categoryContainer" class="space-y-3 text-sm max-h-80 overflow-y-auto">
+                <p class="text-xs text-slate-500">Erzähl mir beliebige Fakten, Orte oder Notizen (z.B. „Der Ersatzschlüssel ist in der Schublade“).</p>
+                <div id="categoryContainer" class="space-y-3 text-sm bg-slate-50 p-3 rounded-lg border border-slate-200 max-h-64 overflow-y-auto">
                     <p class="text-slate-500 text-xs">Noch nichts im Gedächtnis gespeichert.</p>
                 </div>
             </div>
@@ -153,16 +128,9 @@
         <!-- Sektion 6: EINKAUFSLISTE -->
         <section id="sec-shopping" class="hidden space-y-4">
             <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-blue-800">🛒 Einkaufsliste:</h2>
-                    <select id="shoppingListSelect" onchange="renderAllLists()" class="p-1 border rounded-lg text-xs font-bold bg-slate-50">
-                        <option value="Allgemein">🛒 Allgemein</option>
-                        <option value="Supermarkt">Lidl/Penny</option>
-                        <option value="Baumarkt">Baumarkt</option>
-                    </select>
-                </div>
+                <h2 class="text-xl font-bold text-blue-800">🛒 Einkaufsliste:</h2>
                 <div class="flex gap-2">
-                    <input type="text" id="manualShoppingInput" placeholder="Artikel (z.B. 2x Milch)..." class="flex-grow p-2 border rounded-lg text-sm">
+                    <input type="text" id="manualShoppingInput" placeholder="Artikel hinzufügen..." class="flex-grow p-2 border rounded-lg text-sm">
                     <button onclick="addManualShoppingItem()" class="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">＋</button>
                 </div>
                 <ul id="shoppingList" class="space-y-2 text-base mt-2">
@@ -187,14 +155,16 @@
                     <label class="block text-sm font-bold text-slate-700 mb-1">Google Client-ID:</label>
                     <input type="text" id="googleClientIdInput" placeholder="Client ID..." class="w-full p-2 border rounded-lg text-sm bg-slate-50">
                 </div>
+                <!-- Standort-Berechtigung -->
                 <div class="border-t pt-3">
                     <label class="block text-sm font-bold text-slate-700 mb-1">📍 GPS & Standort:</label>
                     <button onclick="requestLocationPermission()" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-2 rounded-lg text-sm font-semibold">
                         Standort-Zugriff aktivieren
                     </button>
                 </div>
+                <!-- Kontakte -->
                 <div class="border-t pt-3">
-                    <label class="block text-sm font-bold text-slate-700 mb-1">📞 Kontakte & Personen:</label>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">📞 Schnell-Anruf Kontakte:</label>
                     <div class="flex gap-2 mb-2">
                         <input type="text" id="contactNameInput" placeholder="Name (z.B. Simone)" class="w-1/2 p-2 border rounded-lg text-sm bg-slate-50">
                         <input type="text" id="contactPhoneInput" placeholder="Nummer..." class="w-1/2 p-2 border rounded-lg text-sm bg-slate-50">
@@ -216,7 +186,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 9.0 (Pro-Assistant Edition)</span>
+        <span>Version 8.0 (Multi-Item Upgrade)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -228,7 +198,7 @@
         }
 
         function switchSection(sectionId) {
-            const sections = ['now', 'speak', 'today', 'reminders', 'todos', 'memory', 'shopping', 'settings'];
+            const sections = ['speak', 'today', 'reminders', 'todos', 'memory', 'shopping', 'settings'];
             sections.forEach(s => {
                 const el = document.getElementById(`sec-${s}`);
                 if (el) el.classList.add('hidden');
@@ -241,8 +211,6 @@
             
             const activeNav = document.getElementById(`nav${sectionId.charAt(0).toUpperCase() + sectionId.slice(1)}`);
             if (activeNav) activeNav.className = "flex-1 py-2 px-2 rounded-lg bg-blue-600 text-white shadow transition";
-            
-            if (sectionId === 'now') updateNowDashboard();
         }
 
         const recordBtn = document.getElementById('recordBtn');
@@ -326,7 +294,6 @@
 
         renderAllLists();
         renderContactList();
-        updateNowDashboard();
 
         function requestNotificationPermission() {
             if ('Notification' in window) {
@@ -338,17 +305,16 @@
 
         function requestLocationPermission() {
             if (!navigator.geolocation) {
-                alert('Geolokalisation wird nicht unterstützt.');
+                alert('Geolokalisation wird von deinem Browser nicht unterstützt.');
                 return;
             }
             navigator.geolocation.getCurrentPosition(
                 () => alert('Standortzugriff erfolgreich aktiviert!'),
-                (err) => alert('Standortzugriff verweigert: ' + err.message),
+                (err) => alert('Standortzugriff verweigert oder Fehler: ' + err.message),
                 { enableHighAccuracy: true, timeout: 10000 }
             );
         }
 
-        // Timer für Erinnerungen mit Wiederholung
         setInterval(() => {
             if (reminderEntries.length === 0) return;
             const now = new Date();
@@ -364,29 +330,12 @@
                         new Notification(`Erinnerung für ${currentUserName}`, { body: rem.text, icon: './dino.png' });
                     }
                     speak(`Erinnerung, ${currentUserName}: ${rem.text}`);
-
-                    // Wiederkehrende Intervall-Logik
-                    if (rem.repeat && rem.repeat !== 'none') {
-                        let nextTime = new Date(remTime);
-                        if (rem.repeat === 'daily') nextTime.setDate(nextTime.getDate() + 1);
-                        else if (rem.repeat === 'weekly') nextTime.setDate(nextTime.getDate() + 7);
-                        else if (rem.repeat === 'monthly') nextTime.setMonth(nextTime.getMonth() + 1);
-                        
-                        reminderEntries.push({
-                            id: Date.now(),
-                            text: rem.text,
-                            time: nextTime.toISOString(),
-                            repeat: rem.repeat,
-                            triggered: false
-                        });
-                    }
                 }
             });
 
             if (updated) {
                 setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
                 renderAllLists();
-                updateNowDashboard();
             }
         }, 1000);
 
@@ -403,6 +352,7 @@
                 scope: 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly',
                 callback: (response) => {
                     if (response.error) {
+                        console.error("OAuth Fehler:", response);
                         if (response.error === 'interaction_required' || response.error === 'login_required') {
                             tokenClient.requestAccessToken({ prompt: 'consent' });
                         }
@@ -428,10 +378,12 @@
 
         function loginWithGoogle(silent = false, onComplete = null) {
             if (onComplete) pendingAction = onComplete;
+            
             if (!tokenClient) {
                 const ok = initTokenClient();
                 if (!ok) { alert('Client-ID fehlt!'); return; }
             }
+
             tokenClient.requestAccessToken({ prompt: silent ? 'none' : 'consent' });
         }
 
@@ -439,8 +391,16 @@
             if (accessToken) {
                 if (connectionStatus) connectionStatus.textContent = "✅ Verbunden (Sitzung aktiv)";
                 fetchGoogleCalendarEvents();
+            } else {
+                if (connectionStatus) connectionStatus.textContent = "Nicht verbunden. Klicke auf Verbinden.";
             }
         });
+
+        setInterval(() => {
+            if (accessToken) {
+                loginWithGoogle(true);
+            }
+        }, 50 * 60 * 1000);
 
         async function addGoogleCalendarEvent(text, isoStartString) {
             let eventDate = isoStartString ? new Date(isoStartString) : new Date();
@@ -459,7 +419,10 @@
                 try {
                     const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
                         method: 'POST',
-                        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json'
+                        },
                         body: JSON.stringify(eventData)
                     });
                     if (res.status === 401) {
@@ -472,7 +435,9 @@
                         fetchGoogleCalendarEvents();
                         return;
                     }
-                } catch (e) {}
+                } catch (e) {
+                    console.error("Google Sync Fehler", e);
+                }
             }
 
             calendarEntries.unshift({
@@ -483,36 +448,52 @@
             });
             setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
             renderAllLists();
-            updateNowDashboard();
         }
 
-        async function addGoogleCalendarReminder(text, isoTimeString, repeat = 'none') {
+        async function addGoogleCalendarReminder(text, isoTimeString) {
             let remDate = isoTimeString ? new Date(isoTimeString) : new Date();
             if (isNaN(remDate.getTime())) remDate = new Date();
 
-            reminderEntries.unshift({
-                id: Date.now(),
-                text: text,
-                time: remDate.toISOString(),
-                repeat: repeat,
-                triggered: false
-            });
+            let googleEventId = null;
+
+            const eventData = {
+                summary: `🔔 ${text}`,
+                start: { dateTime: remDate.toISOString() },
+                end: { dateTime: new Date(remDate.getTime() + 30 * 60000).toISOString() }
+            };
+
+            if (accessToken) {
+                try {
+                    const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify(eventData)
+                    });
+                    if (res.status === 401) {
+                        loginWithGoogle(true, () => addGoogleCalendarReminder(text, isoTimeString));
+                        return;
+                    }
+                    if (res.ok) {
+                        const data = await res.json();
+                        googleEventId = data.id;
+                    }
+                } catch (e) {}
+            }
+
+            reminderEntries.unshift({ id: Date.now(), googleId: googleEventId, text, time: remDate.toISOString(), triggered: false });
             setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
             renderAllLists();
-            updateNowDashboard();
         }
 
         async function addManualReminder() {
             const textEl = document.getElementById('manualReminderText');
             const timeEl = document.getElementById('manualReminderTime');
-            const repeatEl = document.getElementById('manualReminderRepeat');
             if (!textEl || !timeEl) return;
             const text = textEl.value.trim();
             const time = timeEl.value;
-            const repeat = repeatEl ? repeatEl.value : 'none';
             if (text && time) {
                 const isoTime = new Date(time).toISOString();
-                await addGoogleCalendarReminder(text, isoTime, repeat);
+                await addGoogleCalendarReminder(text, isoTime);
                 textEl.value = '';
                 timeEl.value = '';
             }
@@ -527,22 +508,18 @@
                 setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
                 inputEl.value = '';
                 renderAllLists();
-                updateNowDashboard();
             }
         }
 
         function addManualShoppingItem() {
             const inputEl = document.getElementById('manualShoppingInput');
-            const listSelect = document.getElementById('shoppingListSelect');
             if (!inputEl) return;
             const val = inputEl.value.trim();
-            const listCat = listSelect ? listSelect.value : 'Allgemein';
             if (val) {
-                shoppingEntries.unshift({ id: Date.now(), text: val, list: listCat });
+                shoppingEntries.unshift({ id: Date.now(), text: val });
                 setPersistentData('helfer_shopping', JSON.stringify(shoppingEntries));
                 inputEl.value = '';
                 renderAllLists();
-                updateNowDashboard();
             }
         }
 
@@ -573,6 +550,7 @@
         async function fetchGoogleCalendarEvents() {
             if (!accessToken) return;
             const nowIso = new Date().toISOString();
+            
             const futureDate = new Date();
             futureDate.setDate(futureDate.getDate() + 14);
             const maxIso = futureDate.toISOString();
@@ -590,7 +568,11 @@
                     if (data.items) {
                         const filteredItems = data.items.filter(item => {
                             const summary = (item.summary || '').toLowerCase();
-                            if (summary.includes('geburtstag') || summary.includes('geb.')) return false;
+                            const id = (item.id || '');
+                            if (summary.includes('geburtstag') || summary.includes('geb.') || summary.includes('jahrestag')) return false;
+                            if (id.includes('_R') || item.recurringEventId) return false;
+                            if (item.start && item.start.date && !item.start.dateTime) return false;
+                            if (summary.includes('🔔') || summary.includes('erinnerung')) return false;
                             return true;
                         });
 
@@ -605,7 +587,6 @@
                         });
                         setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
                         renderAllLists();
-                        updateNowDashboard();
                     }
                 }
             } catch (e) {}
@@ -613,38 +594,112 @@
 
         async function deleteCalendarEntry(id) {
             if (accessToken && id && typeof id === 'string' && !id.startsWith('local_')) {
+                const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${id}`;
                 try {
-                    await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${id}`, {
+                    const res = await fetch(url, {
                         method: 'DELETE',
                         headers: { 'Authorization': `Bearer ${accessToken}` }
                     });
-                } catch (e) {}
+                    if (res.status === 401) {
+                        loginWithGoogle(true, () => deleteCalendarEntry(id));
+                        return;
+                    }
+                } catch (e) {
+                    console.error("Fehler beim Löschen im Google Kalender", e);
+                }
             }
+
             calendarEntries = calendarEntries.filter(e => e.id !== id);
             setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
             renderAllLists();
-            updateNowDashboard();
         }
 
         async function deleteReminderEntry(id) {
+            const rem = reminderEntries.find(e => e.id === id);
+            if (rem && accessToken) {
+                let targetGoogleId = rem.googleId;
+                
+                if (!targetGoogleId) {
+                    try {
+                        const nowIso = new Date().toISOString();
+                        const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${nowIso}&singleEvents=true`;
+                        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+                        if (res.status === 401) {
+                            loginWithGoogle(true, () => deleteReminderEntry(id));
+                            return;
+                        }
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.items) {
+                                const match = data.items.find(item => item.summary && item.summary.includes(rem.text));
+                                if (match) targetGoogleId = match.id;
+                            }
+                        }
+                    } catch (e) {}
+                }
+
+                if (targetGoogleId) {
+                    try {
+                        const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${targetGoogleId}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': `Bearer ${accessToken}` }
+                        });
+                        if (res.status === 401) {
+                            loginWithGoogle(true, () => deleteReminderEntry(id));
+                            return;
+                        }
+                    } catch (e) {}
+                }
+            }
+
             reminderEntries = reminderEntries.filter(e => e.id !== id);
             setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
             renderAllLists();
-            updateNowDashboard();
+        }
+
+        async function fetchLocationData() {
+            return new Promise((resolve) => {
+                if (!navigator.geolocation) {
+                    resolve({ fehler: "Geolokalisierung wird von deinem Browser nicht unterstützt." });
+                    return;
+                }
+                navigator.geolocation.getCurrentPosition(async (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    try {
+                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`);
+                        const data = await res.json();
+                        resolve({
+                            adresse: data.display_name || "Unbekannte Adresse",
+                            details: data.address || {},
+                            koordinaten: { lat, lon }
+                        });
+                    } catch (e) {
+                        resolve({ fehler: "Adresse konnte nicht aus den Koordinaten ermittelt werden.", koordinaten: { lat, lon } });
+                    }
+                }, (err) => {
+                    resolve({ fehler: "Standortzugriff im Browser verweigert oder fehlgeschlagen. Bitte in den Einstellungen erlauben." });
+                }, { timeout: 10000, enableHighAccuracy: true });
+            });
         }
 
         async function fetchWeatherData() {
             return new Promise((resolve) => {
                 const getMeteo = async (lat, lon) => {
                     try {
-                        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`);
+                        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m`);
                         const data = await res.json();
                         resolve({
                             temperatur: Math.round(data.current.temperature_2m),
+                            einheit: data.current_units.temperature_2m,
                             niederschlag: data.current.precipitation,
-                            windstärke: data.current.wind_speed_10m
+                            windstärke: data.current.wind_speed_10m,
+                            wettercode: data.current.weather_code,
+                            koordinaten: { lat, lon }
                         });
-                    } catch (e) { resolve(null); }
+                    } catch (e) {
+                        resolve({ fehler: "Wetterdaten konnten nicht geladen werden." });
+                    }
                 };
 
                 if (navigator.geolocation) {
@@ -653,32 +708,10 @@
                         () => getMeteo(53.5511, 9.9937),
                         { timeout: 5000 }
                     );
-                } else { getMeteo(53.5511, 9.9937); }
+                } else {
+                    getMeteo(53.5511, 9.9937);
+                }
             });
-        }
-
-        async function updateNowDashboard() {
-            const nowWidget = document.getElementById('nowWeatherWidget');
-            const summaryCard = document.getElementById('nowSummaryCard');
-            if (!summaryCard) return;
-
-            const weather = await fetchWeatherData();
-            if (weather && nowWidget) {
-                nowWidget.textContent = `🌡️ ${weather.temperatur}°C`;
-            }
-
-            const nextTerm = calendarEntries.length > 0 ? `${calendarEntries[0].text} (${calendarEntries[0].date})` : 'Keine Termine';
-            const activeRems = reminderEntries.filter(r => !r.triggered);
-            const nextRem = activeRems.length > 0 ? `${activeRems[0].text} (${new Date(activeRems[0].time).toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'})})` : 'Keine';
-            const openTodos = todoEntries.length;
-            const shoppingCount = shoppingEntries.length;
-
-            summaryCard.innerHTML = `
-                <div class="flex items-center gap-2"><span>📅 Nächster Termin:</span> <b>${nextTerm}</b></div>
-                <div class="flex items-center gap-2"><span>🔔 Nächste Erinnerung:</span> <b>${nextRem}</b></div>
-                <div class="flex items-center gap-2"><span>📝 Offene Aufgaben:</span> <b>${openTodos}</b></div>
-                <div class="flex items-center gap-2"><span>🛒 Auf dem Einkaufszettel:</span> <b>${shoppingCount} Artikel</b></div>
-            `;
         }
 
         let currentAudio = null;
@@ -731,7 +764,7 @@
                 return;
             }
             if (!recognition) {
-                alert('Spracherkennung wird nicht unterstützt.');
+                alert('Spracherkennung wird von diesem Browser leider nicht unterstützt.');
                 return;
             }
             if (isRecording) recognition.stop();
@@ -747,75 +780,161 @@
             if (recordText) recordText.textContent = "SPRECHEN";
         }
 
-        // --- NICHT-VERGESSEN-MODUS ---
-        function triggerForgetMeNot() {
-            let text = `Hallo ${currentUserName}, hier ist dein Schnell-Check: `;
-            const activeRems = reminderEntries.filter(r => !r.triggered);
+        // --- NATÜRLICHES & FREUNDLICHES TAGES-BRIEFING ---
+        async function triggerDailyBriefing() {
+            const now = new Date();
+            const hour = now.getHours();
+            const timeStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
             
-            if (activeRems.length > 0) {
-                text += `Denk an deine Erinnerungen: ${activeRems.map(r => r.text).join(', ')}. `;
+            let greeting = "Guten Morgen";
+            if (hour >= 12 && hour < 18) greeting = "Hallo";
+            if (hour >= 18) greeting = "Guten Abend";
+
+            let text = `${greeting} ${currentUserName}! Es ist jetzt ${timeStr} Uhr. `;
+            
+            if (statusMessage) statusMessage.textContent = "Hole Wetter...";
+            const weather = await fetchWeatherData();
+            if (weather && !weather.fehler) {
+                const temp = weather.temperatur;
+                const regen = weather.niederschlag;
+                const wind = weather.windstärke;
+
+                text += `Draußen sind es aktuell ${temp} Grad. `;
+
+                // Empfehlungen zur Bekleidung
+                if (temp < 10) {
+                    text += "Es ist recht kalt, zieh dir am besten eine dicke Winterjacke an. ";
+                } else if (temp < 18) {
+                    text += "Nimm heute auf jeden Fall eine Übergangsjacke mit. ";
+                } else if (temp < 22) {
+                    text += "Eine leichte Strickjacke oder dünne Jacke reicht heute völlig aus. ";
+                } else {
+                    text += "Es ist schön warm, du brauchst heute keine Jacke! ";
+                }
+
+                // Hinweis auf Regenschirm / Niederschlag
+                if (regen > 0) {
+                    text += "Es regnet aktuell oder ist Regen gemeldet – nimm unbedingt einen Regenschirm mit! ";
+                }
+
+                // Hinweis auf Wind
+                if (wind > 25) {
+                    text += "Achte darauf, dass es draußen ziemlich windig ist. ";
+                }
             }
-            if (todoEntries.length > 0) {
-                text += `Dringende Aufgaben: ${todoEntries.slice(0, 3).map(t => t.text).join(', ')}. `;
+
+            const todayStr = now.toDateString();
+            const tomorrow = new Date();
+            tomorrow.setDate(now.getDate() + 1);
+            const tomorrowStr = tomorrow.toDateString();
+
+            const filteredCalendarEntries = (calendarEntries || []).filter(e => {
+                if (!e.isoDate) return true;
+                const eDate = new Date(e.isoDate).toDateString();
+                return eDate === todayStr || eDate === tomorrowStr;
+            });
+
+            if (filteredCalendarEntries.length > 0) {
+                const termList = filteredCalendarEntries.map(e => {
+                    const eDateObj = new Date(e.isoDate);
+                    const timeFormatted = eDateObj.toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' });
+                    const isToday = eDateObj.toDateString() === todayStr;
+                    const dayLabel = isToday ? 'heute' : 'morgen';
+                    return `${e.text} ${dayLabel} um ${timeFormatted} Uhr`;
+                }).join(', sowie ');
+                text += `Hier ist deine Übersicht: Du hast anstehende Termine: ${termList}. `;
+            } else {
+                text += "Was deine Termine angeht: Für heute und morgen steht nichts weiter im Kalender. ";
             }
-            if (shoppingEntries.length > 0) {
-                text += `Auf der Einkaufsliste steht unter anderem: ${shoppingEntries.slice(0, 3).map(s => s.text).join(', ')}. `;
+
+            if (reminderEntries && reminderEntries.length > 0) {
+                const remList = reminderEntries.map(e => {
+                    const timeFormatted = new Date(e.time).toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' });
+                    return `${e.text} um ${timeFormatted} Uhr`;
+                }).join(' und ');
+                text += `Denk bitte an deine aktiven Erinnerungen: ${remList}. `;
             }
 
             const memoryKeys = Object.keys(memoryItems);
-            const essential = memoryKeys.filter(k => k.includes('schlüssel') || k.includes('brille') || k.includes('geld') || k.includes('ausweis'));
-            if (essential.length > 0) {
-                text += `Wichtige Ablageorte: ${essential.map(k => {
-                    const itemVal = typeof memoryItems[k] === 'object' ? memoryItems[k].val : memoryItems[k];
-                    return `${k} ist${itemVal}`;
-                }).join(', ')}. `;
-            }
-
-            text += "Du bist startklar!";
-            speak(text);
-        }
-
-        // --- TAGES-BRIEFING ---
-        async function triggerDailyBriefing() {
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-            let text = `Guten Tag ${currentUserName}! Es ist ${timeStr} Uhr. `;
+            const importantKeywords = ['schlüssel', 'schluessel', 'portemonnaie', 'börse', 'geldbörse', 'geld', 'ausweis', 'pass', 'brille', 'handy', 'telefon', 'papiere', 'wichtig'];
             
-            const weather = await fetchWeatherData();
-            if (weather) {
-                text += `Aktuell sind es ${weather.temperatur} Grad draußen. `;
-                if (weather.temperatur < 12) text += "Zieh dir eine warme Jacke an. ";
-                if (weather.niederschlag > 0) text += "Nimm einen Regenschirm mit! ";
+            const importantMemoryItems = memoryKeys.filter(key => {
+                const lowerKey = key.toLowerCase();
+                const lowerVal = String(memoryItems[key]).toLowerCase();
+                return importantKeywords.some(kw => lowerKey.includes(kw) || lowerVal.includes(kw));
+            });
+
+            if (importantMemoryItems.length > 0) {
+                const memList = importantMemoryItems.map(k => `${k} liegt ${memoryItems[k]}`).join(', und ');
+                text += `Kurzer Hinweis für unterwegs: ${memList}. `;
             }
 
-            if (calendarEntries.length > 0) {
-                text += `Deine nächsten Termine: ${calendarEntries.slice(0, 2).map(e => e.text).join(' sowie ')}. `;
-            } else {
-                text += "Du hast aktuell keine anstehenden Termine im Kalender. ";
+            if (todoEntries && todoEntries.length > 0) {
+                if (todoEntries.length === 1) {
+                    text += `Auf deiner Aufgabenliste steht noch: ${todoEntries[0].text}. `;
+                } else {
+                    const todoListTexts = todoEntries.map(e => e.text).join(', ');
+                    text += `Offene Aufgaben hast du aktuell folgende: ${todoListTexts}. `;
+                }
             }
 
-            text += `Einen wunderbaren Tag noch, ${currentUserName}!`;
+            if (shoppingEntries && shoppingEntries.length > 0) {
+                const shopList = shoppingEntries.map(e => e.text).join(', ');
+                text += `Auf dem Einkaufszettel steht übrigens: ${shopList}. `;
+            }
+
+            const closingPhrases = [
+                `Das war’s erst mal von mir! Ich wünsche dir noch einen wunderbaren Tag, ${currentUserName}.`,
+                `Damit bist du bestens informiert. Hab einen fantastischen Tag!`,
+                `Das ist der aktuelle Stand. Mach dir einen entspannten Tag, ${currentUserName}!`,
+                `Damit bist du startklar für den Tag. Wir hören uns später!`
+            ];
+            const randomClosing = closingPhrases[Math.floor(Math.random() * closingPhrases.length)];
+            text += randomClosing;
+
+            if (statusMessage) statusMessage.textContent = "Briefing aktiv.";
             speak(text);
         }
 
         async function sendToGroqSmart(text) {
             const key = getPersistentData('user_api_key', '');
-            if (statusMessage) statusMessage.textContent = "Verarbeite...";
+            if (statusMessage) statusMessage.textContent = "Verarbeite Befehl...";
 
-            // Gedächtnis für den KI-Kontext sauber in Textform aufbereiten, damit kein [object Object] gesendet wird
-            const plainMemory = {};
-            Object.keys(memoryItems).forEach(k => {
-                plainMemory[k] = typeof memoryItems[k] === 'object' ? memoryItems[k].val : memoryItems[k];
-            });
+            let weatherInfo = null;
+            let locationInfo = null;
+            const lowerText = text.toLowerCase();
+
+            if (lowerText.includes('wo bin ich') || lowerText.includes('wo befinde ich') || lowerText.includes('mein standort') || lowerText.includes('aktueller ort') || lowerText.includes('welche straße') || lowerText.includes('welcher ort') || lowerText.includes('wo bin') || lowerText.includes('wo sind wir')) {
+                if (statusMessage) statusMessage.textContent = "Bestimme Standort...";
+                locationInfo = await fetchLocationData();
+            }
+
+            if (
+                lowerText.includes('wetter') || 
+                lowerText.includes('regenschirm') || 
+                lowerText.includes('regen') || 
+                lowerText.includes('draußen') || 
+                lowerText.includes('grad') || 
+                lowerText.includes('temperatur') ||
+                lowerText.includes('jacke') ||
+                lowerText.includes('anziehen') ||
+                lowerText.includes('kalt') ||
+                lowerText.includes('warm') ||
+                lowerText.includes('sonne') ||
+                lowerText.includes('frieren')
+            ) {
+                if (statusMessage) statusMessage.textContent = "Hole Wetter...";
+                weatherInfo = await fetchWeatherData();
+            }
 
             const contextData = {
                 heute_datum: new Date().toISOString(),
-                gedächtnis: plainMemory,
+                gedächtnis: memoryItems,
                 kontakte: savedContacts,
                 termine: calendarEntries,
                 erinnerungen: reminderEntries,
-                aufgaben: todoEntries,
-                einkauf: shoppingEntries
+                wetter: weatherInfo,
+                standort: locationInfo
             };
 
             try {
@@ -828,28 +947,46 @@
                         messages: [
                             {
                                 role: "system",
-                                content: `Du bist ${currentUserName}s smarter Alltags-Assistent. Aktueller Kontext: ${JSON.stringify(contextData)}.
-                                Analysiere den Sprachbefehl und entscheide präzise:
+                                content: `Du bist ${currentUserName}s smarter, persönlicher Alltags-Assistent. Aktueller Kontext: ${JSON.stringify(contextData)}.
+                                Analysiere den Sprachbefehl des Benutzers und unterscheide PRÄZISE:
                                 
-                                KATEGORIEN:
-                                - "query_info": Wenn der Benutzer wissen möchte, was auf Listen steht oder wo Dinge sind ("Was muss ich einkaufen?", "Wo ist meine Brille?", "Was steht morgen an?"). Beantworte die Frage in 'reply' direkt aus den Kontextdaten!
-                                - "memory_store": Dinge merken ("Der Schlüssel ist im Flur", "Ich packe den Schlüssel ans Klemmbrett am Kühlschrank"). Speichere mit präzisem Begriff ("dein Schlüssel") und als 'memory_value' den genauen Ablageort (z.B. "hängt am Klemmbrett am Kühlschrank"). Weise eine Kategorie zu: "🔑 Schlüssel", "📄 Dokumente", "🔧 Werkzeug", "🏠 Haushalt", "🚗 Auto", "📦 Sonstiges".
-                                - "shopping": Einkaufsartikel.
-                                - "todo": Aufgaben.
-                                - "reminder": Erinnerung ("Erinnere mich um 15 Uhr"). Extrahiere 'repeat' ("none", "daily", "weekly", "monthly").
-                                - "calendar": Termine.
-                                - "name_change": Namenswechsel.
-                                - "call": Kontakt anrufen.
+                                STRIKTE CATEGORY-REGELN:
+                                - "name_change": Wenn der Benutzer sagt, wie er genannt werden möchte (z.B. "Nenn mich Silvia", "Ich heiße jetzt Dino", "Sprich mich mit Silvia an"). Gib im Feld new_name NUR den reinen neuen Namen zurück (z.B. "Silvia").
+                                
+                                - "location": Fragen nach dem aktuellen physischen Standort ("Wo bin ich?", "Wo sind wir?", "Welche Straße ist das?"). Nenne in der 'reply' immer eine sehr beruhigende, klare und einfache Antwort mit Straße, Hausnummer und Ort aus den Standort-Daten.
+                                
+                                - "memory_store": Wenn der Benutzer sagt, wo er einen Gegenstand abgelegt hat ODER Fragen nach gespeicherten Orten stellt.
+                                  WICHTIG FÜR MEMORY_KEY: Speichere den Gegenstand IMMER mit dem passenden Possessivpronomen/Artikel ab (z. B. "deine Brille", "dein Schlüssel", "deine Geldbörse", "dein Brillenpass"). Speichere niemals nur das bloße Nomen ohne Artikel!
+                                  WICHTIG: Verwende dafür NIEMALS "reminder" oder "calendar"! Speichere Gegenstände/Ablageorte IMMER unter memory_store.
+                                
+                                - "reminder": NUR wenn der Benutzer ausdrücklich eine ERINNERUNG mit Uhrzeit/Aufforderung verlangt (z. B. "Erinnere mich um 14 Uhr, Isabelle abzuholen").
+                                  WICHTIG FÜR ERINNERUNGSTEXT & KALENDERTEXT: Filtere Füllwörter wie "Erinnere mich daran", "Erinnere mich", "Ich muss" STRIKT HERAUS! Speichere in reminder_text NUR den reinen Inhalt (z.B. "Isabelle abholen").
+                                
+                                - "calendar": Feste Termine ("Arzttermin um 10 Uhr", "Friseur am Dienstag"). Speichere in calendar_text NUR die Kern-Bezeichnung ohne Füllwörter.
+                                
+                                - "todo": Eine oder MEHRERE Aufgaben. Trenne mehrfache Aufgaben sauber auf!
+                                
+                                - "shopping": Einen oder MEHRERE Einkaufsartikel. Trenne Mehrfachbegriffe (z. B. getrennt durch Komma, "und" oder Aufzählungen) sauber in Einzelteile auf!
+                                
+                                - "calendar_delete", "reminder_delete", "call", "chat".
 
-                                Return JSON:
-                                - type
-                                - reply (Natürliche Antwort zum Vorlesen, z.B. "Alles klar, ich habe mir gemerkt, dass dein Schlüssel am Klemmbrett am Kühlschrank hängt.")
-                                - memory_key, memory_value, memory_category
-                                - shopping_items (Array), shopping_list ("Allgemein", "Supermarkt", "Baumarkt")
-                                - todo_items (Array)
-                                - reminder_text, reminder_time, repeat
-                                - calendar_text, calendar_time
-                                - new_name, call_contact`
+                                MEHRSPRACHIGKEIT & SPRACHWECHSEL:
+                                - Der Benutzer kann dich in jeder beliebigen Sprache ansprechen oder dich bitten, die Sprache zu wechseln (z. B. "Rede Spanisch mit mir", "Speak English").
+                                - Die 'reply' MUSS immer in der Sprache geantwortet werden, in der der Benutzer spricht ODER in die er dich zu wechseln bittet.
+
+                                Gib IMMER ein valides JSON-Objekt zurück mit:
+                                - type: "chat", "location", "memory_store", "todo", "calendar", "calendar_delete", "reminder", "reminder_delete", "shopping", "call", "name_change"
+                                - new_name (wenn type === "name_change")
+                                - memory_key (z. B. "deine Brille", "dein Schlüssel")
+                                - memory_value (z. B. "unter dem Tisch", "auf der Couch")
+                                - todo_items (Array aus Strings, z. B. ["Müll rausbringen", "Rasen mähen"])
+                                - shopping_items (Array aus Strings, z. B. ["Milch", "Schokolade", "Käse"])
+                                - reminder_text (REINER TEXT ohne "Erinnere mich", z.B. "Isabelle abholen"), reminder_time (ISO-String)
+                                - reminder_delete_query
+                                - calendar_text (REINER TEXT), calendar_time (ISO-String)
+                                - calendar_delete_query
+                                - call_contact
+                                - reply: Natürliche, menschliche und deutliche Antwort (in der gewünschten/gesprochenen Sprache des Benutzers).`
                             },
                             { role: "user", content: text }
                         ]
@@ -864,40 +1001,95 @@
                     setPersistentData('user_custom_name', currentUserName);
                     if (userNameInput) userNameInput.value = currentUserName;
                     updateUserGreeting();
+                } else if (ai.type === 'location' || locationInfo) {
+                    let responseText = ai.reply;
+                    
+                    if (!responseText && locationInfo) {
+                        if (locationInfo.fehler) {
+                            responseText = locationInfo.fehler;
+                        } else if (locationInfo.details) {
+                            const road = locationInfo.details.road || locationInfo.details.pedestrian || "einer unbekannten Straße";
+                            const houseNumber = locationInfo.details.house_number ? ` Nummer ${locationInfo.details.house_number}` : "";
+                            const city = locationInfo.details.city || locationInfo.details.town || locationInfo.details.village || "";
+                            
+                            responseText = `Du bist aktuell in ${road}${houseNumber}${city ? ' in ' + city : ''}. Alles ist gut!`;
+                        } else {
+                            responseText = `Dein Standort ist: ${locationInfo.adresse}`;
+                        }
+                    }
+                    
+                    renderAllLists();
+                    speak(responseText || `Ich konnte deinen aktuellen Standort leider nicht ermitteln.`);
+                    if (statusMessage) statusMessage.textContent = "Standort vorgelesen.";
+                    return;
                 } else if (ai.type === 'shopping') {
-                    const items = ai.shopping_items || [];
-                    const targetList = ai.shopping_list || 'Allgemein';
-                    items.forEach((item, idx) => {
-                        shoppingEntries.unshift({ id: Date.now() + idx, text: item, list: targetList });
+                    const items = ai.shopping_items || (ai.shopping_item ? [ai.shopping_item] : []);
+                    items.forEach((item, index) => {
+                        if (item && item.trim()) {
+                            shoppingEntries.unshift({ id: Date.now() + index, text: item.trim() });
+                        }
                     });
                     setPersistentData('helfer_shopping', JSON.stringify(shoppingEntries));
                 } else if (ai.type === 'todo') {
-                    (ai.todo_items || []).forEach((item, idx) => {
-                        todoEntries.unshift({ id: Date.now() + idx, text: item, createdDate: 'Per Sprache' });
+                    const items = ai.todo_items || (ai.todo_text ? [ai.todo_text] : []);
+                    items.forEach((item, index) => {
+                        if (item && item.trim()) {
+                            todoEntries.unshift({ id: Date.now() + index, text: item.trim(), createdDate: 'Per Sprache' });
+                        }
                     });
                     setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
                 } else if (ai.type === 'memory_store' && ai.memory_key) {
-                    memoryItems[ai.memory_key.toLowerCase()] = {
-                        val: ai.memory_value || "gespeichert",
-                        cat: ai.memory_category || "📦 Sonstiges"
-                    };
+                    memoryItems[ai.memory_key.toLowerCase()] = ai.memory_value || "gespeichert";
                     setPersistentData('helfer_memory', JSON.stringify(memoryItems));
+                } else if (ai.type === 'reminder_delete') {
+                    const query = (ai.reminder_delete_query || text).toLowerCase().replace('lösche', '').replace('lösch', '').replace('erinnerung', '').trim();
+                    const match = reminderEntries.find(e => e.text.toLowerCase().includes(query) || (query.length > 2 && e.text.toLowerCase().includes(query)));
+                    if (match) {
+                        await deleteReminderEntry(match.id);
+                    } else if (reminderEntries.length > 0) {
+                        await deleteReminderEntry(reminderEntries[0].id);
+                    }
                 } else if (ai.type === 'reminder') {
-                    await addGoogleCalendarReminder(ai.reminder_text || text, ai.reminder_time, ai.repeat || 'none');
-                } else if (ai.type === 'calendar') {
-                    await addGoogleCalendarEvent(ai.calendar_text || text, ai.calendar_time);
+                    let rText = ai.reminder_text || text;
+                    rText = rText.replace(/^(erinnere mich daran|erinnere mich|erinnere|denk daran|ich muss)\s*,?\s*(dass\s+)?/i, '').trim();
+                    if (rText.length > 0) {
+                        rText = rText.charAt(0).toUpperCase() + rText.slice(1);
+                    }
+                    await addGoogleCalendarReminder(rText, ai.reminder_time);
+                } else if (ai.type === 'calendar_delete') {
+                    const query = (ai.calendar_delete_query || text).toLowerCase().replace('lösche', '').replace('lösch', '').replace('termin', '').trim();
+                    const match = calendarEntries.find(e => e.text.toLowerCase().includes(query));
+                    if (match) {
+                        await deleteCalendarEntry(match.id);
+                    } else if (calendarEntries.length > 0) {
+                        await deleteCalendarEntry(calendarEntries[0].id);
+                    }
+                } else if (ai.type === 'calendar' || ai.calendar_text) {
+                    let cText = ai.calendar_text || text;
+                    cText = cText.replace(/^(trage|trage ein|erstelle|neuer termin|termin)\s*,?\s*/i, '').trim();
+                    if (cText.length > 0) {
+                        cText = cText.charAt(0).toUpperCase() + cText.slice(1);
+                    }
+                    await addGoogleCalendarEvent(cText, ai.calendar_time);
                 } else if (ai.type === 'call' && ai.call_contact) {
                     const foundKey = Object.keys(savedContacts).find(k => k.includes(ai.call_contact.toLowerCase()));
-                    if (foundKey) window.location.href = `tel:${savedContacts[foundKey].phone}`;
+                    if (foundKey) {
+                        window.location.href = `tel:${savedContacts[foundKey].phone}`;
+                    }
                 }
 
-                renderAllLists();
-                updateNowDashboard();
+                if (ai.type === 'calendar' || ai.type === 'calendar_delete') {
+                    await fetchGoogleCalendarEvents();
+                } else {
+                    renderAllLists();
+                }
+
                 speak(ai.reply || `Erledigt, ${currentUserName}.`);
                 if (statusMessage) statusMessage.textContent = "Fertig.";
             } catch (e) {
                 renderAllLists();
-                speak("Entschuldige, das konnte ich nicht genau verarbeiten.");
+                speak("Entschuldige, das konnte ich leider nicht genau verarbeiten.");
+                if (statusMessage) statusMessage.textContent = "Fehler bei der Verarbeitung.";
             }
         }
 
@@ -905,13 +1097,11 @@
             todoEntries = todoEntries.filter(e => e.id !== id);
             setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
             renderAllLists();
-            updateNowDashboard();
         }
         function deleteShoppingEntry(id) {
             shoppingEntries = shoppingEntries.filter(e => e.id !== id);
             setPersistentData('helfer_shopping', JSON.stringify(shoppingEntries));
             renderAllLists();
-            updateNowDashboard();
         }
         function deleteMemoryItem(key) {
             delete memoryItems[key];
@@ -927,29 +1117,16 @@
         function renderAllLists() {
             if (calendarList) calendarList.innerHTML = calendarEntries.length === 0 ? '<li class="text-slate-500">Keine Termine.</li>' : calendarEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border"><span>📅 ${e.text} (${e.date})</span><button onclick="deleteCalendarEntry('${e.id}')" class="text-red-600 font-bold text-xs">Löschen</button></li>`).join('');
             if (todoList) todoList.innerHTML = todoEntries.length === 0 ? '<li class="text-slate-500">Keine offenen Aufgaben.</li>' : todoEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border"><span>📝 ${e.text}</span><button onclick="deleteTodoEntry(${e.id})" class="text-emerald-600 font-bold text-xs">Erledigt</button></li>`).join('');
-            
-            const listSelect = document.getElementById('shoppingListSelect');
-            const selectedListCat = listSelect ? listSelect.value : 'Allgemein';
-            const filteredShopping = shoppingEntries.filter(s => (s.list || 'Allgemein') === selectedListCat);
-            
-            if (shoppingList) shoppingList.innerHTML = filteredShopping.length === 0 ? '<li class="text-slate-500">Diese Liste ist leer.</li>' : filteredShopping.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border"><span>🛒 ${e.text}</span><button onclick="deleteShoppingEntry(${e.id})" class="text-emerald-600 font-bold text-xs">Gekauft</button></li>`).join('');
-            
-            if (reminderList) reminderList.innerHTML = reminderEntries.length === 0 ? '<li class="text-slate-500">Keine Erinnerungen.</li>' : reminderEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border"><span>🔔 ${e.text} (${new Date(e.time).toLocaleString('de-DE', {dateStyle:'short', timeStyle:'short'})}${e.repeat && e.repeat !== 'none' ? ' 🔄' : ''})</span><button onclick="deleteReminderEntry(${e.id})" class="text-red-600 font-bold text-xs">Löschen</button></li>`).join('');
+            if (shoppingList) shoppingList.innerHTML = shoppingEntries.length === 0 ? '<li class="text-slate-500">Liste ist leer.</li>' : shoppingEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border"><span>🛒 ${e.text}</span><button onclick="deleteShoppingEntry(${e.id})" class="text-emerald-600 font-bold text-xs">Gekauft</button></li>`).join('');
+            if (reminderList) reminderList.innerHTML = reminderEntries.length === 0 ? '<li class="text-slate-500">Keine Erinnerungen.</li>' : reminderEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border"><span>🔔 ${e.text} (${new Date(e.time).toLocaleString('de-DE', {timeZone: 'Europe/Berlin', dateStyle:'short', timeStyle:'short'})})</span><button onclick="deleteReminderEntry(${e.id})" class="text-red-600 font-bold text-xs">Löschen</button></li>`).join('');
 
             if (categoryContainer) {
                 const memKeys = Object.keys(memoryItems);
-                if (memKeys.length === 0) {
-                    categoryContainer.innerHTML = '<p class="text-slate-500 text-xs">Noch nichts im Gedächtnis gespeichert.</p>';
-                } else {
-                    categoryContainer.innerHTML = memKeys.map(k => {
-                        const item = memoryItems[k];
-                        const val = typeof item === 'object' ? item.val : item;
-                        const cat = typeof item === 'object' ? item.cat : '📦 Sonstiges';
-                        return `<div class="flex justify-between items-center text-xs p-2 bg-slate-50 rounded-lg border"><div><span class="text-slate-400 font-semibold">${cat}</span><br><b>${k}</b>: ${val}</div><button onclick="deleteMemoryItem('${k}')" class="text-red-600 font-bold">Löschen</button></div>`;
-                    }).join('');
-                }
+                categoryContainer.innerHTML = memKeys.length === 0 ? '<p class="text-slate-500 text-xs">Noch nichts im Gedächtnis gespeichert.</p>' : memKeys.map(k => `<div class="flex justify-between items-center text-xs py-1 border-b"><span>• <b>${k}</b>: ${memoryItems[k]}</span><button onclick="deleteMemoryItem('${k}')" class="text-red-600 font-bold">Löschen</button></div>`).join('');
             }
         }
     </script>
 </body>
 </html>
+ 
+      
