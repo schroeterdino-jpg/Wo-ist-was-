@@ -1052,7 +1052,7 @@
                 termine: calendarEntries,
                 erinnerungen: reminderEntries,
                 einkauf: shoppingEntries.map(s => s.text),
-                aufgaben: todoEntries.map(t => t.text),
+                aufgaben_und_notizen: todoEntries.map(t => t.text),
                 wetter: weatherInfo,
                 standort: locationInfo
             };
@@ -1077,6 +1077,10 @@
                                 
                                 - "shopping": Wenn der Benutzer NEUE Artikel zur Einkaufsliste HINZUFÜGEN möchte (z. B. "Setz Milch auf den Einkaufszettel").
                                 
+                                - "todo": Für alle Aufgaben ODER Notizen/Gedanken (z. B. "Erstelle eine Notiz...", "Schreib auf...", "Notiere...", "Erinnere mich nicht, aber merk dir als Notiz...").
+                                
+                                - "memory_store": Ausschließlich für feste Fakten, Standorte von Gegenständen oder persönliches Wissen (z. B. "Der Schlüssel hängt am Klemmbrett", "PIN ist 1234"). Keine Vorhaben oder flexiblen Notizen!
+                                
                                 - "calendar_delete": Wenn der Benutzer einen Termin LÖSCHEN oder ENTFERNEN möchte (z. B. "Lösche den Arbeitsamt Termin", "Entferne den Arzttermin"). 
                                   Gib im Feld 'calendar_delete_query' das Kern-Suchwort des Termins an (z. B. "arbeitsamt").
                                 
@@ -1084,10 +1088,8 @@
                                 
                                 - "name_change": Wenn der Benutzer sagt, wie er genannt werden möchte.
                                 - "location": Fragen nach dem aktuellen physischen Standort.
-                                - "memory_store": Ablegen von Gegenständen/Notizen.
-                                - "reminder": Neue Erinnerung anlegen.
-                                - "calendar": Neuer Termin anlegen.
-                                - "todo": Neue Aufgaben anlegen.
+                                - "reminder": Neue zeitgesteuerte Erinnerung anlegen.
+                                - "calendar": Neuer fester Kalender-Termin anlegen.
                                 - "call": Telefonanruf starten.
 
                                 MEHRSPRACHIGKEIT:
