@@ -946,12 +946,15 @@
             
             const importantMemoryItems = memoryKeys.filter(key => {
                 const lowerKey = key.toLowerCase();
-                const lowerVal = String(memoryItems[key]).toLowerCase();
+                const lowerVal = String(typeof memoryItems[key] === 'object' ? JSON.stringify(memoryItems[key]) : memoryItems[key]).toLowerCase();
                 return importantKeywords.some(kw => lowerKey.includes(kw) || lowerVal.includes(kw));
             });
 
             if (importantMemoryItems.length > 0) {
-                const memList = importantMemoryItems.map(k => `${k} liegt ${memoryItems[k]}`).join(', und ');
+                const memList = importantMemoryItems.map(k => {
+                    const val = typeof memoryItems[k] === 'object' ? JSON.stringify(memoryItems[k]) : memoryItems[k];
+                    return `${k} liegt ${val}`;
+                }).join(', und ');
                 text += `Kurzer Hinweis für unterwegs: ${memList}. `;
             }
 
@@ -1044,6 +1047,7 @@
                                 - "memory_store": Wenn der Benutzer sagt, wo er einen Gegenstand abgelegt hat ODER Fragen nach gespeicherten Orten stellt.
                                   WICHTIG FÜR MEMORY_KEY: Speichere den Gegenstand IMMER mit dem passenden Possessivpronomen/Artikel ab (z. B. "deine Brille", "dein Schlüssel", "deine Geldbörse", "dein Brillenpass"). Speichere niemals nur das bloße Nomen ohne Artikel!
                                   WICHTIG: Verwende dafür NIEMALS "reminder" oder "calendar"! Speichere Gegenstände/Ablageorte IMMER unter memory_store.
+                                  WICHTIG FÜR MEMORY_VALUE: Gib den Ort IMMER als einfachen String zurück (z. B. "auf dem Tisch" oder "in der Küche"), NIEMALS als verschachteltes JSON-Objekt!
                                 
                                 - "reminder": NUR wenn der Benutzer ausdrücklich eine ERINNERUNG mit Uhrzeit/Aufforderung verlangt (z. B. "Erinnere mich um 14 Uhr, Isabelle abzuholen").
                                   WICHTIG FÜR ERINNERUNGSTEXT & KALENDERTEXT: Filtere Füllwörter wie "Erinnere mich daran", "Erinnere mich", "Ich muss" STRIKT HERAUS! Speichere in reminder_text NUR den reinen Inhalt (z.B. "Isabelle abholen").
@@ -1125,7 +1129,11 @@
                     });
                     setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
                 } else if (ai.type === 'memory_store' && ai.memory_key) {
-                    memoryItems[ai.memory_key.toLowerCase()] = ai.memory_value || "gespeichert";
+                    let val = ai.memory_value || "gespeichert";
+                    if (typeof val === 'object') {
+                        val = JSON.stringify(val);
+                    }
+                    memoryItems[ai.memory_key.toLowerCase()] = String(val);
                     setPersistentData('helfer_memory', JSON.stringify(memoryItems));
                 } else if (ai.type === 'reminder_delete') {
                     const query = (ai.reminder_delete_query || text).toLowerCase().replace('lösche', '').replace('lösch', '').replace('erinnerung', '').trim();
@@ -1208,7 +1216,13 @@
 
             if (categoryContainer) {
                 const memKeys = Object.keys(memoryItems);
-                categoryContainer.innerHTML = memKeys.length === 0 ? '<p class="text-slate-500 text-xs">Noch nichts im Gedächtnis gespeichert.</p>' : memKeys.map(k => `<div class="flex justify-between items-center text-xs py-1 border-b"><span>• <b>${k}</b>: ${memoryItems[k]}</span><button onclick="deleteMemoryItem('${k}')" class="text-red-600 font-bold">Löschen</button></div>`).join('');
+                categoryContainer.innerHTML = memKeys.length === 0 ? '<p class="text-slate-500 text-xs">Noch nichts im Gedächtnis gespeichert.</p>' : memKeys.map(k => {
+                    let val = memoryItems[k];
+                    if (typeof val === 'object' && val !== null) {
+                        val = val.location || val.value || JSON.stringify(val);
+                    }
+                    return `<div class="flex justify-between items-center text-xs py-1 border-b"><span>• <b>${k}</b>: ${val}</span><button onclick="deleteMemoryItem('${k}')" class="text-red-600 font-bold">Löschen</button></div>`;
+                }).join('');
             }
 
             // Start-Übersicht Widget nach jedem Listen-Update neu rendern
