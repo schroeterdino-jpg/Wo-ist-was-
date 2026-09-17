@@ -795,7 +795,32 @@
             if (statusMessage) statusMessage.textContent = "Hole Wetter...";
             const weather = await fetchWeatherData();
             if (weather && !weather.fehler) {
-                text += `Draußen sind es aktuell rund ${weather.temperatur} Grad. `;
+                const temp = weather.temperatur;
+                const regen = weather.niederschlag;
+                const wind = weather.windstärke;
+
+                text += `Draußen sind es aktuell ${temp} Grad. `;
+
+                // Empfehlungen zur Bekleidung
+                if (temp < 10) {
+                    text += "Es ist recht kalt, zieh dir am besten eine dicke Winterjacke an. ";
+                } else if (temp < 18) {
+                    text += "Nimm heute auf jeden Fall eine Übergangsjacke mit. ";
+                } else if (temp < 22) {
+                    text += "Eine leichte Strickjacke oder dünne Jacke reicht heute völlig aus. ";
+                } else {
+                    text += "Es ist schön warm, du brauchst heute keine Jacke! ";
+                }
+
+                // Hinweis auf Regenschirm / Niederschlag
+                if (regen > 0) {
+                    text += "Es regnet aktuell oder ist Regen gemeldet – nimm unbedingt einen Regenschirm mit! ";
+                }
+
+                // Hinweis auf Wind
+                if (wind > 25) {
+                    text += "Achte darauf, dass es draußen ziemlich windig ist. ";
+                }
             }
 
             const todayStr = now.toDateString();
@@ -884,7 +909,20 @@
                 locationInfo = await fetchLocationData();
             }
 
-            if (lowerText.includes('wetter') || lowerText.includes('regenschirm') || lowerText.includes('regen') || lowerText.includes('draußen') || lowerText.includes('grad') || lowerText.includes('temperatur')) {
+            if (
+                lowerText.includes('wetter') || 
+                lowerText.includes('regenschirm') || 
+                lowerText.includes('regen') || 
+                lowerText.includes('draußen') || 
+                lowerText.includes('grad') || 
+                lowerText.includes('temperatur') ||
+                lowerText.includes('jacke') ||
+                lowerText.includes('anziehen') ||
+                lowerText.includes('kalt') ||
+                lowerText.includes('warm') ||
+                lowerText.includes('sonne') ||
+                lowerText.includes('frieren')
+            ) {
                 if (statusMessage) statusMessage.textContent = "Hole Wetter...";
                 weatherInfo = await fetchWeatherData();
             }
