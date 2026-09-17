@@ -65,7 +65,7 @@
             <p id="statusMessage" class="text-center font-medium text-slate-700 h-6">Drücken und sprechen...</p>
 
             <button onclick="triggerDailyBriefing()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-xl shadow-md font-bold text-base flex items-center justify-center gap-2">
-                🌅 Intelligentestes Tages-Briefing starten
+                🌅 Intelligentes Tages-Briefing starten
             </button>
         </section>
 
@@ -115,12 +115,12 @@
         <section id="sec-memory" class="hidden space-y-4">
             <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
                 <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-blue-800">🧠 Digitales Gedächtnis:</h2>
+                    <h2 class="text-xl font-bold text-blue-800">🧠 Digitales Langzeitgedächtnis:</h2>
                     <button onclick="clearAllMemory()" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold">🗑️ Leeren</button>
                 </div>
-                <p class="text-xs text-slate-500">Sag einfach: „Ich habe meinen Schlüssel in die Jackentasche gelegt.“</p>
-                <div id="categoryContainer" class="space-y-3 text-sm bg-slate-50 p-3 rounded-lg border border-slate-200">
-                    <p class="text-slate-500 text-xs">Noch keine Gegenstände gespeichert.</p>
+                <p class="text-xs text-slate-500">Erzähl mir beliebige Fakten, Orte oder Notizen (z.B. „Der Ersatzschlüssel ist in der Schublade“).</p>
+                <div id="categoryContainer" class="space-y-3 text-sm bg-slate-50 p-3 rounded-lg border border-slate-200 max-h-64 overflow-y-auto">
+                    <p class="text-slate-500 text-xs">Noch nichts im Gedächtnis gespeichert.</p>
                 </div>
             </div>
         </section>
@@ -179,7 +179,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 5.1</span>
+        <span>Version 6.0 (Pro)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -189,7 +189,7 @@
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
                     .then(reg => {
-                        reg.update(); // Erzwingt Aktualisierung
+                        reg.update();
                         console.log('Service Worker aktiv!', reg);
                     })
                     .catch(err => console.log('SW Fehler:', err));
@@ -296,11 +296,30 @@
             }
         }
 
+        // Hintergrund-Check für fällige Erinnerungen (läuft minütlich)
+        setInterval(() => {
+            if (reminderEntries.length === 0) return;
+            const now = new Date();
+            reminderEntries.forEach(rem => {
+                const remTime = new Date(rem.time);
+                if (!rem.triggered && remTime <= now) {
+                    rem.triggered = true;
+                    setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
+                    
+                    // Benachrichtigung auslösen
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        new Notification("Erinnerung von deinem Helfer", { body: rem.text, icon: './dino.png' });
+                    }
+                    speak(`Erinnerung: ${rem.text}`);
+                }
+            });
+        }, 30000);
+
         function addManualReminder() {
             const text = document.getElementById('manualReminderText').value.trim();
             const time = document.getElementById('manualReminderTime').value;
             if (text && time) {
-                reminderEntries.push({ id: Date.now(), text, time });
+                reminderEntries.push({ id: Date.now(), text, time, triggered: false });
                 setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
                 document.getElementById('manualReminderText').value = '';
                 document.getElementById('manualReminderTime').value = '';
@@ -399,23 +418,17 @@
             } catch (e) {}
         }
 
-        // Aktualisierte Sprachausgabe mit window.speechSynthesis
+        // Sprachausgabe via window.speechSynthesis
         let currentAudio = null;
         function speak(text, onComplete) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
-                
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'de-DE';
-                utterance.rate = 1.15; // Zügige, angenehme Sprechgeschwindigkeit
-                
-                utterance.onend = () => {
-                    if (onComplete) onComplete();
-                };
-                
+                utterance.rate = 1.15;
+                utterance.onend = () => { if (onComplete) onComplete(); };
                 window.speechSynthesis.speak(utterance);
             } else {
-                // Fallback für ältere Browser
                 if (currentAudio) { currentAudio.pause(); currentAudio = null; }
                 currentAudio = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=de&client=tw-ob`);
                 currentAudio.playbackRate = 1.35;
@@ -464,12 +477,20 @@
             recordText.textContent = "SPRECHEN";
         }
 
+        // Intelligentes Tages-Briefing mit Kontext aus allen Listen & Gedächtnis
         async function triggerDailyBriefing() {
             const timeStr = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
             let text = `Guten Tag ${currentUserName}. Es ist ${timeStr} Uhr. `;
-            text += calendarEntries.length > 0 ? `Du hast ${calendarEntries.length} Termine. ` : "Du hast keine Termine. ";
-            text += todoEntries.length > 0 ? `Es gibt ${todoEntries.length} offene Aufgaben. ` : "";
+            text += calendarEntries.length > 0 ? `Du hast ${calendarEntries.length} anstehende Termine. ` : "Du hast heute keine Termine. ";
+            text += todoEntries.length > 0 ? `Es gibt noch ${todoEntries.length} offene Aufgaben. ` : "";
+            text += reminderEntries.length > 0 ? `Du hast ${reminderEntries.length} aktive Erinnerungen. ` : "";
             text += shoppingEntries.length > 0 ? `Auf der Einkaufsliste stehen ${shoppingEntries.length} Artikel. ` : "";
+            
+            const memKeys = Object.keys(memoryItems);
+            if (memKeys.length > 0) {
+                text += `Im Gedächtnis habe ich unter anderem gespeichert: ${memKeys[0]} bei ${memoryItems[memKeys[0]]}. `;
+            }
+
             statusMessage.textContent = "Briefing aktiv.";
             speak(text);
         }
@@ -477,6 +498,13 @@
         async function sendToGroqSmart(text) {
             const key = getPersistentData('user_api_key', '');
             statusMessage.textContent = "Verarbeite...";
+
+            // Gedächtnis und Kontakte mit an die KI übergeben, damit sie darauf zugreifen kann
+            const contextData = {
+                gedächtnis: memoryItems,
+                kontakte: savedContacts,
+                termine: calendarEntries
+            };
 
             try {
                 const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -488,10 +516,15 @@
                         messages: [
                             {
                                 role: "system",
-                                content: `Du bist ${currentUserName}s smarter Alltags-Assistent. Analysiere den Sprachbefehl und gib JSON zurück:
-                                - type: "chat", "item_store", "item_query", "note", "calendar", "reminder", "shopping"
-                                - item_name, item_location, note_text, summary, start_time (ISO), reminder_time (ISO), shopping_item
-                                - reply: Natürliche Antwort auf Deutsch.`
+                                content: `Du bist ${currentUserName}s smarter, persönlicher Alltags-Assistent und digitales Langzeitgedächtnis. Aktueller Kontext: ${JSON.stringify(contextData)}.
+                                Analysiere den Sprachbefehl des Benutzers und gib ein JSON-Objekt zurück mit:
+                                - type: "chat", "memory_store", "memory_query", "todo", "calendar", "reminder", "shopping", "call"
+                                - memory_key (Schlüsselwort für Gedächtnis), memory_value (Inhalt/Ort)
+                                - todo_text (Aufgabe)
+                                - shopping_item (Einkaufsartikel)
+                                - reminder_text, reminder_time (ISO-String für Erinnerung)
+                                - call_contact (Name des anzurufenden Kontakts)
+                                - reply: Natürliche, menschliche Antwort auf Deutsch, die dem Benutzer direkt vorgelesen wird. Wenn nach einer Info aus dem Gedächtnis gefragt wird, antworte direkt mit dem gespeicherten Wert in der reply.`
                             },
                             { role: "user", content: text }
                         ]
@@ -501,22 +534,31 @@
                 const data = await res.json();
                 const ai = JSON.parse(data.choices[0].message.content);
 
+                // Aktionen ausführen
                 if (ai.type === 'shopping' && ai.shopping_item) {
                     shoppingEntries.unshift({ id: Date.now(), text: ai.shopping_item });
                     setPersistentData('helfer_shopping', JSON.stringify(shoppingEntries));
-                } else if (ai.type === 'note' && ai.note_text) {
-                    todoEntries.unshift({ id: Date.now(), text: ai.note_text, createdDate: 'Per Sprache' });
+                } else if (ai.type === 'todo' && ai.todo_text) {
+                    todoEntries.unshift({ id: Date.now(), text: ai.todo_text, createdDate: 'Per Sprache' });
                     setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
-                } else if (ai.type === 'item_store' && ai.item_name) {
-                    memoryItems[ai.item_name.toLowerCase()] = { location: ai.item_location, timestamp: Date.now() };
+                } else if (ai.type === 'memory_store' && ai.memory_key) {
+                    memoryItems[ai.memory_key.toLowerCase()] = ai.memory_value || "gespeichert";
                     setPersistentData('helfer_memory', JSON.stringify(memoryItems));
+                } else if (ai.type === 'reminder' && ai.reminder_text) {
+                    reminderEntries.push({ id: Date.now(), text: ai.reminder_text, time: ai.reminder_time || new Date(Date.now() + 3600000).toISOString(), triggered: false });
+                    setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
+                } else if (ai.type === 'call' && ai.call_contact) {
+                    const foundKey = Object.keys(savedContacts).find(k => k.includes(ai.call_contact.toLowerCase()));
+                    if (foundKey) {
+                        window.location.href = `tel:${savedContacts[foundKey].phone}`;
+                    }
                 }
 
                 renderAllLists();
                 speak(ai.reply || "Erledigt.");
                 statusMessage.textContent = "Fertig.";
             } catch (e) {
-                speak("Fehler bei der Anfrage.");
+                speak("Entschuldigung, da gab es einen Fehler bei der Verbindung.");
             }
         }
 
@@ -555,10 +597,10 @@
             calendarList.innerHTML = calendarEntries.length === 0 ? '<li class="text-slate-500">Keine Termine.</li>' : calendarEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border"><span>📅 ${e.text} (${e.date})</span><button onclick="deleteCalendarEntry('${e.id}')" class="text-red-600 font-bold text-xs">Löschen</button></li>`).join('');
             todoList.innerHTML = todoEntries.length === 0 ? '<li class="text-slate-500">Keine offenen Aufgaben.</li>' : todoEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border"><span>📝 ${e.text}</span><button onclick="deleteTodoEntry(${e.id})" class="text-emerald-600 font-bold text-xs">Erledigt</button></li>`).join('');
             shoppingList.innerHTML = shoppingEntries.length === 0 ? '<li class="text-slate-500">Liste ist leer.</li>' : shoppingEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border"><span>🛒 ${e.text}</span><button onclick="deleteShoppingEntry(${e.id})" class="text-emerald-600 font-bold text-xs">Gekauft</button></li>`).join('');
-            reminderList.innerHTML = reminderEntries.length === 0 ? '<li class="text-slate-500">Keine Erinnerungen.</li>' : reminderEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border"><span>🔔 ${e.text} (${e.time})</span><button onclick="deleteReminderEntry(${e.id})" class="text-red-600 font-bold text-xs">Löschen</button></li>`).join('');
+            reminderList.innerHTML = reminderEntries.length === 0 ? '<li class="text-slate-500">Keine Erinnerungen.</li>' : reminderEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border"><span>🔔 ${e.text} (${new Date(e.time).toLocaleString('de-DE', {dateStyle:'short', timeStyle:'short'})})</span><button onclick="deleteReminderEntry(${e.id})" class="text-red-600 font-bold text-xs">Löschen</button></li>`).join('');
 
             const memKeys = Object.keys(memoryItems);
-            categoryContainer.innerHTML = memKeys.length === 0 ? '<p class="text-slate-500 text-xs">Keine Gegenstände gespeichert.</p>' : memKeys.map(k => `<div class="flex justify-between items-center text-xs py-1 border-b"><span>• <b>${k}</b>: ${memoryItems[k].location}</span><button onclick="deleteMemoryItem('${k}')" class="text-red-600 font-bold">Löschen</button></div>`).join('');
+            categoryContainer.innerHTML = memKeys.length === 0 ? '<p class="text-slate-500 text-xs">Noch nichts im Gedächtnis gespeichert.</p>' : memKeys.map(k => `<div class="flex justify-between items-center text-xs py-1 border-b"><span>• <b>${k}</b>: ${memoryItems[k]}</span><button onclick="deleteMemoryItem('${k}')" class="text-red-600 font-bold">Löschen</button></div>`).join('');
         }
     </script>
 </body>
