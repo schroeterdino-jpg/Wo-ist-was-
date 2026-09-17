@@ -186,7 +186,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 7.9 (Friendly Briefing Upgrade)</span>
+        <span>Version 8.0 (Multi-Item Upgrade)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -720,7 +720,7 @@
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'de-DE';
-                utterance.rate = 1.05; // Etwas natürlicher & entspannter im Tempo
+                utterance.rate = 1.05;
                 utterance.onend = () => { if (onComplete) onComplete(); };
                 window.speechSynthesis.speak(utterance);
             } else {
@@ -786,21 +786,18 @@
             const hour = now.getHours();
             const timeStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
             
-            // Tageszeit-Greeting
             let greeting = "Guten Morgen";
             if (hour >= 12 && hour < 18) greeting = "Hallo";
             if (hour >= 18) greeting = "Guten Abend";
 
             let text = `${greeting} ${currentUserName}! Es ist jetzt ${timeStr} Uhr. `;
             
-            // Wetter einbauen
             if (statusMessage) statusMessage.textContent = "Hole Wetter...";
             const weather = await fetchWeatherData();
             if (weather && !weather.fehler) {
                 text += `Draußen sind es aktuell rund ${weather.temperatur} Grad. `;
             }
 
-            // Termine heute & morgen
             const todayStr = now.toDateString();
             const tomorrow = new Date();
             tomorrow.setDate(now.getDate() + 1);
@@ -825,7 +822,6 @@
                 text += "Was deine Termine angeht: Für heute und morgen steht nichts weiter im Kalender. ";
             }
 
-            // Erinnerungen
             if (reminderEntries && reminderEntries.length > 0) {
                 const remList = reminderEntries.map(e => {
                     const timeFormatted = new Date(e.time).toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' });
@@ -834,7 +830,6 @@
                 text += `Denk bitte an deine aktiven Erinnerungen: ${remList}. `;
             }
 
-            // Wichtige Gegenstände aus dem Gedächtnis
             const memoryKeys = Object.keys(memoryItems);
             const importantKeywords = ['schlüssel', 'schluessel', 'portemonnaie', 'börse', 'geldbörse', 'geld', 'ausweis', 'pass', 'brille', 'handy', 'telefon', 'papiere', 'wichtig'];
             
@@ -849,7 +844,6 @@
                 text += `Kurzer Hinweis für unterwegs: ${memList}. `;
             }
 
-            // Offene Aufgaben
             if (todoEntries && todoEntries.length > 0) {
                 if (todoEntries.length === 1) {
                     text += `Auf deiner Aufgabenliste steht noch: ${todoEntries[0].text}. `;
@@ -859,13 +853,11 @@
                 }
             }
 
-            // Einkaufsliste
             if (shoppingEntries && shoppingEntries.length > 0) {
                 const shopList = shoppingEntries.map(e => e.text).join(', ');
                 text += `Auf dem Einkaufszettel steht übrigens: ${shopList}. `;
             }
 
-            // Lockerer Abschlusssatz
             const closingPhrases = [
                 `Das war’s erst mal von mir! Ich wünsche dir noch einen wunderbaren Tag, ${currentUserName}.`,
                 `Damit bist du bestens informiert. Hab einen fantastischen Tag!`,
@@ -934,7 +926,11 @@
                                 
                                 - "calendar": Feste Termine ("Arzttermin um 10 Uhr", "Friseur am Dienstag"). Speichere in calendar_text NUR die Kern-Bezeichnung ohne Füllwörter.
                                 
-                                - "calendar_delete", "reminder_delete", "todo", "shopping", "call", "chat".
+                                - "todo": Eine oder MEHRERE Aufgaben. Trenne mehrfache Aufgaben sauber auf!
+                                
+                                - "shopping": Einen oder MEHRERE Einkaufsartikel. Trenne Mehrfachbegriffe (z. B. getrennt durch Komma, "und" oder Aufzählungen) sauber in Einzelteile auf!
+                                
+                                - "calendar_delete", "reminder_delete", "call", "chat".
 
                                 MEHRSPRACHIGKEIT & SPRACHWECHSEL:
                                 - Der Benutzer kann dich in jeder beliebigen Sprache ansprechen oder dich bitten, die Sprache zu wechseln (z. B. "Rede Spanisch mit mir", "Speak English").
@@ -945,8 +941,8 @@
                                 - new_name (wenn type === "name_change")
                                 - memory_key (z. B. "deine Brille", "dein Schlüssel")
                                 - memory_value (z. B. "unter dem Tisch", "auf der Couch")
-                                - todo_text
-                                - shopping_item
+                                - todo_items (Array aus Strings, z. B. ["Müll rausbringen", "Rasen mähen"])
+                                - shopping_items (Array aus Strings, z. B. ["Milch", "Schokolade", "Käse"])
                                 - reminder_text (REINER TEXT ohne "Erinnere mich", z.B. "Isabelle abholen"), reminder_time (ISO-String)
                                 - reminder_delete_query
                                 - calendar_text (REINER TEXT), calendar_time (ISO-String)
@@ -988,11 +984,21 @@
                     speak(responseText || `Ich konnte deinen aktuellen Standort leider nicht ermitteln.`);
                     if (statusMessage) statusMessage.textContent = "Standort vorgelesen.";
                     return;
-                } else if (ai.type === 'shopping' && ai.shopping_item) {
-                    shoppingEntries.unshift({ id: Date.now(), text: ai.shopping_item });
+                } else if (ai.type === 'shopping') {
+                    const items = ai.shopping_items || (ai.shopping_item ? [ai.shopping_item] : []);
+                    items.forEach((item, index) => {
+                        if (item && item.trim()) {
+                            shoppingEntries.unshift({ id: Date.now() + index, text: item.trim() });
+                        }
+                    });
                     setPersistentData('helfer_shopping', JSON.stringify(shoppingEntries));
-                } else if (ai.type === 'todo' && ai.todo_text) {
-                    todoEntries.unshift({ id: Date.now(), text: ai.todo_text, createdDate: 'Per Sprache' });
+                } else if (ai.type === 'todo') {
+                    const items = ai.todo_items || (ai.todo_text ? [ai.todo_text] : []);
+                    items.forEach((item, index) => {
+                        if (item && item.trim()) {
+                            todoEntries.unshift({ id: Date.now() + index, text: item.trim(), createdDate: 'Per Sprache' });
+                        }
+                    });
                     setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
                 } else if (ai.type === 'memory_store' && ai.memory_key) {
                     memoryItems[ai.memory_key.toLowerCase()] = ai.memory_value || "gespeichert";
