@@ -155,6 +155,13 @@
                     <label class="block text-sm font-bold text-slate-700 mb-1">Google Client-ID:</label>
                     <input type="text" id="googleClientIdInput" placeholder="Client ID..." class="w-full p-2 border rounded-lg text-sm bg-slate-50">
                 </div>
+                <!-- Standort-Berechtigung -->
+                <div class="border-t pt-3">
+                    <label class="block text-sm font-bold text-slate-700 mb-1">📍 GPS & Standort:</label>
+                    <button onclick="requestLocationPermission()" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-2 rounded-lg text-sm font-semibold">
+                        Standort-Zugriff aktivieren
+                    </button>
+                </div>
                 <!-- Kontakte -->
                 <div class="border-t pt-3">
                     <label class="block text-sm font-bold text-slate-700 mb-1">📞 Schnell-Anruf Kontakte:</label>
@@ -179,7 +186,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 7.4 (Smart Routing Fixed)</span>
+        <span>Version 7.5 (Location & Weather Fixed)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -296,6 +303,18 @@
             }
         }
 
+        function requestLocationPermission() {
+            if (!navigator.geolocation) {
+                alert('Geolokalisation wird von deinem Browser nicht unterstützt.');
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                () => alert('Standortzugriff erfolgreich aktiviert!'),
+                (err) => alert('Standortzugriff verweigert oder Fehler: ' + err.message),
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        }
+
         // Sekundengenauer Check für lokale App-Erinnerungen inklusive Audio & Benachrichtigung
         setInterval(() => {
             if (reminderEntries.length === 0) return;
@@ -324,7 +343,7 @@
         // --- GOOGLE OAUTH & SILENT REFRESH LOGIK ---
         let tokenClient = null;
         let accessToken = getPersistentData('google_access_token', '');
-        let pendingAction = null; // Speichert ausstehende API-Aufrufe bei Token-Erneuerung
+        let pendingAction = null;
 
         function initTokenClient(callbackAction) {
             const clientId = getPersistentData('google_client_id', DEFAULT_CLIENT_ID);
@@ -385,7 +404,7 @@
             }
         }, 50 * 60 * 1000);
 
-        // 1. ECHTER TERMIN (Eintrag im Google Kalender ohne Erinnerungs-Emoji)
+        // 1. ECHTER TERMIN
         async function addGoogleCalendarEvent(text, isoStartString) {
             let eventDate = isoStartString ? new Date(isoStartString) : new Date();
             if (isNaN(eventDate.getTime())) eventDate = new Date();
@@ -434,7 +453,7 @@
             renderAllLists();
         }
 
-        // 2. ERINNERUNG (In App + Google Kalender mit 🔔 markiert)
+        // 2. ERINNERUNG
         async function addGoogleCalendarReminder(text, isoTimeString) {
             let remDate = isoTimeString ? new Date(isoTimeString) : new Date();
             if (isNaN(remDate.getTime())) remDate = new Date();
@@ -639,35 +658,7 @@
             renderAllLists();
         }
 
-        async function fetchWeatherData() {
-            return new Promise((resolve) => {
-                if (!navigator.geolocation) {
-                    resolve({ fehler: "Standortbestimmung nicht unterstützt." });
-                    return;
-                }
-                navigator.geolocation.getCurrentPosition(async (position) => {
-                    const lat = position.coords.latitude;
-                    const lon = position.coords.longitude;
-                    try {
-                        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m`);
-                        const data = await res.json();
-                        resolve({
-                            temperatur: data.current.temperature_2m,
-                            einheit: data.current_units.temperature_2m,
-                            niederschlag: data.current.precipitation,
-                            windstärke: data.current.wind_speed_10m,
-                            wettercode: data.current.weather_code,
-                            koordinaten: { lat, lon }
-                        });
-                    } catch (e) {
-                        resolve({ fehler: "Wetterdaten konnten nicht geladen werden." });
-                    }
-                }, () => {
-                    resolve({ fehler: "Standortzugriff verweigert." });
-                }, { timeout: 10000 });
-            });
-        }
-
+        // STANDORT-ABFRAGE
         async function fetchLocationData() {
             return new Promise((resolve) => {
                 if (!navigator.geolocation) {
@@ -689,8 +680,40 @@
                         resolve({ fehler: "Adresse konnte nicht aus den Koordinaten ermittelt werden.", koordinaten: { lat, lon } });
                     }
                 }, (err) => {
-                    resolve({ fehler: "Standortzugriff verweigert oder fehlgeschlagen." });
+                    resolve({ fehler: "Standortzugriff im Browser verweigert oder fehlgeschlagen. Bitte in den Einstellungen erlauben." });
                 }, { timeout: 10000, enableHighAccuracy: true });
+            });
+        }
+
+        // WETTER-ABFRAGE (Robust mit Fallback)
+        async function fetchWeatherData() {
+            return new Promise((resolve) => {
+                const getMeteo = async (lat, lon) => {
+                    try {
+                        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m`);
+                        const data = await res.json();
+                        resolve({
+                            temperatur: data.current.temperature_2m,
+                            einheit: data.current_units.temperature_2m,
+                            niederschlag: data.current.precipitation,
+                            windstärke: data.current.wind_speed_10m,
+                            wettercode: data.current.weather_code,
+                            koordinaten: { lat, lon }
+                        });
+                    } catch (e) {
+                        resolve({ fehler: "Wetterdaten konnten nicht geladen werden." });
+                    }
+                };
+
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => getMeteo(pos.coords.latitude, pos.coords.longitude),
+                        () => getMeteo(53.5511, 9.9937), // Fallback Hamburg / Deutschland
+                        { timeout: 5000 }
+                    );
+                } else {
+                    getMeteo(53.5511, 9.9937);
+                }
             });
         }
 
@@ -785,13 +808,16 @@
             let locationInfo = null;
             const lowerText = text.toLowerCase();
 
-            if (lowerText.includes('wetter') || lowerText.includes('regenschirm') || lowerText.includes('regen') || lowerText.includes('draußen')) {
-                weatherInfo = await fetchWeatherData();
-            }
-
-            if (lowerText.includes('wo bin ich') || lowerText.includes('wo befinde ich') || lowerText.includes('mein standort') || lowerText.includes('aktueller ort') || lowerText.includes('welche straße') || lowerText.includes('welcher ort')) {
+            // Automatische Erkennung aller Standortfragen (auch wenn Oma verwirrt ist)
+            if (lowerText.includes('wo bin ich') || lowerText.includes('wo befinde ich') || lowerText.includes('mein standort') || lowerText.includes('aktueller ort') || lowerText.includes('welche straße') || lowerText.includes('welcher ort') || lowerText.includes('wo bin') || lowerText.includes('wo sind wir')) {
                 if (statusMessage) statusMessage.textContent = "Bestimme Standort...";
                 locationInfo = await fetchLocationData();
+            }
+
+            // Erkennung von Wetterfragen
+            if (lowerText.includes('wetter') || lowerText.includes('regenschirm') || lowerText.includes('regen') || lowerText.includes('draußen') || lowerText.includes('grad') || lowerText.includes('temperatur')) {
+                if (statusMessage) statusMessage.textContent = "Hole Wetter...";
+                weatherInfo = await fetchWeatherData();
             }
 
             const contextData = {
@@ -818,18 +844,16 @@
                                 Analysiere den Sprachbefehl des Benutzers und unterscheide PRÄZISE:
                                 
                                 STRIKTE CATEGORY-REGELN:
+                                - "location": Fragen nach dem aktuellen physischen Standort ("Wo bin ich?", "Wo sind wir?", "Welche Straße ist das?"). Nenne in der 'reply' immer eine sehr beruhigende, klare und einfache Antwort auf Deutsch mit Straße, Hausnummer und Ort aus den Standort-Daten.
+                                
                                 - "memory_store": Wenn der Benutzer sagt, wo er einen Gegenstand abgelegt hat (z. B. "Ich habe meinen Schlüssel unter/auf die Couch gelegt", "Der Brillenpass liegt in der Schublade") ODER Fragen nach gespeicherten Orten/Fakten stellt ("Wo ist mein Schlüssel?").
                                   WICHTIG: Verwende dafür NIEMALS "reminder" oder "calendar"! Speichere Gegenstände/Ablageorte IMMER unter memory_store.
                                 
                                 - "reminder": NUR wenn der Benutzer ausdrücklich eine ERINNERUNG mit Uhrzeit/Aufforderung verlangt (z. B. "Erinnere mich um 17 Uhr, meine Tochter abzuholen", "Erinnere mich morgen an X").
                                 
-                                - "location": Fragen nach dem aktuellen physischen Standort ("Wo bin ich?", "Welche Straße ist das?").
-                                
                                 - "calendar": Feste Termine ("Arzttermin um 10 Uhr", "Friseur am Dienstag").
                                 
                                 - "calendar_delete", "reminder_delete", "todo", "shopping", "call", "chat".
-
-                                WICHTIG FÜR LOCATION: Wenn der Typ "location" ist, nenne in der 'reply' klar und einfach verständlich die Straße, Hausnummer und den Ort aus den Standort-Daten.
 
                                 Gib IMMER ein valides JSON-Objekt zurück mit:
                                 - type: "chat", "location", "memory_store", "todo", "calendar", "calendar_delete", "reminder", "reminder_delete", "shopping", "call"
@@ -863,7 +887,7 @@
                             const houseNumber = locationInfo.details.house_number ? ` Nummer ${locationInfo.details.house_number}` : "";
                             const city = locationInfo.details.city || locationInfo.details.town || locationInfo.details.village || "";
                             
-                            responseText = `Du bist aktuell in ${road}${houseNumber}${city ? ' in ' + city : ''}.`;
+                            responseText = `Du bist aktuell in ${road}${houseNumber}${city ? ' in ' + city : ''}. Alles ist gut!`;
                         } else {
                             responseText = `Dein Standort ist: ${locationInfo.adresse}`;
                         }
@@ -909,8 +933,6 @@
                     if (foundKey) {
                         window.location.href = `tel:${savedContacts[foundKey].phone}`;
                     }
-                } else {
-                    // Fallback nur für reine Chat-Antworten
                 }
 
                 await fetchGoogleCalendarEvents();
