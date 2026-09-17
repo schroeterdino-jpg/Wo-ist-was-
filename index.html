@@ -845,7 +845,7 @@
             });
 
             if (importantMemoryItems.length > 0) {
-                const memList = importantMemoryItems.map(k => `dein ${k} liegt ${memoryItems[k]}`).join(', und ');
+                const memList = importantMemoryItems.map(k => `${k} liegt ${memoryItems[k]}`).join(', und ');
                 text += `Kurzer Hinweis für unterwegs: ${memList}. `;
             }
 
@@ -925,7 +925,8 @@
                                 
                                 - "location": Fragen nach dem aktuellen physischen Standort ("Wo bin ich?", "Wo sind wir?", "Welche Straße ist das?"). Nenne in der 'reply' immer eine sehr beruhigende, klare und einfache Antwort mit Straße, Hausnummer und Ort aus den Standort-Daten.
                                 
-                                - "memory_store": Wenn der Benutzer sagt, wo er einen Gegenstand abgelegt hat (z. B. "Ich habe meinen Schlüssel unter/auf die Couch gelegt", "Der Brillenpass liegt in der Schublade") ODER Fragen nach gespeicherten Orten/Fakten stellt ("Wo ist mein Schlüssel?").
+                                - "memory_store": Wenn der Benutzer sagt, wo er einen Gegenstand abgelegt hat ODER Fragen nach gespeicherten Orten stellt.
+                                  WICHTIG FÜR MEMORY_KEY: Speichere den Gegenstand IMMER mit dem passenden Possessivpronomen/Artikel ab (z. B. "deine Brille", "dein Schlüssel", "deine Geldbörse", "dein Brillenpass"). Speichere niemals nur das bloße Nomen ohne Artikel!
                                   WICHTIG: Verwende dafür NIEMALS "reminder" oder "calendar"! Speichere Gegenstände/Ablageorte IMMER unter memory_store.
                                 
                                 - "reminder": NUR wenn der Benutzer ausdrücklich eine ERINNERUNG mit Uhrzeit/Aufforderung verlangt (z. B. "Erinnere mich um 14 Uhr, Isabelle abzuholen").
@@ -942,8 +943,8 @@
                                 Gib IMMER ein valides JSON-Objekt zurück mit:
                                 - type: "chat", "location", "memory_store", "todo", "calendar", "calendar_delete", "reminder", "reminder_delete", "shopping", "call", "name_change"
                                 - new_name (wenn type === "name_change")
-                                - memory_key (z. B. "Schlüssel")
-                                - memory_value (z. B. "unter der Couch")
+                                - memory_key (z. B. "deine Brille", "dein Schlüssel")
+                                - memory_value (z. B. "unter dem Tisch", "auf der Couch")
                                 - todo_text
                                 - shopping_item
                                 - reminder_text (REINER TEXT ohne "Erinnere mich", z.B. "Isabelle abholen"), reminder_time (ISO-String)
