@@ -54,6 +54,10 @@
         </div>
     </nav>
 
+    <!-- Versteckte Felder zur internen Datenhaltung -->
+    <input type="hidden" id="apiKeyInput">
+    <input type="hidden" id="googleClientIdInput">
+
     <!-- Hauptbereich -->
     <main class="container mx-auto p-4 max-w-md flex-grow flex flex-col space-y-4">
 
@@ -194,14 +198,6 @@
                 </summary>
                 <div class="p-4 space-y-3 border-t border-slate-700">
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-1">Groq API-Key (gsk_...):</label>
-                        <input type="password" id="apiKeyInput" placeholder="gsk_..." class="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-100">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-1">Google Client-ID:</label>
-                        <input type="text" id="googleClientIdInput" placeholder="Client ID..." class="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-100">
-                    </div>
-                    <div class="pt-2 border-t border-slate-700">
                         <button onclick="loginWithGoogle(false)" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
                             📅 Mit Google Kalender verbinden
                         </button>
@@ -242,7 +238,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-800 border-t border-slate-700 text-center p-3 text-xs text-slate-400 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 8.7 (Dark Mode & Voice Fix)</span>
+        <span>Version 8.8 (Hidden Keys)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -331,21 +327,6 @@
                 currentUserName = userNameInput.value.trim() || "Dino";
                 setPersistentData('user_custom_name', currentUserName);
                 updateUserGreeting();
-            });
-        }
-
-        if (apiKeyInput) {
-            apiKeyInput.addEventListener('input', () => {
-                setPersistentData('user_api_key', apiKeyInput.value.trim());
-                if (connectionStatus) connectionStatus.textContent = "API-Key gespeichert.";
-            });
-        }
-
-        if (googleClientIdInput) {
-            googleClientIdInput.addEventListener('input', () => {
-                const val = googleClientIdInput.value.trim() || DEFAULT_CLIENT_ID;
-                setPersistentData('google_client_id', val);
-                if (connectionStatus) connectionStatus.textContent = "Client-ID gespeichert.";
             });
         }
 
@@ -853,14 +834,14 @@
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'de-DE';
-                utterance.rate = 1.15; // Zügigere Sprachgeschwindigkeit für dynamisches Sprechen
+                utterance.rate = 1.15;
                 utterance.pitch = 1.0;
                 utterance.onend = () => { if (onComplete) onComplete(); };
                 window.speechSynthesis.speak(utterance);
             } else {
                 if (currentAudio) { currentAudio.pause(); currentAudio = null; }
                 currentAudio = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=de&client=tw-ob`);
-                currentAudio.playbackRate = 1.25; // Beschleunigter Fallback
+                currentAudio.playbackRate = 1.25;
                 currentAudio.play().catch(() => {});
                 currentAudio.onended = () => { currentAudio = null; if (onComplete) onComplete(); };
             }
@@ -893,8 +874,7 @@
 
         function toggleSpeechRecognition() {
             if (!getPersistentData('user_api_key', '')) {
-                alert('Bitte Groq API-Key in den Einstellungen hinterlegen!');
-                switchSection('settings');
+                alert('Bitte Groq API-Key hinterlegen!');
                 return;
             }
             if (!recognition) {
@@ -1000,10 +980,8 @@
                     const valText = String(rawVal).trim();
                     const lowerVal = valText.toLowerCase();
                     
-                    // Grammatik-Optimierung: Groß- und Kleinschreibung anpassen
                     let formattedKey = k.charAt(0).toUpperCase() + k.slice(1);
                     
-                    // Prüfen, ob bereits Verben oder Präpositionen vorhanden sind
                     const hasVerb = /\b(hängt|liegt|steht|ist|befindet)\b/i.test(lowerVal);
                     const hasPrep = /\b(auf|in|an|unter|über|neben|zwischen|vor|hinter)\b/i.test(lowerVal);
                     
@@ -1115,20 +1093,19 @@
                                 Analysiere den Sprachbefehl des Benutzers und unterscheide PRÄZISE:
                                 
                                 STRIKTE CATEGORY-REGELN:
-                                - "forgot_check": Wenn der Benutzer fragt, ob er etwas vergessen hat (z. B. "Habe ich etwas vergessen?", "Gibt es noch was zu tun?", "Habe ich was übersehen?", "Habe ich irgendwas vergessen?"). Prüfe im Daten-Kontext überfällige/aktive Erinnerungen, anstehende Termine, offene Aufgaben, Einkaufsliste und wichtige Dinge im Gedächtnis und fass diese präzise in 'reply' zusammen (z. B. "Ja, Dino. Du hast noch zwei offene Aufgaben und um 10 Uhr einen Termin. Auf deiner Einkaufsliste stehen außerdem Milch und Eier.").
+                                - "forgot_check": Wenn der Benutzer fragt, ob er etwas vergessen hat (z. B. "Habe ich etwas vergessen?", "Gibt es noch was zu tun?", "Habe ich was übersehen?", "Habe ich irgendwas vergessen?"). Prüfe im Daten-Kontext überfällige/aktive Erinnerungen, anstehende Termine, offene Aufgaben, Einkaufsliste und wichtige Dinge im Gedächtnis und fass diese präzise in 'reply' zusammen.
 
                                 - "chat": Fragen nach Inhalten aus den Listen (z. B. "Was steht auf meiner Einkaufsliste?", "Welche Aufgaben habe ich?", "Welche Termine stehen an?"). Nutze die Daten aus dem Daten-Kontext, um in 'reply' eine präzise und freundliche Antwort zu formulieren!
                                 
                                 - "shopping": Wenn der Benutzer NEUE Artikel zur Einkaufsliste HINZUFÜGEN möchte (z. B. "Setz Milch auf den Einkaufszettel").
                                 
-                                - "todo": Für alle Aufgaben ODER Notizen/Gedanken (z. B. "Erstelle eine Notiz...", "Schreib auf...", "Notiere...", "Erinnere mich nicht, aber merk dir als Notiz...").
+                                - "todo": Für alle Aufgaben ODER Notizen/Gedanken (z. B. "Erstelle eine Notiz...", "Schreib auf...", "Notiere...").
                                 
-                                - "memory_store": Ausschließlich für feste Fakten, Standorte von Gegenständen oder persönliches Wissen zum SPEICHERN (z. B. "Der Schlüssel hängt am Klemmbrett", "PIN ist 1234"). Keine Vorhaben oder flexiblen Notizen!
+                                - "memory_store": Ausschließlich für feste Fakten, Standorte von Gegenständen oder persönliches Wissen zum SPEICHERN (z. B. "Der Schlüssel hängt am Klemmbrett", "PIN ist 1234").
                                 
-                                - "memory_search": Wenn der Benutzer nach gespeicherten Informationen, Fakten, Orten oder Dingen im Gedächtnis fragt oder sucht – AUCH bei abstrakten Umschreibungen oder Synonymen (z. B. "Wo ist mein Schlüssel?", "Suche im Gedächtnis nach PIN", "Wo habe ich das Ding zum Sehen hingelegt?"). Analysiere die Absicht des Benutzers und ermittle das BESTE konkrete Suchwort (z. B. bei "Ding zum Sehen" -> "brille") und gib dieses im Feld 'memory_search_query' an!
+                                - "memory_search": Wenn der Benutzer nach gespeicherten Informationen, Fakten, Orten oder Dingen im Gedächtnis fragt oder sucht. Analysiere die Absicht des Benutzers und ermittle das BESTE konkrete Suchwort und gib dieses im Feld 'memory_search_query' an!
                                 
-                                - "calendar_delete": Wenn der Benutzer einen Termin LÖSCHEN oder ENTFERNEN möchte (z. B. "Lösche den Arbeitsamt Termin", "Entferne den Arzttermin"). 
-                                  Gib im Feld 'calendar_delete_query' das Kern-Suchwort des Termins an (z. B. "arbeitsamt").
+                                - "calendar_delete": Wenn der Benutzer einen Termin LÖSCHEN oder ENTFERNEN möchte. Gib 'calendar_delete_query' an.
                                 
                                 - "reminder_delete": Wenn der Benutzer eine Erinnerung löschen möchte. Gib 'reminder_delete_query' zurück.
                                 
@@ -1146,8 +1123,8 @@
                                 - new_name
                                 - memory_key, memory_value, memory_search_query
                                 - todo_items, shopping_items, reminder_text, reminder_time, calendar_text, calendar_time, call_contact
-                                - calendar_delete_query (Kernwort des zu löschenden Termins)
-                                - reminder_delete_query (Kernwort der zu löschenden Erinnerung)
+                                - calendar_delete_query
+                                - reminder_delete_query
                                 - reply: Natürliche, grammatikalisch einwandfreie Antwort.`
                             },
                             { role: "user", content: text }
@@ -1211,10 +1188,8 @@
                     const searchQuery = ai.memory_search_query || text;
                     const results = searchMemory(searchQuery);
 
-                    // Nutze direkt die Antwort der KI, ohne doppelte Ausgaben anzuhängen
                     let responseText = ai.reply;
 
-                    // Falls die KI keine Antwort geliefert hat, erstelle eine einfache Zusammenfassung
                     if (!responseText) {
                         if (results.length > 0) {
                             const foundList = results.map(r => `${r.key}: ${r.value}`).join(', ');
