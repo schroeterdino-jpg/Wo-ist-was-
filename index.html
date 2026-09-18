@@ -865,33 +865,9 @@
         }
 
         let currentAudio = null;
-        async function speak(text, onComplete) {
-            if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-            if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); }
-
-            try {
-                const response = await fetch('/api/tts', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: text })
-                });
-
-                if (response.ok) {
-                    const blob = await response.blob();
-                    const audioUrl = URL.createObjectURL(blob);
-                    currentAudio = new Audio(audioUrl);
-                    currentAudio.play().catch(() => {});
-                    currentAudio.onended = () => { 
-                        currentAudio = null; 
-                        if (onComplete) onComplete(); 
-                    };
-                    return;
-                }
-            } catch (e) {
-                console.error("API TTS Server-Fehler, Nutze Fallback:", e);
-            }
-
+        function speak(text, onComplete) {
             if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'de-DE';
                 utterance.rate = 1.15;
@@ -899,6 +875,7 @@
                 utterance.onend = () => { if (onComplete) onComplete(); };
                 window.speechSynthesis.speak(utterance);
             } else {
+                if (currentAudio) { currentAudio.pause(); currentAudio = null; }
                 currentAudio = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=de&client=tw-ob`);
                 currentAudio.playbackRate = 1.25;
                 currentAudio.play().catch(() => {});
