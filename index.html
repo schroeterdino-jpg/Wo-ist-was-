@@ -54,8 +54,7 @@
         </div>
     </nav>
 
-    <!-- Versteckte Felder zur internen Datenhaltung -->
-    <input type="hidden" id="apiKeyInput">
+    <!-- Verstecktes Feld zur internen Datenhaltung -->
     <input type="hidden" id="googleClientIdInput">
 
     <!-- Hauptbereich -->
@@ -238,7 +237,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-800 border-t border-slate-700 text-center p-3 text-xs text-slate-400 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 8.8 (Hidden Keys)</span>
+        <span>Version 8.9 (Vercel Proxy Secured)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -286,7 +285,6 @@
         const shoppingList = document.getElementById('shoppingList');
         const categoryContainer = document.getElementById('categoryContainer');
         
-        const apiKeyInput = document.getElementById('apiKeyInput');
         const googleClientIdInput = document.getElementById('googleClientIdInput');
         const userNameInput = document.getElementById('userNameInput');
         const userNameDisplay = document.getElementById('userNameDisplay');
@@ -295,6 +293,10 @@
         const contactNameInput = document.getElementById('contactNameInput');
         const contactPhoneInput = document.getElementById('contactPhoneInput');
         const contactListDisplay = document.getElementById('contactListDisplay');
+
+        // Bereinige alte Schlüssel-Fragmente im Browser für absolute Sicherheit
+        localStorage.removeItem('user_api_key');
+        sessionStorage.removeItem('user_api_key');
 
         function getPersistentData(key, defaultValue) {
             let val = localStorage.getItem(key);
@@ -310,9 +312,6 @@
         let currentUserName = getPersistentData('user_custom_name', 'Dino');
         if (userNameInput) userNameInput.value = currentUserName;
         updateUserGreeting();
-
-        let savedKey = getPersistentData('user_api_key', '');
-        if (savedKey && apiKeyInput) apiKeyInput.value = savedKey;
 
         const DEFAULT_CLIENT_ID = '399573320370-qka01ghj0s88eoair7lla665cbj10o4g.apps.googleusercontent.com';
         let savedClientId = getPersistentData('google_client_id', DEFAULT_CLIENT_ID);
@@ -451,7 +450,7 @@
                 setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
                 renderAllLists();
             }
-        }, 1000);
+        }, 15000);
 
         let tokenClient = null;
         let accessToken = getPersistentData('google_access_token', '');
@@ -836,7 +835,20 @@
                 utterance.lang = 'de-DE';
                 utterance.rate = 1.15;
                 utterance.pitch = 1.0;
-                utterance.onend = () => { if (onComplete) onComplete(); };
+                
+                let hasEnded = false;
+                const endHandler = () => {
+                    if (!hasEnded) {
+                        hasEnded = true;
+                        if (onComplete) onComplete();
+                    }
+                };
+
+                utterance.onend = endHandler;
+                utterance.onerror = endHandler;
+                
+                setTimeout(endHandler, 20000); // Fallback nach max. 20 sek
+
                 window.speechSynthesis.speak(utterance);
             } else {
                 if (currentAudio) { currentAudio.pause(); currentAudio = null; }
@@ -873,10 +885,6 @@
         }
 
         function toggleSpeechRecognition() {
-            if (!getPersistentData('user_api_key', '')) {
-                alert('Bitte Groq API-Key hinterlegen!');
-                return;
-            }
             if (!recognition) {
                 alert('Spracherkennung wird von diesem Browser leider nicht unterstützt.');
                 return;
@@ -1027,7 +1035,6 @@
         }
 
         async function sendToGroqSmart(text) {
-            const key = getPersistentData('user_api_key', '');
             if (statusMessage) statusMessage.textContent = "Verarbeite Befehl...";
 
             let weatherInfo = null;
@@ -1063,6 +1070,7 @@
             const contextData = {
                 heute_datum: nowGermanIso,
                 aktuelles_jahr: now.getFullYear(),
+                userName: currentUserName,
                 gedächtnis: memoryItems,
                 kontakte: savedContacts,
                 termine: calendarEntries,
@@ -1074,66 +1082,21 @@
             };
 
             try {
-                const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                // GESICHERTE BACKEND-SCHNITTSTELLE: Anstelle des API-Keys ruft das Frontend die Vercel Serverless Function an.
+                const res = await fetch('/api/chat', {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        model: "openai/gpt-oss-120b",
-                        response_format: { type: "json_object" },
-                        messages: [
-                            {
-                                role: "system",
-                                content: `Du bist ${currentUserName}s smarter, persönlicher Alltags-Assistent. 
-                                Aktueller Daten-Kontext: ${JSON.stringify(contextData)}.
-                                
-                                WICHTIG ZUR ZEIT & DATUM:
-                                - Aktuelles Datum und deutsche Ortszeit: ${nowGermanIso}.
-                                - Berücksichtige bei Datums- und Zeitangaben (z.B. calendar_time, reminder_time) immer die deutsche Zeitzone (Europe/Berlin).
-                                
-                                Analysiere den Sprachbefehl des Benutzers und unterscheide PRÄZISE:
-                                
-                                STRIKTE CATEGORY-REGELN:
-                                - "forgot_check": Wenn der Benutzer fragt, ob er etwas vergessen hat (z. B. "Habe ich etwas vergessen?", "Gibt es noch was zu tun?", "Habe ich was übersehen?", "Habe ich irgendwas vergessen?"). Prüfe im Daten-Kontext überfällige/aktive Erinnerungen, anstehende Termine, offene Aufgaben, Einkaufsliste und wichtige Dinge im Gedächtnis und fass diese präzise in 'reply' zusammen.
-
-                                - "chat": Fragen nach Inhalten aus den Listen (z. B. "Was steht auf meiner Einkaufsliste?", "Welche Aufgaben habe ich?", "Welche Termine stehen an?"). Nutze die Daten aus dem Daten-Kontext, um in 'reply' eine präzise und freundliche Antwort zu formulieren!
-                                
-                                - "shopping": Wenn der Benutzer NEUE Artikel zur Einkaufsliste HINZUFÜGEN möchte (z. B. "Setz Milch auf den Einkaufszettel").
-                                
-                                - "todo": Für alle Aufgaben ODER Notizen/Gedanken (z. B. "Erstelle eine Notiz...", "Schreib auf...", "Notiere...").
-                                
-                                - "memory_store": Ausschließlich für feste Fakten, Standorte von Gegenständen oder persönliches Wissen zum SPEICHERN (z. B. "Der Schlüssel hängt am Klemmbrett", "PIN ist 1234").
-                                
-                                - "memory_search": Wenn der Benutzer nach gespeicherten Informationen, Fakten, Orten oder Dingen im Gedächtnis fragt oder sucht. Analysiere die Absicht des Benutzers und ermittle das BESTE konkrete Suchwort und gib dieses im Feld 'memory_search_query' an!
-                                
-                                - "calendar_delete": Wenn der Benutzer einen Termin LÖSCHEN oder ENTFERNEN möchte. Gib 'calendar_delete_query' an.
-                                
-                                - "reminder_delete": Wenn der Benutzer eine Erinnerung löschen möchte. Gib 'reminder_delete_query' zurück.
-                                
-                                - "name_change": Wenn der Benutzer sagt, wie er genannt werden möchte.
-                                - "location": Fragen nach dem aktuellen physischen Standort.
-                                - "reminder": Neue zeitgesteuerte Erinnerung anlegen.
-                                - "calendar": Neuer fester Kalender-Termin anlegen.
-                                - "call": Telefonanruf starten.
-
-                                MEHRSPRACHIGKEIT:
-                                - Antworte immer in der Sprache des Benutzers.
-
-                                Gib IMMER ein valides JSON-Objekt zurück mit:
-                                - type: "forgot_check", "chat", "location", "memory_store", "memory_search", "todo", "calendar", "calendar_delete", "reminder", "reminder_delete", "shopping", "call", "name_change"
-                                - new_name
-                                - memory_key, memory_value, memory_search_query
-                                - todo_items, shopping_items, reminder_text, reminder_time, calendar_text, calendar_time, call_contact
-                                - calendar_delete_query
-                                - reminder_delete_query
-                                - reply: Natürliche, grammatikalisch einwandfreie Antwort.`
-                            },
-                            { role: "user", content: text }
-                        ]
+                        text: text,
+                        contextData: contextData
                     })
                 });
 
-                const data = await res.json();
-                const ai = JSON.parse(data.choices[0].message.content);
+                if (!res.ok) {
+                    throw new Error(`Server Status: ${res.status}`);
+                }
+
+                const ai = await res.json();
 
                 if (ai.type === 'name_change' && ai.new_name) {
                     currentUserName = ai.new_name.trim();
@@ -1208,8 +1171,6 @@
                     const match = reminderEntries.find(e => e.text.toLowerCase().includes(query) || (query.length > 2 && query.includes(e.text.toLowerCase())));
                     if (match) {
                         await deleteReminderEntry(match.id);
-                    } else if (reminderEntries.length > 0) {
-                        await deleteReminderEntry(reminderEntries[0].id);
                     }
                 } else if (ai.type === 'reminder') {
                     let rText = ai.reminder_text || text;
@@ -1226,15 +1187,15 @@
                         .replace('termin', '')
                         .trim();
 
-                    const match = calendarEntries.find(e => {
-                        const entryText = e.text.toLowerCase();
-                        return entryText.includes(query) || (query.length > 2 && query.includes(entryText));
-                    });
+                    if (query.length >= 3) {
+                        const match = calendarEntries.find(e => {
+                            const entryText = e.text.toLowerCase();
+                            return entryText.includes(query) || query.includes(entryText);
+                        });
 
-                    if (match) {
-                        await deleteCalendarEntry(match.id);
-                    } else if (calendarEntries.length > 0 && query.length < 3) {
-                        await deleteCalendarEntry(calendarEntries[0].id);
+                        if (match) {
+                            await deleteCalendarEntry(match.id);
+                        }
                     }
                 } else if (ai.type === 'calendar' || ai.calendar_text) {
                     let cText = ai.calendar_text || text;
