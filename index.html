@@ -242,7 +242,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-800 border-t border-slate-700 text-center p-3 text-xs text-slate-400 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 8.8 (GPS & WhatsApp Fix)</span>
+        <span>Version 8.9 (Standort-Teilen)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -1170,20 +1170,24 @@
                         const lat = locationInfo.koordinaten.lat;
                         const lon = locationInfo.koordinaten.lon;
 
-                        responseText = `Du bist aktuell im ${road}${houseNumber}${city ? ' in ' + city : ''}. Keine Sorge, ${currentUserName}! Ich öffne WhatsApp mit deinem Standort für deinen Schatz.`;
+                        responseText = `Du bist aktuell im ${road}${houseNumber}${city ? ' in ' + city : ''}. Keine Sorge, ${currentUserName}! Ich öffne WhatsApp, damit du deinen Standort senden kannst.`;
 
-                        const wifeContact = savedContacts['schatz'] || savedContacts['frau'] || savedContacts['ehefrau'] || Object.values(savedContacts)[0];
-                        
-                        if (wifeContact && wifeContact.phone) {
-                            const cleanPhone = wifeContact.phone.replace(/[^0-9]/g, '');
-                            const mapsUrl = `https://maps.google.com/?q=${lat},${lon}`;
-                            const message = encodeURIComponent(`Hallo Schatz, ich bin gerade etwas orientierungslos. Mein aktueller Standort: ${mapsUrl}`);
-                            const whatsappUrl = `https://wa.me/${cleanPhone}?text=${message}`;
+                        const mapsUrl = `https://maps.google.com/?q=${lat},${lon}`;
+                        const shareText = `Hallo, ich bin gerade etwas orientierungslos. Mein aktueller Standort: ${mapsUrl}`;
 
-                            setTimeout(() => {
-                                window.location.href = whatsappUrl;
-                            }, 3500);
-                        }
+                        setTimeout(() => {
+                            if (navigator.share) {
+                                navigator.share({
+                                    title: 'Mein Standort',
+                                    text: shareText
+                                }).catch(() => {
+                                    window.location.href = `whatsapp://send?text=${encodeURIComponent(shareText)}`;
+                                });
+                            } else {
+                                window.location.href = `whatsapp://send?text=${encodeURIComponent(shareText)}`;
+                            }
+                        }, 3500);
+
                     } else if (locationInfo && locationInfo.fehler) {
                         responseText = locationInfo.fehler;
                     } else {
@@ -1192,7 +1196,7 @@
                     
                     renderAllLists();
                     speak(responseText);
-                    if (statusMessage) statusMessage.textContent = "Standort ermittelt & WhatsApp vorbereitet.";
+                    if (statusMessage) statusMessage.textContent = "Standort ermittelt & WhatsApp Teilen vorbereitet.";
                     return;
                 } else if (ai.type === 'shopping') {
                     const items = ai.shopping_items || (ai.shopping_item ? [ai.shopping_item] : []);
