@@ -1,14 +1,20 @@
 export default async function handler(req, res) {
-    // Nur POST-Anfragen erlauben
+    // 1. Nur POST-Anfragen erlauben
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
+    // 2. Zugriffsschutz (Optional, aber dringend empfohlen)
+    // Wenn in Vercel die Variable API_SECRET_KEY gesetzt ist, wird dieser Header geprüft.
+    const clientSecret = req.headers['x-api-secret'];
+    if (process.env.API_SECRET_KEY && clientSecret !== process.env.API_SECRET_KEY) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     const { text, contextData } = req.body;
     
-    // Holt den Key sicher aus deinen Vercel-Umgebungsvariablen
+    // 3. Groq API-Key prüfen
     const apiKey = process.env.GROQ_API_KEY;
-
     if (!apiKey) {
         return res.status(500).json({ error: 'GROQ_API_KEY ist auf Vercel nicht gesetzt.' });
     }
@@ -67,9 +73,30 @@ export default async function handler(req, res) {
             })
         });
 
+        // 4. HTTP-Status der Groq-Antwort prüfen
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            return res.status(response.status).json({ 
+                error: 'Fehler von der Groq-API', 
+                details: errorData 
+            });
+        }
+
         const data = await response.json();
-        return res.status(200).json(data);
+        
+        // 5. Raw-Content aus den OpenAI/Groq Choices extrahieren
+        const rawContent = data?.choices?.[0]?.message?.content;
+
+        if (!rawContent) {
+            return res.status(500).json({ error: 'Keine Antwort im Groq-Payload gefunden.' });
+        }
+
+        // 6. JSON-String parsen und direkt als fertiges Objekt an das Frontend liefern
+        const parsedData = JSON.parse(rawContent);
+        return res.status(200).json(parsedData);
+
     } catch (error) {
-        return res.status(500).json({ error: 'Server-Fehler bei der Anfrage an Groq' });
+        console.error("Groq API Handler Error:", error);
+        return res.status(500).json({ error: 'Server-Fehler bei der Verarbeitung der Anfrage' });
     }
 }
