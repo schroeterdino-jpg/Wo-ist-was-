@@ -228,7 +228,7 @@
                 </summary>
                 <div class="p-4 space-y-3 border-t border-slate-700">
                     <div class="flex gap-2">
-                        <input type="text" id="contactNameInput" placeholder="Name (z.B. Simone)" class="w-1/2 p-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-100">
+                        <input type="text" id="contactNameInput" placeholder="Name (z.B. Schatz)" class="w-1/2 p-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-100">
                         <input type="text" id="contactPhoneInput" placeholder="Nummer..." class="w-1/2 p-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-100">
                     </div>
                     <button onclick="saveContact()" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-lg text-sm font-semibold border border-slate-600">Kontakt hinzufügen</button>
@@ -242,7 +242,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-800 border-t border-slate-700 text-center p-3 text-xs text-slate-400 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 8.7 (Dark Mode & Voice Fix)</span>
+        <span>Version 8.8 (GPS & WhatsApp Fix)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -853,14 +853,14 @@
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'de-DE';
-                utterance.rate = 1.15; // Zügigere Sprachgeschwindigkeit für dynamisches Sprechen
+                utterance.rate = 1.15;
                 utterance.pitch = 1.0;
                 utterance.onend = () => { if (onComplete) onComplete(); };
                 window.speechSynthesis.speak(utterance);
             } else {
                 if (currentAudio) { currentAudio.pause(); currentAudio = null; }
                 currentAudio = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=de&client=tw-ob`);
-                currentAudio.playbackRate = 1.25; // Beschleunigter Fallback
+                currentAudio.playbackRate = 1.25;
                 currentAudio.play().catch(() => {});
                 currentAudio.onended = () => { currentAudio = null; if (onComplete) onComplete(); };
             }
@@ -1000,10 +1000,8 @@
                     const valText = String(rawVal).trim();
                     const lowerVal = valText.toLowerCase();
                     
-                    // Grammatik-Optimierung: Groß- und Kleinschreibung anpassen
                     let formattedKey = k.charAt(0).toUpperCase() + k.slice(1);
                     
-                    // Prüfen, ob bereits Verben oder Präpositionen vorhanden sind
                     const hasVerb = /\b(hängt|liegt|steht|ist|befindet)\b/i.test(lowerVal);
                     const hasPrep = /\b(auf|in|an|unter|über|neben|zwischen|vor|hinter)\b/i.test(lowerVal);
                     
@@ -1056,7 +1054,21 @@
             let locationInfo = null;
             const lowerText = text.toLowerCase();
 
-            if (lowerText.includes('wo bin ich') || lowerText.includes('wo befinde ich') || lowerText.includes('mein standort') || lowerText.includes('aktueller ort') || lowerText.includes('welche straße') || lowerText.includes('welcher ort') || lowerText.includes('wo bin') || lowerText.includes('wo sind wir')) {
+            if (
+                lowerText.includes('wo bin ich') || 
+                lowerText.includes('wo befinde ich') || 
+                lowerText.includes('mein standort') || 
+                lowerText.includes('aktueller ort') || 
+                lowerText.includes('welche straße') || 
+                lowerText.includes('welcher ort') || 
+                lowerText.includes('wo bin') || 
+                lowerText.includes('wo sind wir') || 
+                lowerText.includes('verwirrt') || 
+                lowerText.includes('orientierungslos') || 
+                lowerText.includes('nicht wo ich bin') ||
+                lowerText.includes('verlaufen') ||
+                lowerText.includes('hilfe wo')
+            ) {
                 if (statusMessage) statusMessage.textContent = "Bestimme Standort...";
                 locationInfo = await fetchLocationData();
             }
@@ -1095,6 +1107,37 @@
                 standort: locationInfo
             };
 
+            const systemPrompt = "Du bist " + currentUserName + "s smarter, persönlicher Alltags-Assistent.\n" +
+            "Aktueller Daten-Kontext: " + JSON.stringify(contextData) + "\n\n" +
+            "WICHTIG ZUR ZEIT & DATUM:\n" +
+            "- Aktuelles Datum und deutsche Ortszeit: " + nowGermanIso + ".\n" +
+            "- Berücksichtige bei Datums- und Zeitangaben immer die deutsche Zeitzone (Europe/Berlin).\n\n" +
+            "Analysiere den Sprachbefehl des Benutzers und unterscheide PRÄZISE:\n\n" +
+            "STRIKTE CATEGORY-REGELN:\n" +
+            "- \"forgot_check\": Wenn der Benutzer fragt, ob er etwas vergessen hat.\n" +
+            "- \"chat\": Fragen nach Inhalten aus den Listen (Einkauf, Aufgaben, Termine).\n" +
+            "- \"shopping\": NEUE Artikel zur Einkaufsliste HINZUFÜGEN.\n" +
+            "- \"todo\": Aufgaben, Notizen oder Gedanken speichern.\n" +
+            "- \"memory_store\": Feste Fakten, Standorte von Gegenständen oder persönliches Wissen SPEICHERN.\n" +
+            "- \"memory_search\": Nach gespeicherten Infos im Gedächtnis fragen.\n" +
+            "- \"calendar_delete\": Termin LÖSCHEN oder ENTFERNEN.\n" +
+            "- \"reminder_delete\": Erinnerung löschen.\n" +
+            "- \"name_change\": Wie der Benutzer genannt werden möchte.\n" +
+            "- \"location\": Fragen nach dem Standort oder Orientierungslosigkeit.\n" +
+            "- \"reminder\": Neue zeitgesteuerte Erinnerung anlegen.\n" +
+            "- \"calendar\": Neuer fester Kalender-Termin anlegen.\n" +
+            "- \"call\": Telefonanruf starten.\n\n" +
+            "MEHRSPRACHIGKEIT:\n" +
+            "- Antworte immer in der Sprache des Benutzers.\n\n" +
+            "Gib IMMER ein valides JSON-Objekt zurück mit:\n" +
+            "- type: \"forgot_check\", \"chat\", \"location\", \"memory_store\", \"memory_search\", \"todo\", \"calendar\", \"calendar_delete\", \"reminder\", \"reminder_delete\", \"shopping\", \"call\", \"name_change\"\n" +
+            "- new_name\n" +
+            "- memory_key, memory_value, memory_search_query\n" +
+            "- todo_items, shopping_items, reminder_text, reminder_time, calendar_text, calendar_time, call_contact\n" +
+            "- calendar_delete_query\n" +
+            "- reminder_delete_query\n" +
+            "- reply: Natürliche, grammatikalisch einwandfreie Antwort.";
+
             try {
                 const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                     method: 'POST',
@@ -1103,53 +1146,7 @@
                         model: "openai/gpt-oss-120b",
                         response_format: { type: "json_object" },
                         messages: [
-                            {
-                                role: "system",
-                                content: `Du bist ${currentUserName}s smarter, persönlicher Alltags-Assistent. 
-                                Aktueller Daten-Kontext: ${JSON.stringify(contextData)}.
-                                
-                                WICHTIG ZUR ZEIT & DATUM:
-                                - Aktuelles Datum und deutsche Ortszeit: ${nowGermanIso}.
-                                - Berücksichtige bei Datums- und Zeitangaben (z.B. calendar_time, reminder_time) immer die deutsche Zeitzone (Europe/Berlin).
-                                
-                                Analysiere den Sprachbefehl des Benutzers und unterscheide PRÄZISE:
-                                
-                                STRIKTE CATEGORY-REGELN:
-                                - "forgot_check": Wenn der Benutzer fragt, ob er etwas vergessen hat (z. B. "Habe ich etwas vergessen?", "Gibt es noch was zu tun?", "Habe ich was übersehen?", "Habe ich irgendwas vergessen?"). Prüfe im Daten-Kontext überfällige/aktive Erinnerungen, anstehende Termine, offene Aufgaben, Einkaufsliste und wichtige Dinge im Gedächtnis und fass diese präzise in 'reply' zusammen (z. B. "Ja, Dino. Du hast noch zwei offene Aufgaben und um 10 Uhr einen Termin. Auf deiner Einkaufsliste stehen außerdem Milch und Eier.").
-
-                                - "chat": Fragen nach Inhalten aus den Listen (z. B. "Was steht auf meiner Einkaufsliste?", "Welche Aufgaben habe ich?", "Welche Termine stehen an?"). Nutze die Daten aus dem Daten-Kontext, um in 'reply' eine präzise und freundliche Antwort zu formulieren!
-                                
-                                - "shopping": Wenn der Benutzer NEUE Artikel zur Einkaufsliste HINZUFÜGEN möchte (z. B. "Setz Milch auf den Einkaufszettel").
-                                
-                                - "todo": Für alle Aufgaben ODER Notizen/Gedanken (z. B. "Erstelle eine Notiz...", "Schreib auf...", "Notiere...", "Erinnere mich nicht, aber merk dir als Notiz...").
-                                
-                                - "memory_store": Ausschließlich für feste Fakten, Standorte von Gegenständen oder persönliches Wissen zum SPEICHERN (z. B. "Der Schlüssel hängt am Klemmbrett", "PIN ist 1234"). Keine Vorhaben oder flexiblen Notizen!
-                                
-                                - "memory_search": Wenn der Benutzer nach gespeicherten Informationen, Fakten, Orten oder Dingen im Gedächtnis fragt oder sucht – AUCH bei abstrakten Umschreibungen oder Synonymen (z. B. "Wo ist mein Schlüssel?", "Suche im Gedächtnis nach PIN", "Wo habe ich das Ding zum Sehen hingelegt?"). Analysiere die Absicht des Benutzers und ermittle das BESTE konkrete Suchwort (z. B. bei "Ding zum Sehen" -> "brille") und gib dieses im Feld 'memory_search_query' an!
-                                
-                                - "calendar_delete": Wenn der Benutzer einen Termin LÖSCHEN oder ENTFERNEN möchte (z. B. "Lösche den Arbeitsamt Termin", "Entferne den Arzttermin"). 
-                                  Gib im Feld 'calendar_delete_query' das Kern-Suchwort des Termins an (z. B. "arbeitsamt").
-                                
-                                - "reminder_delete": Wenn der Benutzer eine Erinnerung löschen möchte. Gib 'reminder_delete_query' zurück.
-                                
-                                - "name_change": Wenn der Benutzer sagt, wie er genannt werden möchte.
-                                - "location": Fragen nach dem aktuellen physischen Standort.
-                                - "reminder": Neue zeitgesteuerte Erinnerung anlegen.
-                                - "calendar": Neuer fester Kalender-Termin anlegen.
-                                - "call": Telefonanruf starten.
-
-                                MEHRSPRACHIGKEIT:
-                                - Antworte immer in der Sprache des Benutzers.
-
-                                Gib IMMER ein valides JSON-Objekt zurück mit:
-                                - type: "forgot_check", "chat", "location", "memory_store", "memory_search", "todo", "calendar", "calendar_delete", "reminder", "reminder_delete", "shopping", "call", "name_change"
-                                - new_name
-                                - memory_key, memory_value, memory_search_query
-                                - todo_items, shopping_items, reminder_text, reminder_time, calendar_text, calendar_time, call_contact
-                                - calendar_delete_query (Kernwort des zu löschenden Termins)
-                                - reminder_delete_query (Kernwort der zu löschenden Erinnerung)
-                                - reply: Natürliche, grammatikalisch einwandfreie Antwort.`
-                            },
+                            { role: "system", content: systemPrompt },
                             { role: "user", content: text }
                         ]
                     })
@@ -1164,25 +1161,38 @@
                     if (userNameInput) userNameInput.value = currentUserName;
                     updateUserGreeting();
                 } else if (ai.type === 'location' || locationInfo) {
-                    let responseText = ai.reply;
+                    let responseText = "";
                     
-                    if (!responseText && locationInfo) {
-                        if (locationInfo.fehler) {
-                            responseText = locationInfo.fehler;
-                        } else if (locationInfo.details) {
-                            const road = locationInfo.details.road || locationInfo.details.pedestrian || "einer unbekannten Straße";
-                            const houseNumber = locationInfo.details.house_number ? ` Nummer ${locationInfo.details.house_number}` : "";
-                            const city = locationInfo.details.city || locationInfo.details.town || locationInfo.details.village || "";
-                            
-                            responseText = `Du bist aktuell in ${road}${houseNumber}${city ? ' in ' + city : ''}. Alles ist gut!`;
-                        } else {
-                            responseText = `Dein Standort ist: ${locationInfo.adresse}`;
+                    if (locationInfo && !locationInfo.fehler && locationInfo.details) {
+                        const road = locationInfo.details.road || locationInfo.details.pedestrian || "einer unbekannten Straße";
+                        const houseNumber = locationInfo.details.house_number ? ` ${locationInfo.details.house_number}` : "";
+                        const city = locationInfo.details.city || locationInfo.details.town || locationInfo.details.village || locationInfo.details.suburb || "";
+                        const lat = locationInfo.koordinaten.lat;
+                        const lon = locationInfo.koordinaten.lon;
+
+                        responseText = `Du bist aktuell im ${road}${houseNumber}${city ? ' in ' + city : ''}. Keine Sorge, ${currentUserName}! Ich öffne WhatsApp mit deinem Standort für deinen Schatz.`;
+
+                        const wifeContact = savedContacts['schatz'] || savedContacts['frau'] || savedContacts['ehefrau'] || Object.values(savedContacts)[0];
+                        
+                        if (wifeContact && wifeContact.phone) {
+                            const cleanPhone = wifeContact.phone.replace(/[^0-9]/g, '');
+                            const mapsUrl = `https://maps.google.com/?q=${lat},${lon}`;
+                            const message = encodeURIComponent(`Hallo Schatz, ich bin gerade etwas orientierungslos. Mein aktueller Standort: ${mapsUrl}`);
+                            const whatsappUrl = `https://wa.me/${cleanPhone}?text=${message}`;
+
+                            setTimeout(() => {
+                                window.location.href = whatsappUrl;
+                            }, 3500);
                         }
+                    } else if (locationInfo && locationInfo.fehler) {
+                        responseText = locationInfo.fehler;
+                    } else {
+                        responseText = `Ich konnte deinen aktuellen Standort leider nicht genau ermitteln.`;
                     }
                     
                     renderAllLists();
-                    speak(responseText || `Ich konnte deinen aktuellen Standort leider nicht ermitteln.`);
-                    if (statusMessage) statusMessage.textContent = "Standort vorgelesen.";
+                    speak(responseText);
+                    if (statusMessage) statusMessage.textContent = "Standort ermittelt & WhatsApp vorbereitet.";
                     return;
                 } else if (ai.type === 'shopping') {
                     const items = ai.shopping_items || (ai.shopping_item ? [ai.shopping_item] : []);
@@ -1211,10 +1221,8 @@
                     const searchQuery = ai.memory_search_query || text;
                     const results = searchMemory(searchQuery);
 
-                    // Nutze direkt die Antwort der KI, ohne doppelte Ausgaben anzuhängen
                     let responseText = ai.reply;
 
-                    // Falls die KI keine Antwort geliefert hat, erstelle eine einfache Zusammenfassung
                     if (!responseText) {
                         if (results.length > 0) {
                             const foundList = results.map(r => `${r.key}: ${r.value}`).join(', ');
