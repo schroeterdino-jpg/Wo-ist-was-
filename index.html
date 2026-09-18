@@ -237,7 +237,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 8.5 (Gedächtnis-Suche)</span>
+        <span>Version 8.6 (Uhrzeit Fix)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -358,7 +358,6 @@
         renderAllLists();
         renderContactList();
 
-        // LOKALE GEDÄCHTNIS-SUCHFUNKTION (Unverändertes Auslesen)
         function searchMemory(query) {
             if (!query || typeof memoryItems !== 'object') return [];
             const lowerQuery = query.toLowerCase().trim();
@@ -381,7 +380,7 @@
                     .sort((a, b) => new Date(a.isoDate) - new Date(b.isoDate));
                 if (validCal.length > 0) {
                     const topCal = validCal[0];
-                    const dateFormatted = new Date(topCal.isoDate).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+                    const dateFormatted = new Date(topCal.isoDate).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'short' });
                     nextCal = `${topCal.text} (${dateFormatted})`;
                 } else if (calendarEntries[0].text) {
                     nextCal = calendarEntries[0].text;
@@ -395,7 +394,7 @@
                     .sort((a, b) => new Date(a.time) - new Date(b.time));
                 if (validRem.length > 0) {
                     const topRem = validRem[0];
-                    const remFormatted = new Date(topRem.time).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+                    const remFormatted = new Date(topRem.time).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'short' });
                     nextRem = `${topRem.text} (${remFormatted})`;
                 }
             }
@@ -911,8 +910,8 @@
 
         async function triggerDailyBriefing() {
             const now = new Date();
-            const hour = now.getHours();
-            const timeStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+            const hour = parseInt(now.toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', hour12: false }), 10);
+            const timeStr = now.toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' });
             
             let greeting = "Guten Morgen";
             if (hour >= 12 && hour < 18) greeting = "Hallo";
@@ -1057,9 +1056,12 @@
                 weatherInfo = await fetchWeatherData();
             }
 
-            // Vollständiger Kontext für Abfragen
+            const now = new Date();
+            const nowGermanIso = now.toLocaleString('sv-SE', { timeZone: 'Europe/Berlin' }).replace(' ', 'T');
+
             const contextData = {
-                heute_datum: new Date().toISOString(),
+                heute_datum: nowGermanIso,
+                aktuelles_jahr: now.getFullYear(),
                 gedächtnis: memoryItems,
                 kontakte: savedContacts,
                 termine: calendarEntries,
@@ -1082,6 +1084,10 @@
                                 role: "system",
                                 content: `Du bist ${currentUserName}s smarter, persönlicher Alltags-Assistent. 
                                 Aktueller Daten-Kontext: ${JSON.stringify(contextData)}.
+                                
+                                WICHTIG ZUR ZEIT & DATUM:
+                                - Aktuelles Datum und deutsche Ortszeit: ${nowGermanIso}.
+                                - Berücksichtige bei Datums- und Zeitangaben (z.B. calendar_time, reminder_time) immer die deutsche Zeitzone (Europe/Berlin).
                                 
                                 Analysiere den Sprachbefehl des Benutzers und unterscheide PRÄZISE:
                                 
