@@ -92,6 +92,23 @@
                 </div>
             </div>
 
+            <!-- Standort-Abfrage Dialog / Karte (Standardmäßig versteckt) -->
+            <div id="locationShareCard" class="hidden w-full bg-slate-800 p-4 rounded-2xl border border-blue-500 shadow-xl space-y-3 text-center">
+                <div class="text-blue-400 font-bold text-base flex justify-center items-center gap-2">
+                    📍 <span>Standort-Auskunft</span>
+                </div>
+                <p id="locationAddressText" class="text-sm text-slate-200 font-medium">Adresse wird ermittelt...</p>
+                <p class="text-xs text-slate-300">Möchtest du deinen Standort jetzt per WhatsApp teilen?</p>
+                <div class="flex gap-2 pt-1">
+                    <button id="btnShareLocationYes" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-3 rounded-xl font-bold text-sm shadow">
+                        💬 Ja, WhatsApp
+                    </button>
+                    <button onclick="dismissLocationShare()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 py-2.5 px-3 rounded-xl font-bold text-sm border border-slate-600">
+                        ❌ Nein, danke
+                    </button>
+                </div>
+            </div>
+
             <!-- Haupt-Aktionsbutton -->
             <div class="my-auto flex flex-col items-center space-y-3 py-2">
                 <button id="recordBtn" onclick="toggleSpeechRecognition()" class="w-44 h-44 bg-red-600 hover:bg-red-700 text-white rounded-full flex flex-col items-center justify-center shadow-2xl transition transform active:scale-95 border-4 border-slate-800 cursor-pointer">
@@ -242,7 +259,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-800 border-t border-slate-700 text-center p-3 text-xs text-slate-400 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 8.9 (Standort-Teilen)</span>
+        <span>Version 9.0 (Standort-Abfrage)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -1046,6 +1063,36 @@
             speak(text);
         }
 
+        // Hilfsfunktionen für das Standort-Sharing
+        function showLocationSharePrompt(locationName, shareText) {
+            const card = document.getElementById('locationShareCard');
+            const addrText = document.getElementById('locationAddressText');
+            const btnYes = document.getElementById('btnShareLocationYes');
+
+            if (card && addrText && btnYes) {
+                addrText.textContent = locationName;
+                btnYes.onclick = () => {
+                    if (navigator.share) {
+                        navigator.share({
+                            title: 'Mein Standort',
+                            text: shareText
+                        }).catch(() => {
+                            window.location.href = `whatsapp://send?text=${encodeURIComponent(shareText)}`;
+                        });
+                    } else {
+                        window.location.href = `whatsapp://send?text=${encodeURIComponent(shareText)}`;
+                    }
+                    dismissLocationShare();
+                };
+                card.classList.remove('hidden');
+            }
+        }
+
+        function dismissLocationShare() {
+            const card = document.getElementById('locationShareCard');
+            if (card) card.classList.add('hidden');
+        }
+
         async function sendToGroqSmart(text) {
             const key = getPersistentData('user_api_key', '');
             if (statusMessage) statusMessage.textContent = "Verarbeite Befehl...";
@@ -1067,7 +1114,8 @@
                 lowerText.includes('orientierungslos') || 
                 lowerText.includes('nicht wo ich bin') ||
                 lowerText.includes('verlaufen') ||
-                lowerText.includes('hilfe wo')
+                lowerText.includes('hilfe wo') ||
+                lowerText.includes('sag mir wo')
             ) {
                 if (statusMessage) statusMessage.textContent = "Bestimme Standort...";
                 locationInfo = await fetchLocationData();
@@ -1170,23 +1218,13 @@
                         const lat = locationInfo.koordinaten.lat;
                         const lon = locationInfo.koordinaten.lon;
 
-                        responseText = `Du bist aktuell im ${road}${houseNumber}${city ? ' in ' + city : ''}. Keine Sorge, ${currentUserName}! Ich öffne WhatsApp, damit du deinen Standort senden kannst.`;
+                        const locationName = `${road}${houseNumber}${city ? ' in ' + city : ''}`;
+                        responseText = `Du bist aktuell im ${locationName}. Möchtest du deinen Standort per WhatsApp teilen?`;
 
                         const mapsUrl = `https://maps.google.com/?q=${lat},${lon}`;
-                        const shareText = `Hallo, ich bin gerade etwas orientierungslos. Mein aktueller Standort: ${mapsUrl}`;
+                        const shareText = `Hallo, ich bin gerade hier: ${mapsUrl}`;
 
-                        setTimeout(() => {
-                            if (navigator.share) {
-                                navigator.share({
-                                    title: 'Mein Standort',
-                                    text: shareText
-                                }).catch(() => {
-                                    window.location.href = `whatsapp://send?text=${encodeURIComponent(shareText)}`;
-                                });
-                            } else {
-                                window.location.href = `whatsapp://send?text=${encodeURIComponent(shareText)}`;
-                            }
-                        }, 3500);
+                        showLocationSharePrompt(locationName, shareText);
 
                     } else if (locationInfo && locationInfo.fehler) {
                         responseText = locationInfo.fehler;
@@ -1196,7 +1234,7 @@
                     
                     renderAllLists();
                     speak(responseText);
-                    if (statusMessage) statusMessage.textContent = "Standort ermittelt & WhatsApp Teilen vorbereitet.";
+                    if (statusMessage) statusMessage.textContent = "Standort ermittelt.";
                     return;
                 } else if (ai.type === 'shopping') {
                     const items = ai.shopping_items || (ai.shopping_item ? [ai.shopping_item] : []);
