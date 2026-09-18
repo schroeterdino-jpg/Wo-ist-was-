@@ -999,12 +999,26 @@
                     const rawVal = typeof memoryItems[k] === 'object' ? JSON.stringify(memoryItems[k]) : memoryItems[k];
                     const valText = String(rawVal).trim();
                     const lowerVal = valText.toLowerCase();
-                    // Satzbau-Optimierung für grammatikalisch korrekte Sprachausgabe
-                    const startsWithVerbOrPrep = lowerVal.startsWith('hängt') || lowerVal.startsWith('liegt') || lowerVal.startsWith('steht') || lowerVal.startsWith('ist') || lowerVal.startsWith('auf') || lowerVal.startsWith('in') || lowerVal.startsWith('an') || lowerVal.startsWith('unter') || lowerVal.startsWith('über') || lowerVal.startsWith('neben') || lowerVal.startsWith('zwischen') || lowerVal.startsWith('vor') || lowerVal.startsWith('hinter');
-                    const prefix = startsWithVerbOrPrep ? '' : 'liegt ';
-                    return `${k} ${prefix}${valText}`;
+                    
+                    // Grammatik-Optimierung: Groß- und Kleinschreibung anpassen
+                    let formattedKey = k.charAt(0).toUpperCase() + k.slice(1);
+                    
+                    // Prüfen, ob bereits Verben oder Präpositionen vorhanden sind
+                    const hasVerb = /\b(hängt|liegt|steht|ist|befindet)\b/i.test(lowerVal);
+                    const hasPrep = /\b(auf|in|an|unter|über|neben|zwischen|vor|hinter)\b/i.test(lowerVal);
+                    
+                    let prefix = "";
+                    if (!hasVerb && !hasPrep) {
+                        prefix = "liegt auf dem ";
+                    } else if (!hasVerb && hasPrep) {
+                        prefix = "liegt ";
+                    } else {
+                        prefix = "";
+                    }
+                    
+                    return `deine ${formattedKey} ${prefix}${valText}`;
                 }).join(', und ');
-                text += `Kurzer Hinweis für unterwegs: ${memList}. `;
+                text += `Kurzer Hinweis für unterwegs: Denk daran, ${memList}. `;
             }
 
             if (todoEntries && todoEntries.length > 0) {
