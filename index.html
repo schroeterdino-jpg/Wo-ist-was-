@@ -1211,17 +1211,17 @@
                     const searchQuery = ai.memory_search_query || text;
                     const results = searchMemory(searchQuery);
 
+                    // Nutze direkt die Antwort der KI, ohne doppelte Ausgaben anzuhängen
                     let responseText = ai.reply;
 
-                    if (results.length > 0) {
-                        const foundList = results.map(r => `${r.key}: ${r.value}`).join(', ');
-                        if (responseText) {
-                            responseText += ` Im Gedächtnis steht: ${foundList}.`;
+                    // Falls die KI keine Antwort geliefert hat, erstelle eine einfache Zusammenfassung
+                    if (!responseText) {
+                        if (results.length > 0) {
+                            const foundList = results.map(r => `${r.key}: ${r.value}`).join(', ');
+                            responseText = `Im Gedächtnis steht: ${foundList}.`;
                         } else {
-                            responseText = `Ich habe Folgendes im Gedächtnis gefunden: ${foundList}.`;
+                            responseText = `Ich habe dazu leider nichts im Gedächtnis gefunden.`;
                         }
-                    } else if (!responseText) {
-                        responseText = `Ich habe dazu leider nichts im Gedächtnis gefunden.`;
                     }
 
                     renderAllLists();
