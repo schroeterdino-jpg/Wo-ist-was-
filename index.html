@@ -237,7 +237,7 @@
     <!-- Fußbereich -->
     <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 8.4 (Fix: Löschen & Abfragen)</span>
+        <span>Version 8.5 (Gedächtnis-Suche)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -357,6 +357,19 @@
 
         renderAllLists();
         renderContactList();
+
+        // LOKALE GEDÄCHTNIS-SUCHFUNKTION (Unverändertes Auslesen)
+        function searchMemory(query) {
+            if (!query || typeof memoryItems !== 'object') return [];
+            const lowerQuery = query.toLowerCase().trim();
+            
+            return Object.keys(memoryItems)
+                .filter(key => {
+                    const val = String(typeof memoryItems[key] === 'object' ? JSON.stringify(memoryItems[key]) : memoryItems[key]).toLowerCase();
+                    return key.toLowerCase().includes(lowerQuery) || val.includes(lowerQuery);
+                })
+                .map(key => ({ key, value: memoryItems[key] }));
+        }
 
         function getAssistantOverview() {
             const now = new Date();
@@ -1079,7 +1092,9 @@
                                 
                                 - "todo": Für alle Aufgaben ODER Notizen/Gedanken (z. B. "Erstelle eine Notiz...", "Schreib auf...", "Notiere...", "Erinnere mich nicht, aber merk dir als Notiz...").
                                 
-                                - "memory_store": Ausschließlich für feste Fakten, Standorte von Gegenständen oder persönliches Wissen (z. B. "Der Schlüssel hängt am Klemmbrett", "PIN ist 1234"). Keine Vorhaben oder flexiblen Notizen!
+                                - "memory_store": Ausschließlich für feste Fakten, Standorte von Gegenständen oder persönliches Wissen zum SPEICHERN (z. B. "Der Schlüssel hängt am Klemmbrett", "PIN ist 1234"). Keine Vorhaben oder flexiblen Notizen!
+                                
+                                - "memory_search": Wenn der Benutzer nach gespeicherten Informationen, Fakten, Orten oder Dingen im Gedächtnis fragt oder sucht (z. B. "Wo ist mein Schlüssel?", "Suche im Gedächtnis nach PIN", "Was weißt du über mein Auto?", "Wo habe ich X abgelegt?"). Gib im Feld 'memory_search_query' den gesuchten Begriff an.
                                 
                                 - "calendar_delete": Wenn der Benutzer einen Termin LÖSCHEN oder ENTFERNEN möchte (z. B. "Lösche den Arbeitsamt Termin", "Entferne den Arzttermin"). 
                                   Gib im Feld 'calendar_delete_query' das Kern-Suchwort des Termins an (z. B. "arbeitsamt").
@@ -1096,9 +1111,9 @@
                                 - Antworte immer in der Sprache des Benutzers.
 
                                 Gib IMMER ein valides JSON-Objekt zurück mit:
-                                - type: "chat", "location", "memory_store", "todo", "calendar", "calendar_delete", "reminder", "reminder_delete", "shopping", "call", "name_change"
+                                - type: "chat", "location", "memory_store", "memory_search", "todo", "calendar", "calendar_delete", "reminder", "reminder_delete", "shopping", "call", "name_change"
                                 - new_name
-                                - memory_key, memory_value
+                                - memory_key, memory_value, memory_search_query
                                 - todo_items, shopping_items, reminder_text, reminder_time, calendar_text, calendar_time, call_contact
                                 - calendar_delete_query (Kernwort des zu löschenden Termins)
                                 - reminder_delete_query (Kernwort der zu löschenden Erinnerung)
@@ -1161,6 +1176,23 @@
                     }
                     memoryItems[ai.memory_key.toLowerCase()] = String(val);
                     setPersistentData('helfer_memory', JSON.stringify(memoryItems));
+                } else if (ai.type === 'memory_search') {
+                    const searchQuery = ai.memory_search_query || text;
+                    const results = searchMemory(searchQuery);
+
+                    let responseText = ai.reply;
+
+                    if (!responseText && results.length > 0) {
+                        const foundList = results.map(r => `${r.key}: ${r.value}`).join(', ');
+                        responseText = `Ich habe Folgendes im Gedächtnis gefunden: ${foundList}.`;
+                    } else if (!responseText) {
+                        responseText = `Ich habe dazu leider nichts im Gedächtnis gefunden.`;
+                    }
+
+                    renderAllLists();
+                    speak(responseText);
+                    if (statusMessage) statusMessage.textContent = "Gedächtnis durchsucht.";
+                    return;
                 } else if (ai.type === 'reminder_delete') {
                     const query = (ai.reminder_delete_query || text).toLowerCase().replace('lösche', '').replace('lösch', '').replace('erinnerung', '').trim();
                     const match = reminderEntries.find(e => e.text.toLowerCase().includes(query) || (query.length > 2 && query.includes(e.text.toLowerCase())));
@@ -1177,7 +1209,6 @@
                     }
                     await addGoogleCalendarReminder(rText, ai.reminder_time);
                 } else if (ai.type === 'calendar_delete') {
-                    // VERBESSERTE LÖSCHLOGIK FÜR TERMINE:
                     const query = (ai.calendar_delete_query || text).toLowerCase()
                         .replace('lösche', '')
                         .replace('lösch', '')
@@ -1185,7 +1216,6 @@
                         .replace('termin', '')
                         .trim();
 
-                    // Flexible Teilwort-Suche in beide Richtungen
                     const match = calendarEntries.find(e => {
                         const entryText = e.text.toLowerCase();
                         return entryText.includes(query) || (query.length > 2 && query.includes(entryText));
