@@ -871,9 +871,10 @@
                 isRecording = true;
                 if (statusMessage) statusMessage.textContent = "Höre zu...";
                 if (recordBtn) {
-                    recordBtn.classList.replace('bg-red-600', 'bg-emerald-600');
-                    recordBtn.classList.add('animate-pulse');
-                }
+    recordBtn.classList.replace('bg-red-600', 'bg-emerald-600');
+    recordBtn.classList.remove('pulse-red');
+    recordBtn.classList.add('pulse-green');
+}
                 if (recordText) recordText.textContent = "HÖRE...";
             };
             recognition.onresult = (event) => {
