@@ -1086,6 +1086,8 @@
                                 Analysiere den Sprachbefehl des Benutzers und unterscheide PRÄZISE:
                                 
                                 STRIKTE CATEGORY-REGELN:
+                                - "forgot_check": Wenn der Benutzer fragt, ob er etwas vergessen hat (z. B. "Habe ich etwas vergessen?", "Gibt es noch was zu tun?", "Habe ich was übersehen?", "Habe ich irgendwas vergessen?"). Prüfe im Daten-Kontext überfällige/aktive Erinnerungen, anstehende Termine, offene Aufgaben, Einkaufsliste und wichtige Dinge im Gedächtnis und fass diese präzise in 'reply' zusammen (z. B. "Ja, Dino. Du hast noch zwei offene Aufgaben und um 10 Uhr einen Termin. Auf deiner Einkaufsliste stehen außerdem Milch und Eier.").
+
                                 - "chat": Fragen nach Inhalten aus den Listen (z. B. "Was steht auf meiner Einkaufsliste?", "Welche Aufgaben habe ich?", "Welche Termine stehen an?"). Nutze die Daten aus dem Daten-Kontext, um in 'reply' eine präzise und freundliche Antwort zu formulieren!
                                 
                                 - "shopping": Wenn der Benutzer NEUE Artikel zur Einkaufsliste HINZUFÜGEN möchte (z. B. "Setz Milch auf den Einkaufszettel").
@@ -1094,7 +1096,7 @@
                                 
                                 - "memory_store": Ausschließlich für feste Fakten, Standorte von Gegenständen oder persönliches Wissen zum SPEICHERN (z. B. "Der Schlüssel hängt am Klemmbrett", "PIN ist 1234"). Keine Vorhaben oder flexiblen Notizen!
                                 
-                                - "memory_search": Wenn der Benutzer nach gespeicherten Informationen, Fakten, Orten oder Dingen im Gedächtnis fragt oder sucht (z. B. "Wo ist mein Schlüssel?", "Suche im Gedächtnis nach PIN", "Was weißt du über mein Auto?", "Wo habe ich X abgelegt?"). Gib im Feld 'memory_search_query' den gesuchten Begriff an.
+                                - "memory_search": Wenn der Benutzer nach gespeicherten Informationen, Fakten, Orten oder Dingen im Gedächtnis fragt oder sucht – AUCH bei abstrakten Umschreibungen oder Synonymen (z. B. "Wo ist mein Schlüssel?", "Suche im Gedächtnis nach PIN", "Wo habe ich das Ding zum Sehen hingelegt?"). Analysiere die Absicht des Benutzers und ermittle das BESTE konkrete Suchwort (z. B. bei "Ding zum Sehen" -> "brille") und gib dieses im Feld 'memory_search_query' an!
                                 
                                 - "calendar_delete": Wenn der Benutzer einen Termin LÖSCHEN oder ENTFERNEN möchte (z. B. "Lösche den Arbeitsamt Termin", "Entferne den Arzttermin"). 
                                   Gib im Feld 'calendar_delete_query' das Kern-Suchwort des Termins an (z. B. "arbeitsamt").
@@ -1111,7 +1113,7 @@
                                 - Antworte immer in der Sprache des Benutzers.
 
                                 Gib IMMER ein valides JSON-Objekt zurück mit:
-                                - type: "chat", "location", "memory_store", "memory_search", "todo", "calendar", "calendar_delete", "reminder", "reminder_delete", "shopping", "call", "name_change"
+                                - type: "forgot_check", "chat", "location", "memory_store", "memory_search", "todo", "calendar", "calendar_delete", "reminder", "reminder_delete", "shopping", "call", "name_change"
                                 - new_name
                                 - memory_key, memory_value, memory_search_query
                                 - todo_items, shopping_items, reminder_text, reminder_time, calendar_text, calendar_time, call_contact
@@ -1182,9 +1184,13 @@
 
                     let responseText = ai.reply;
 
-                    if (!responseText && results.length > 0) {
+                    if (results.length > 0) {
                         const foundList = results.map(r => `${r.key}: ${r.value}`).join(', ');
-                        responseText = `Ich habe Folgendes im Gedächtnis gefunden: ${foundList}.`;
+                        if (responseText) {
+                            responseText += ` Im Gedächtnis steht: ${foundList}.`;
+                        } else {
+                            responseText = `Ich habe Folgendes im Gedächtnis gefunden: ${foundList}.`;
+                        }
                     } else if (!responseText) {
                         responseText = `Ich habe dazu leider nichts im Gedächtnis gefunden.`;
                     }
