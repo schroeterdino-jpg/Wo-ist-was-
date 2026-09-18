@@ -1,11 +1,16 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mein Alltags-Helfer</title>
-    <!-- Tailwind CSS -->
+    <!-- Tailwind CSS mit Dark-Mode Support -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
     <!-- Google Identity Services (OAuth / Login) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     
@@ -17,35 +22,35 @@
     <link rel="manifest" href="./manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#1d4ed8">
+    <meta name="theme-color" content="#0f172a">
 
     <style>
         body { font-size: 1.15rem; }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-900 min-h-screen flex flex-col justify-between">
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between">
 
     <!-- Kopfbereich -->
-    <header class="bg-blue-700 text-white p-4 text-center shadow-md relative">
+    <header class="bg-slate-800 text-white p-4 text-center shadow-md border-b border-slate-700 relative">
         <div class="flex justify-between items-center max-w-md mx-auto">
             <div></div>
             <div>
-                <h1 class="text-2xl font-bold">Mein Alltags-Helfer</h1>
-                <p id="userNameDisplay" class="text-sm text-blue-100 mt-0.5">Hallo, Dino!</p>
+                <h1 class="text-2xl font-bold text-blue-400">Mein Alltags-Helfer</h1>
+                <p id="userNameDisplay" class="text-sm text-slate-300 mt-0.5">Hallo, Dino!</p>
             </div>
-            <button onclick="switchSection('settings')" class="bg-blue-800 hover:bg-blue-900 text-white px-3 py-2 rounded-lg text-sm shadow flex items-center gap-1">
+            <button onclick="switchSection('settings')" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-lg text-sm shadow flex items-center gap-1 border border-slate-600">
                 ⚙️ <span class="hidden sm:inline">Einstellungen</span>
             </button>
         </div>
     </header>
 
     <!-- Hauptnavigation / Reiter -->
-    <nav class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-50">
+    <nav class="bg-slate-800 border-b border-slate-700 shadow-sm sticky top-0 z-50">
         <div class="flex max-w-md mx-auto px-1 py-2 gap-1 text-xs font-bold">
             <button id="navSpeak" onclick="switchSection('speak')" class="flex-1 py-2.5 px-1 rounded-lg bg-blue-600 text-white shadow transition text-center">🎙️ Sprechen</button>
-            <button id="navPlanner" onclick="switchSection('planner')" class="flex-1 py-2.5 px-1 rounded-lg text-slate-600 hover:bg-slate-100 transition text-center">📅 Planer</button>
-            <button id="navLists" onclick="switchSection('lists')" class="flex-1 py-2.5 px-1 rounded-lg text-slate-600 hover:bg-slate-100 transition text-center">📝 Listen</button>
-            <button id="navMemory" onclick="switchSection('memory')" class="flex-1 py-2.5 px-1 rounded-lg text-slate-600 hover:bg-slate-100 transition text-center">🧠 Gedächtnis</button>
+            <button id="navPlanner" onclick="switchSection('planner')" class="flex-1 py-2.5 px-1 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-slate-200 transition text-center">📅 Planer</button>
+            <button id="navLists" onclick="switchSection('lists')" class="flex-1 py-2.5 px-1 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-slate-200 transition text-center">📝 Listen</button>
+            <button id="navMemory" onclick="switchSection('memory')" class="flex-1 py-2.5 px-1 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-slate-200 transition text-center">🧠 Gedächtnis</button>
         </div>
     </nav>
 
@@ -56,32 +61,32 @@
         <section id="sec-speak" class="flex flex-col items-center justify-between space-y-4 my-auto py-2">
             
             <!-- Tages-Übersicht Card -->
-            <div id="overviewCard" class="w-full bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden text-sm transition-all">
-                <button onclick="toggleOverviewDetails()" class="w-full bg-slate-50 p-3.5 border-b border-slate-100 font-bold text-blue-800 flex justify-between items-center text-left">
-                    <span class="flex items-center gap-1.5">⚡ Tages-Übersicht <span class="text-xs font-normal text-slate-500">(Live)</span></span>
+            <div id="overviewCard" class="w-full bg-slate-800 rounded-2xl shadow-lg border border-slate-700 overflow-hidden text-sm transition-all">
+                <button onclick="toggleOverviewDetails()" class="w-full bg-slate-800/80 p-3.5 border-b border-slate-700 font-bold text-blue-400 flex justify-between items-center text-left">
+                    <span class="flex items-center gap-1.5">⚡ Tages-Übersicht <span class="text-xs font-normal text-slate-400">(Live)</span></span>
                     <span id="overviewToggleIcon" class="text-xs text-slate-400">▼ Klappen</span>
                 </button>
-                <div id="overviewDetails" class="p-4 space-y-2 text-slate-700">
+                <div id="overviewDetails" class="p-4 space-y-2 text-slate-200">
                     <p class="flex items-start gap-2">
                         <span>📅</span> 
-                        <span><b>Nächster Termin:</b> <span id="ovNextCalendar" class="text-slate-800">Lädt...</span></span>
+                        <span><b>Nächster Termin:</b> <span id="ovNextCalendar" class="text-slate-300">Lädt...</span></span>
                     </p>
                     <p class="flex items-start gap-2">
                         <span>🔔</span> 
-                        <span><b>Nächste Erinnerung:</b> <span id="ovNextReminder" class="text-slate-800">Lädt...</span></span>
+                        <span><b>Nächste Erinnerung:</b> <span id="ovNextReminder" class="text-slate-300">Lädt...</span></span>
                     </p>
-                    <div class="grid grid-cols-3 gap-2 pt-2 border-t text-center text-xs font-semibold">
-                        <div class="bg-blue-50 p-2 rounded-lg border border-blue-100">
-                            <span class="block text-slate-500 text-[10px]">AUFGABEN</span>
-                            <span id="ovCountTodos" class="text-blue-700 text-sm font-bold">0</span>
+                    <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-700 text-center text-xs font-semibold">
+                        <div class="bg-slate-900/60 p-2 rounded-lg border border-slate-700">
+                            <span class="block text-slate-400 text-[10px]">AUFGABEN</span>
+                            <span id="ovCountTodos" class="text-blue-400 text-sm font-bold">0</span>
                         </div>
-                        <div class="bg-amber-50 p-2 rounded-lg border border-amber-100">
-                            <span class="block text-slate-500 text-[10px]">EINKAUF</span>
-                            <span id="ovCountShopping" class="text-amber-700 text-sm font-bold">0</span>
+                        <div class="bg-slate-900/60 p-2 rounded-lg border border-slate-700">
+                            <span class="block text-slate-400 text-[10px]">EINKAUF</span>
+                            <span id="ovCountShopping" class="text-amber-400 text-sm font-bold">0</span>
                         </div>
-                        <div class="bg-emerald-50 p-2 rounded-lg border border-emerald-100">
-                            <span class="block text-slate-500 text-[10px]">GEDÄCHTNIS</span>
-                            <span id="ovCountMemory" class="text-emerald-700 text-sm font-bold">0</span>
+                        <div class="bg-slate-900/60 p-2 rounded-lg border border-slate-700">
+                            <span class="block text-slate-400 text-[10px]">GEDÄCHTNIS</span>
+                            <span id="ovCountMemory" class="text-emerald-400 text-sm font-bold">0</span>
                         </div>
                     </div>
                 </div>
@@ -89,145 +94,145 @@
 
             <!-- Haupt-Aktionsbutton -->
             <div class="my-auto flex flex-col items-center space-y-3 py-2">
-                <button id="recordBtn" onclick="toggleSpeechRecognition()" class="w-44 h-44 bg-red-600 hover:bg-red-700 text-white rounded-full flex flex-col items-center justify-center shadow-2xl transition transform active:scale-95 border-4 border-white cursor-pointer">
+                <button id="recordBtn" onclick="toggleSpeechRecognition()" class="w-44 h-44 bg-red-600 hover:bg-red-700 text-white rounded-full flex flex-col items-center justify-center shadow-2xl transition transform active:scale-95 border-4 border-slate-800 cursor-pointer">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                     </svg>
                     <span id="recordText" class="text-sm font-semibold tracking-wide">SPRECHEN</span>
                 </button>
-                <p id="statusMessage" class="text-center font-medium text-slate-700 h-6">Drücken und sprechen...</p>
+                <p id="statusMessage" class="text-center font-medium text-slate-300 h-6">Drücken und sprechen...</p>
             </div>
 
-            <button onclick="triggerDailyBriefing()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 px-4 rounded-xl shadow-md font-bold text-base flex items-center justify-center gap-2">
+            <button onclick="triggerDailyBriefing()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 px-4 rounded-xl shadow-md font-bold text-base flex items-center justify-center gap-2 border border-indigo-500/30">
                 🌅 Intelligentes Tages-Briefing starten
             </button>
         </section>
 
         <!-- Sektion 2: PLANER -->
         <section id="sec-planner" class="hidden space-y-4">
-            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200">
-                <h2 class="text-xl font-bold text-blue-800 mb-3">📅 Heutige Termine:</h2>
+            <div class="bg-slate-800 p-5 rounded-2xl shadow-md border border-slate-700">
+                <h2 class="text-xl font-bold text-blue-400 mb-3">📅 Heutige Termine:</h2>
                 <ul id="calendarList" class="space-y-2 text-base">
-                    <li class="text-slate-500">Keine Termine eingetragen.</li>
+                    <li class="text-slate-400">Keine Termine eingetragen.</li>
                 </ul>
             </div>
 
-            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
+            <div class="bg-slate-800 p-5 rounded-2xl shadow-md border border-slate-700 space-y-3">
                 <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-blue-800">🔔 Aktive Erinnerungen:</h2>
-                    <button onclick="requestNotificationPermission()" class="bg-blue-600 text-white text-xs px-2.5 py-1.5 rounded-lg font-semibold">Erlauben</button>
+                    <h2 class="text-xl font-bold text-blue-400">🔔 Aktive Erinnerungen:</h2>
+                    <button onclick="requestNotificationPermission()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2.5 py-1.5 rounded-lg font-semibold">Erlauben</button>
                 </div>
                 <div class="flex gap-2">
-                    <input type="text" id="manualReminderText" placeholder="Was soll erinnert werden?" class="flex-grow p-2 border rounded-lg text-sm">
-                    <input type="datetime-local" id="manualReminderTime" class="p-2 border rounded-lg text-sm">
+                    <input type="text" id="manualReminderText" placeholder="Was soll erinnert werden?" class="flex-grow p-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-100 placeholder-slate-500">
+                    <input type="datetime-local" id="manualReminderTime" class="p-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-100">
                 </div>
-                <button onclick="addManualReminder()" class="w-full bg-blue-700 text-white py-2 rounded-lg text-sm font-semibold">Erinnerung speichern</button>
+                <button onclick="addManualReminder()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-semibold">Erinnerung speichern</button>
                 <ul id="reminderList" class="space-y-2 text-sm mt-3">
-                    <li class="text-slate-500">Keine aktiven Erinnerungen.</li>
+                    <li class="text-slate-400">Keine aktiven Erinnerungen.</li>
                 </ul>
             </div>
         </section>
 
         <!-- Sektion 3: LISTEN -->
         <section id="sec-lists" class="hidden space-y-4">
-            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
-                <h2 class="text-xl font-bold text-blue-800">📝 Aufgaben & Notizen:</h2>
+            <div class="bg-slate-800 p-5 rounded-2xl shadow-md border border-slate-700 space-y-3">
+                <h2 class="text-xl font-bold text-blue-400">📝 Aufgaben & Notizen:</h2>
                 <div class="flex gap-2">
-                    <input type="text" id="manualTodoInput" placeholder="Neue Aufgabe..." class="flex-grow p-2 border rounded-lg text-sm">
-                    <button onclick="addManualTodo()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">＋</button>
+                    <input type="text" id="manualTodoInput" placeholder="Neue Aufgabe..." class="flex-grow p-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-100 placeholder-slate-500">
+                    <button onclick="addManualTodo()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold">＋</button>
                 </div>
                 <ul id="todoList" class="space-y-2 text-base mt-2">
-                    <li class="text-slate-500">Keine offenen To-Dos.</li>
+                    <li class="text-slate-400">Keine offenen To-Dos.</li>
                 </ul>
             </div>
 
-            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
-                <h2 class="text-xl font-bold text-blue-800">🛒 Einkaufsliste:</h2>
+            <div class="bg-slate-800 p-5 rounded-2xl shadow-md border border-slate-700 space-y-3">
+                <h2 class="text-xl font-bold text-blue-400">🛒 Einkaufsliste:</h2>
                 <div class="flex gap-2">
-                    <input type="text" id="manualShoppingInput" placeholder="Artikel hinzufügen..." class="flex-grow p-2 border rounded-lg text-sm">
-                    <button onclick="addManualShoppingItem()" class="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">＋</button>
+                    <input type="text" id="manualShoppingInput" placeholder="Artikel hinzufügen..." class="flex-grow p-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-100 placeholder-slate-500">
+                    <button onclick="addManualShoppingItem()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-semibold">＋</button>
                 </div>
                 <ul id="shoppingList" class="space-y-2 text-base mt-2">
-                    <li class="text-slate-500">Einkaufsliste ist leer.</li>
+                    <li class="text-slate-400">Einkaufsliste ist leer.</li>
                 </ul>
             </div>
         </section>
 
         <!-- Sektion 4: GEDÄCHTNIS -->
         <section id="sec-memory" class="hidden space-y-4">
-            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
+            <div class="bg-slate-800 p-5 rounded-2xl shadow-md border border-slate-700 space-y-3">
                 <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-blue-800">🧠 Digitales Langzeitgedächtnis:</h2>
-                    <button onclick="clearAllMemory()" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold">🗑️ Leeren</button>
+                    <h2 class="text-xl font-bold text-blue-400">🧠 Digitales Langzeitgedächtnis:</h2>
+                    <button onclick="clearAllMemory()" class="bg-red-600 hover:bg-red-700 text-white px-2.5 py-1 rounded-lg text-xs font-semibold">🗑️ Leeren</button>
                 </div>
-                <p class="text-xs text-slate-500">Erzähl mir beliebige Fakten, Orte oder Notizen (z.B. „Der Ersatzschlüssel hängt am Klemmbrett“).</p>
-                <div id="categoryContainer" class="space-y-3 text-sm bg-slate-50 p-3 rounded-lg border border-slate-200 max-h-80 overflow-y-auto">
-                    <p class="text-slate-500 text-xs">Noch nichts im Gedächtnis gespeichert.</p>
+                <p class="text-xs text-slate-400">Erzähl mir beliebige Fakten, Orte oder Notizen (z.B. „Der Ersatzschlüssel hängt am Klemmbrett“).</p>
+                <div id="categoryContainer" class="space-y-3 text-sm bg-slate-900 p-3 rounded-lg border border-slate-700 max-h-80 overflow-y-auto">
+                    <p class="text-slate-400 text-xs">Noch nichts im Gedächtnis gespeichert.</p>
                 </div>
             </div>
         </section>
 
         <!-- Sektion 5: EINSTELLUNGEN -->
         <section id="sec-settings" class="hidden space-y-3">
-            <h2 class="text-xl font-bold text-blue-800 px-1">⚙️ Einstellungen</h2>
+            <h2 class="text-xl font-bold text-blue-400 px-1">⚙️ Einstellungen</h2>
 
-            <details class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden" open>
-                <summary class="p-4 font-bold text-slate-800 cursor-pointer bg-slate-50 flex justify-between items-center">
+            <details class="bg-slate-800 rounded-xl shadow-sm border border-slate-700 overflow-hidden" open>
+                <summary class="p-4 font-bold text-slate-200 cursor-pointer bg-slate-800/80 flex justify-between items-center">
                     <span>👤 Profil & Anrede</span>
                 </summary>
-                <div class="p-4 space-y-3">
+                <div class="p-4 space-y-3 border-t border-slate-700">
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Wie soll ich dich nennen?:</label>
-                        <input type="text" id="userNameInput" placeholder="Dein Name..." class="w-full p-2 border rounded-lg text-sm bg-slate-50">
+                        <label class="block text-xs font-bold text-slate-400 mb-1">Wie soll ich dich nennen?:</label>
+                        <input type="text" id="userNameInput" placeholder="Dein Name..." class="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-100">
                     </div>
                 </div>
             </details>
 
-            <details class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <summary class="p-4 font-bold text-slate-800 cursor-pointer bg-slate-50 flex justify-between items-center">
+            <details class="bg-slate-800 rounded-xl shadow-sm border border-slate-700 overflow-hidden">
+                <summary class="p-4 font-bold text-slate-200 cursor-pointer bg-slate-800/80 flex justify-between items-center">
                     <span>🔑 Schnittstellen & Konten</span>
                 </summary>
-                <div class="p-4 space-y-3">
+                <div class="p-4 space-y-3 border-t border-slate-700">
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Groq API-Key (gsk_...):</label>
-                        <input type="password" id="apiKeyInput" placeholder="gsk_..." class="w-full p-2 border rounded-lg text-sm bg-slate-50">
+                        <label class="block text-xs font-bold text-slate-400 mb-1">Groq API-Key (gsk_...):</label>
+                        <input type="password" id="apiKeyInput" placeholder="gsk_..." class="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-100">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Google Client-ID:</label>
-                        <input type="text" id="googleClientIdInput" placeholder="Client ID..." class="w-full p-2 border rounded-lg text-sm bg-slate-50">
+                        <label class="block text-xs font-bold text-slate-400 mb-1">Google Client-ID:</label>
+                        <input type="text" id="googleClientIdInput" placeholder="Client ID..." class="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-100">
                     </div>
-                    <div class="pt-2 border-t">
+                    <div class="pt-2 border-t border-slate-700">
                         <button onclick="loginWithGoogle(false)" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
                             📅 Mit Google Kalender verbinden
                         </button>
                     </div>
-                    <p id="connectionStatus" class="text-xs text-slate-600 font-medium break-all"></p>
+                    <p id="connectionStatus" class="text-xs text-slate-400 font-medium break-all"></p>
                 </div>
             </details>
 
-            <details class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <summary class="p-4 font-bold text-slate-800 cursor-pointer bg-slate-50 flex justify-between items-center">
+            <details class="bg-slate-800 rounded-xl shadow-sm border border-slate-700 overflow-hidden">
+                <summary class="p-4 font-bold text-slate-200 cursor-pointer bg-slate-800/80 flex justify-between items-center">
                     <span>📍 Standort & GPS</span>
                 </summary>
-                <div class="p-4 space-y-3">
-                    <p class="text-xs text-slate-500">Erforderlich für Ortsabfragen ("Wo bin ich?") und lokales Wetter.</p>
-                    <button onclick="requestLocationPermission()" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-2 rounded-lg text-sm font-semibold">
+                <div class="p-4 space-y-3 border-t border-slate-700">
+                    <p class="text-xs text-slate-400">Erforderlich für Ortsabfragen ("Wo bin ich?") und lokales Wetter.</p>
+                    <button onclick="requestLocationPermission()" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-lg text-sm font-semibold border border-slate-600">
                         Standort-Zugriff aktivieren
                     </button>
                 </div>
             </details>
 
-            <details class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <summary class="p-4 font-bold text-slate-800 cursor-pointer bg-slate-50 flex justify-between items-center">
+            <details class="bg-slate-800 rounded-xl shadow-sm border border-slate-700 overflow-hidden">
+                <summary class="p-4 font-bold text-slate-200 cursor-pointer bg-slate-800/80 flex justify-between items-center">
                     <span>📞 Schnell-Anruf Kontakte</span>
                 </summary>
-                <div class="p-4 space-y-3">
+                <div class="p-4 space-y-3 border-t border-slate-700">
                     <div class="flex gap-2">
-                        <input type="text" id="contactNameInput" placeholder="Name (z.B. Simone)" class="w-1/2 p-2 border rounded-lg text-sm bg-slate-50">
-                        <input type="text" id="contactPhoneInput" placeholder="Nummer..." class="w-1/2 p-2 border rounded-lg text-sm bg-slate-50">
+                        <input type="text" id="contactNameInput" placeholder="Name (z.B. Simone)" class="w-1/2 p-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-100">
+                        <input type="text" id="contactPhoneInput" placeholder="Nummer..." class="w-1/2 p-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-100">
                     </div>
-                    <button onclick="saveContact()" class="w-full bg-slate-700 text-white py-2 rounded-lg text-sm font-semibold">Kontakt hinzufügen</button>
-                    <div id="contactListDisplay" class="mt-2 text-xs text-slate-600 space-y-1"></div>
+                    <button onclick="saveContact()" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-lg text-sm font-semibold border border-slate-600">Kontakt hinzufügen</button>
+                    <div id="contactListDisplay" class="mt-2 text-xs text-slate-400 space-y-1"></div>
                 </div>
             </details>
         </section>
@@ -235,9 +240,9 @@
     </main>
 
     <!-- Fußbereich -->
-    <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
+    <footer class="bg-slate-800 border-t border-slate-700 text-center p-3 text-xs text-slate-400 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 8.6 (Uhrzeit Fix)</span>
+        <span>Version 8.7 (Dark Mode & Voice Fix)</span>
     </footer>
 
     <!-- JavaScript -->
@@ -254,7 +259,7 @@
                 const el = document.getElementById(`sec-${s}`);
                 if (el) el.classList.add('hidden');
                 const navBtn = document.getElementById(`nav${s.charAt(0).toUpperCase() + s.slice(1)}`);
-                if (navBtn) navBtn.className = "flex-1 py-2.5 px-1 rounded-lg text-slate-600 hover:bg-slate-100 transition text-center";
+                if (navBtn) navBtn.className = "flex-1 py-2.5 px-1 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-slate-200 transition text-center";
             });
 
             const targetSec = document.getElementById(`sec-${sectionId}`);
@@ -672,7 +677,7 @@
         function renderContactList() {
             if (!contactListDisplay) return;
             const keys = Object.keys(savedContacts);
-            contactListDisplay.innerHTML = keys.length === 0 ? 'Keine Kontakte.' : keys.map(k => `<div class="flex justify-between items-center bg-slate-50 p-2 rounded border my-1"><span>${savedContacts[k].originalName}: ${savedContacts[k].phone}</span><button onclick="deleteContact('${k}')" class="text-red-600 font-bold">Löschen</button></div>`).join('');
+            contactListDisplay.innerHTML = keys.length === 0 ? 'Keine Kontakte.' : keys.map(k => `<div class="flex justify-between items-center bg-slate-900 p-2 rounded border border-slate-700 my-1"><span>${savedContacts[k].originalName}: ${savedContacts[k].phone}</span><button onclick="deleteContact('${k}')" class="text-red-400 font-bold">Löschen</button></div>`).join('');
         }
 
         async function fetchGoogleCalendarEvents() {
@@ -848,13 +853,14 @@
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'de-DE';
-                utterance.rate = 1.05;
+                utterance.rate = 0.95; // Angepasst für natürliche Sprachgeschwindigkeit
+                utterance.pitch = 1.0;
                 utterance.onend = () => { if (onComplete) onComplete(); };
                 window.speechSynthesis.speak(utterance);
             } else {
                 if (currentAudio) { currentAudio.pause(); currentAudio = null; }
                 currentAudio = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=de&client=tw-ob`);
-                currentAudio.playbackRate = 1.2;
+                currentAudio.playbackRate = 1.0; // Korrigiert von 1.2 auf normale Geschwindigkeit
                 currentAudio.play().catch(() => {});
                 currentAudio.onended = () => { currentAudio = null; if (onComplete) onComplete(); };
             }
@@ -992,7 +998,10 @@
                 const memList = importantMemoryItems.map(k => {
                     const rawVal = typeof memoryItems[k] === 'object' ? JSON.stringify(memoryItems[k]) : memoryItems[k];
                     const valText = String(rawVal).trim();
-                    const prefix = (valText.startsWith('hängt') || valText.startsWith('liegt') || valText.startsWith('steht') || valText.startsWith('ist')) ? '' : 'liegt ';
+                    const lowerVal = valText.toLowerCase();
+                    // Satzbau-Optimierung für grammatikalisch korrekte Sprachausgabe
+                    const startsWithVerbOrPrep = lowerVal.startsWith('hängt') || lowerVal.startsWith('liegt') || lowerVal.startsWith('steht') || lowerVal.startsWith('ist') || lowerVal.startsWith('auf') || lowerVal.startsWith('in') || lowerVal.startsWith('an') || lowerVal.startsWith('unter') || lowerVal.startsWith('über') || lowerVal.startsWith('neben') || lowerVal.startsWith('zwischen') || lowerVal.startsWith('vor') || lowerVal.startsWith('hinter');
+                    const prefix = startsWithVerbOrPrep ? '' : 'liegt ';
                     return `${k} ${prefix}${valText}`;
                 }).join(', und ');
                 text += `Kurzer Hinweis für unterwegs: ${memList}. `;
@@ -1289,19 +1298,19 @@
         }
 
         function renderAllLists() {
-            if (calendarList) calendarList.innerHTML = calendarEntries.length === 0 ? '<li class="text-slate-500">Keine Termine.</li>' : calendarEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border"><span>📅 ${e.text} (${e.date})</span><button onclick="deleteCalendarEntry('${e.id}')" class="text-red-600 font-bold text-xs">Löschen</button></li>`).join('');
-            if (todoList) todoList.innerHTML = todoEntries.length === 0 ? '<li class="text-slate-500">Keine offenen Aufgaben.</li>' : todoEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border"><span>📝 ${e.text}</span><button onclick="deleteTodoEntry(${e.id})" class="text-emerald-600 font-bold text-xs">Erledigt</button></li>`).join('');
-            if (shoppingList) shoppingList.innerHTML = shoppingEntries.length === 0 ? '<li class="text-slate-500">Liste ist leer.</li>' : shoppingEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border"><span>🛒 ${e.text}</span><button onclick="deleteShoppingEntry(${e.id})" class="text-emerald-600 font-bold text-xs">Gekauft</button></li>`).join('');
-            if (reminderList) reminderList.innerHTML = reminderEntries.length === 0 ? '<li class="text-slate-500">Keine Erinnerungen.</li>' : reminderEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border"><span>🔔 ${e.text} (${new Date(e.time).toLocaleString('de-DE', {timeZone: 'Europe/Berlin', dateStyle:'short', timeStyle:'short'})})</span><button onclick="deleteReminderEntry(${e.id})" class="text-red-600 font-bold text-xs">Löschen</button></li>`).join('');
+            if (calendarList) calendarList.innerHTML = calendarEntries.length === 0 ? '<li class="text-slate-400">Keine Termine.</li>' : calendarEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>📅 ${e.text} (${e.date})</span><button onclick="deleteCalendarEntry('${e.id}')" class="text-red-400 font-bold text-xs">Löschen</button></li>`).join('');
+            if (todoList) todoList.innerHTML = todoEntries.length === 0 ? '<li class="text-slate-400">Keine offenen Aufgaben.</li>' : todoEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>📝 ${e.text}</span><button onclick="deleteTodoEntry(${e.id})" class="text-emerald-400 font-bold text-xs">Erledigt</button></li>`).join('');
+            if (shoppingList) shoppingList.innerHTML = shoppingEntries.length === 0 ? '<li class="text-slate-400">Liste ist leer.</li>' : shoppingEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>🛒 ${e.text}</span><button onclick="deleteShoppingEntry(${e.id})" class="text-emerald-400 font-bold text-xs">Gekauft</button></li>`).join('');
+            if (reminderList) reminderList.innerHTML = reminderEntries.length === 0 ? '<li class="text-slate-400">Keine Erinnerungen.</li>' : reminderEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>🔔 ${e.text} (${new Date(e.time).toLocaleString('de-DE', {timeZone: 'Europe/Berlin', dateStyle:'short', timeStyle:'short'})})</span><button onclick="deleteReminderEntry(${e.id})" class="text-red-400 font-bold text-xs">Löschen</button></li>`).join('');
 
             if (categoryContainer) {
                 const memKeys = Object.keys(memoryItems);
-                categoryContainer.innerHTML = memKeys.length === 0 ? '<p class="text-slate-500 text-xs">Noch nichts im Gedächtnis gespeichert.</p>' : memKeys.map(k => {
+                categoryContainer.innerHTML = memKeys.length === 0 ? '<p class="text-slate-400 text-xs">Noch nichts im Gedächtnis gespeichert.</p>' : memKeys.map(k => {
                     let val = memoryItems[k];
                     if (typeof val === 'object' && val !== null) {
                         val = val.location || val.value || JSON.stringify(val);
                     }
-                    return `<div class="flex justify-between items-center text-xs py-1 border-b"><span>• <b>${k}</b>: ${val}</span><button onclick="deleteMemoryItem('${k}')" class="text-red-600 font-bold">Löschen</button></div>`;
+                    return `<div class="flex justify-between items-center text-xs py-1 border-b border-slate-800"><span>• <b class="text-blue-300">${k}</b>: ${val}</span><button onclick="deleteMemoryItem('${k}')" class="text-red-400 font-bold">Löschen</button></div>`;
                 }).join('');
             }
 
