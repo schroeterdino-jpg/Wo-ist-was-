@@ -1079,7 +1079,6 @@
                     text += "Es ist schön warm, du brauchst heute keine Jacke! ";
                 }
 
-                // Prüfen auf Regen (heute & morgen)
                 const regenMorgen = (weather.täglich && weather.täglich.precipitation_sum && weather.täglich.precipitation_sum[1]) ? weather.täglich.precipitation_sum[1] : 0;
 
                 if (regen > 0) {
@@ -1562,23 +1561,43 @@
         }
 
         function renderAllLists() {
-            if (calendarList) calendarList.innerHTML = calendarEntries.length === 0 ? '<li class="text-slate-400">Keine Termine.</li>' : calendarEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>📅 ${e.text} (${e.date})</span><button onclick="deleteCalendarEntry('${e.id}')" class="text-red-400 font-bold text-xs">Löschen</button></li>`).join('');
-            if (todoList) todoList.innerHTML = todoEntries.length === 0 ? '<li class="text-slate-400">Keine offenen Aufgaben.</li>' : todoEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>📝 ${e.text}</span><button onclick="deleteTodoEntry(${e.id})" class="text-emerald-400 font-bold text-xs">Erledigt</button></li>`).join('');
-            if (shoppingList) shoppingList.innerHTML = shoppingEntries.length === 0 ? '<li class="text-slate-400">Liste ist leer.</li>' : shoppingEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>🛒 ${e.text}</span><button onclick="deleteShoppingEntry(${e.id})" class="text-emerald-400 font-bold text-xs">Gekauft</button></li>`).join('');
-            if (reminderList) reminderList.innerHTML = reminderEntries.length === 0 ? '<li class="text-slate-400">Keine Erinnerungen.</li>' : reminderEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>🔔 ${e.text} (${new Date(e.time).toLocaleString('de-DE', {timeZone: 'Europe/Berlin', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'})})</span><button onclick="deleteReminderEntry(${e.id})" class="text-red-400 font-bold text-xs">Löschen</button></li>`).join('');
+            renderAssistantOverview();
 
-            if (categoryContainer) {
-                const memKeys = Object.keys(memoryItems);
-                categoryContainer.innerHTML = memKeys.length === 0 ? '<p class="text-slate-400 text-xs">Noch nichts im Gedächtnis gespeichert.</p>' : memKeys.map(k => {
-                    let val = memoryItems[k];
-                    if (typeof val === 'object' && val !== null) {
-                        val = val.location || val.value || JSON.stringify(val);
-                    }
-                    return `<div class="flex justify-between items-center text-xs py-1 border-b border-slate-800"><span>• <b class="text-blue-300">${k}</b>: ${val}</span><button onclick="deleteMemoryItem('${k}')" class="text-red-400 font-bold">Löschen</button></div>`;
-                }).join('');
+            if (calendarList) {
+                calendarList.innerHTML = calendarEntries.length === 0 
+                    ? '<li class="text-slate-400">Keine Termine.</li>' 
+                    : calendarEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>📅 ${e.text} (${e.date})</span><button onclick="deleteCalendarEntry('${e.id}')" class="text-red-400 font-bold text-xs">Löschen</button></li>`).join('');
             }
 
-            renderAssistantOverview();  
+            if (todoList) {
+                todoList.innerHTML = todoEntries.length === 0 
+                    ? '<li class="text-slate-400">Keine offenen To-Dos.</li>' 
+                    : todoEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>📌 ${e.text}</span><button onclick="deleteTodoEntry(${e.id})" class="text-red-400 font-bold text-xs">Löschen</button></li>`).join('');
+            }
+
+            if (reminderList) {
+                reminderList.innerHTML = reminderEntries.length === 0 
+                    ? '<li class="text-slate-400">Keine aktiven Erinnerungen.</li>' 
+                    : reminderEntries.map(e => {
+                        const remTime = new Date(e.time).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                        return `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700 ${e.triggered ? 'opacity-50 line-through' : ''}"><span>🔔 ${e.text} (${remTime})</span><button onclick="deleteReminderEntry(${e.id})" class="text-red-400 font-bold text-xs">Löschen</button></li>`;
+                    }).join('');
+            }
+
+            if (shoppingList) {
+                shoppingList.innerHTML = shoppingEntries.length === 0 
+                    ? '<li class="text-slate-400">Einkaufsliste ist leer.</li>' 
+                    : shoppingEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>🛒 ${e.text}</span><button onclick="deleteShoppingEntry(${e.id})" class="text-red-400 font-bold text-xs">Löschen</button></li>`).join('');
+            }
+
+            if (categoryContainer) {
+                const keys = Object.keys(memoryItems);
+                if (keys.length === 0) {
+                    categoryContainer.innerHTML = '<p class="text-slate-400 text-xs">Noch nichts im Gedächtnis gespeichert.</p>';
+                } else {
+                    categoryContainer.innerHTML = keys.map(k => `<div class="flex justify-between items-center bg-slate-800 p-2 rounded border border-slate-700 my-1"><span class="break-all"><b>${k}:</b> ${memoryItems[k]}</span><button onclick="deleteMemoryItem('${k}')" class="text-red-400 font-bold text-xs ml-2">Löschen</button></div>`).join('');
+                }
+            }
         }
     </script>
 </body>
