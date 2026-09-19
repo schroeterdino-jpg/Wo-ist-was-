@@ -20,26 +20,66 @@
     <style>
     body { font-size: 1.15rem; }
     
-    /* Pulsieren Rot */
-    @keyframes pulseRingRed {
-        0%   { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.8); }
-        70%  { box-shadow: 0 0 0 25px rgba(220, 38, 38, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+    /* Knight Rider Scanner Bar Style */
+    .kitt-scanner-container {
+        width: 100%;
+        max-width: 280px;
+        height: 54px;
+        background-color: #050505;
+        border: 2px solid #334155;
+        border-radius: 12px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 15px rgba(220, 38, 38, 0.3), inset 0 0 10px rgba(0, 0, 0, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
     }
 
-    /* Pulsieren Grün */
-    @keyframes pulseRingGreen {
-        0%   { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.8); }
-        70%  { box-shadow: 0 0 0 25px rgba(5, 150, 105, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0); }
+    .kitt-scanner-container:hover {
+        border-color: #ef4444;
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
     }
 
-    .pulse-red { 
-        animation: pulseRingRed 2s infinite !important; 
+    .kitt-light {
+        position: absolute;
+        top: 6px;
+        bottom: 6px;
+        width: 45px;
+        background: linear-gradient(90deg, transparent, #ff0000, #ffffff, #ff0000, transparent);
+        border-radius: 6px;
+        box-shadow: 0 0 15px #ff0000, 0 0 30px #ff0000;
+        animation: kittScan 1.4s infinite alternate ease-in-out;
     }
-    
-    .pulse-green { 
-        animation: pulseRingGreen 1.2s infinite !important; 
+
+    .kitt-scanner-container.recording .kitt-light {
+        background: linear-gradient(90deg, transparent, #10b981, #ffffff, #10b981, transparent);
+        box-shadow: 0 0 15px #10b981, 0 0 30px #10b981;
+        animation: kittScan 0.8s infinite alternate ease-in-out;
+    }
+
+    .kitt-scanner-container.recording {
+        border-color: #10b981;
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
+    }
+
+    @keyframes kittScan {
+        0% {
+            left: 4px;
+        }
+        100% {
+            left: calc(100% - 49px);
+        }
+    }
+
+    .kitt-text {
+        position: relative;
+        z-index: 10;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.9);
     }
 </style>
 </head>
@@ -118,13 +158,12 @@
                 </div>
             </div>
 
-            <div class="my-auto flex flex-col items-center space-y-3 py-2">
-                <button id="recordBtn" onclick="toggleSpeechRecognition()" class="pulse-red w-44 h-44 bg-red-600 hover:bg-red-700 text-white rounded-full flex flex-col items-center justify-center shadow-2xl transition transform active:scale-95 border-4 border-slate-800 cursor-pointer">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                    </svg>
-                    <span id="recordText" class="text-sm font-semibold tracking-wide">SPRECHEN</span>
-                </button>
+            <div class="my-auto flex flex-col items-center space-y-4 py-4">
+                <!-- Knight Rider Scanner Element -->
+                <div id="recordBtn" onclick="toggleSpeechRecognition()" class="kitt-scanner-container">
+                    <div class="kitt-light"></div>
+                    <span id="recordText" class="kitt-text text-white text-base">SPRECHEN</span>
+                </div>
                 <p id="statusMessage" class="text-center font-medium text-slate-300 h-6">Drücken und sprechen...</p>
             </div>
 
@@ -258,7 +297,7 @@
 
     <footer class="bg-slate-800 border-t border-slate-700 text-center p-3 text-xs text-slate-400 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 9.4 (Sync- & Kalender-Fix)</span>
+        <span>Version 9.5 (K.I.T.T. Edition)</span>
     </footer>
 
     <script>
@@ -266,6 +305,50 @@
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Fehler:', err));
             });
+        }
+
+        // Web Audio Synth für den echten Knight Rider Scanner Sound ("Wuuush Wuuush")
+        function playKittScannerSound() {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                const ctx = new AudioCtx();
+                
+                // Rauschen für das "Wuuush"-Geräusch
+                const bufferSize = ctx.sampleRate * 0.45;
+                const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                const output = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+
+                const whiteNoise = ctx.createBufferSource();
+                whiteNoise.buffer = buffer;
+
+                // Bandpass-Filter simuliert das Zischen/Woschen des Scanners
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.Q.setValueAtTime(4.0, ctx.currentTime);
+                
+                // Frequenz-Sweep hin und zurück
+                filter.frequency.setValueAtTime(300, ctx.currentTime);
+                filter.frequency.exponentialRampToValueAtTime(1800, ctx.currentTime + 0.22);
+                filter.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.45);
+
+                const gain = ctx.createGain();
+                gain.gain.setValueAtTime(0.01, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.35, ctx.currentTime + 0.22);
+                gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.45);
+
+                whiteNoise.connect(filter);
+                filter.connect(gain);
+                gain.connect(ctx.destination);
+
+                whiteNoise.start();
+                whiteNoise.stop(ctx.currentTime + 0.45);
+            } catch (e) {
+                console.log('Audio Sound Effekt Fehler:', e);
+            }
         }
 
         function switchSection(sectionId) {
@@ -552,7 +635,6 @@
             }
         }, 50 * 60 * 1000);
 
-        // Periodischer Kalenderabgleich (alle 30 Sek.) um gelöschte/veränderte Termine und Erinnerungen sofort zu spiegeln
         setInterval(() => {
             if (accessToken) {
                 fetchGoogleCalendarEvents();
@@ -640,7 +722,6 @@
                 }
             }
 
-            // Fallback für lokale Termine
             const localEntry = calendarEntries.find(e => e.id === eventId);
             if (localEntry) {
                 if (newTitle) localEntry.text = newTitle;
@@ -780,7 +861,6 @@
                             return true;
                         });
 
-                        // 1. Termine filtern
                         const calItems = validItems.filter(item => {
                             const summary = (item.summary || '').toLowerCase();
                             return !summary.includes('🔔') && !summary.includes('erinnerung');
@@ -797,19 +877,16 @@
                         });
                         setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
 
-                        // 2. Erinnerungen filtern und mit lokaler Liste abgleichen
                         const googleReminders = validItems.filter(item => {
                             const summary = (item.summary || '').toLowerCase();
                             return summary.includes('🔔') || summary.includes('erinnerung');
                         });
 
-                        // Aktualisiere reminderEntries mit den echten Daten aus Google
                         const newReminderEntries = [];
                         googleReminders.forEach(gItem => {
                             const cleanText = (gItem.summary || '').replace(/^🔔\s*/, '').trim();
                             const isoTime = gItem.start.dateTime || gItem.start.date;
                             
-                            // Prüfen, ob lokal bereits vorhanden
                             const existing = reminderEntries.find(r => r.googleId === gItem.id || (r.text === cleanText && r.time === isoTime));
                             
                             newReminderEntries.push({
@@ -821,7 +898,6 @@
                             });
                         });
 
-                        // Behalte auch noch nicht hochgeladene/lokale Erinnerungen
                         reminderEntries.forEach(r => {
                             if (!r.googleId && !newReminderEntries.some(nr => nr.text === r.text && nr.time === r.time)) {
                                 newReminderEntries.push(r);
@@ -864,7 +940,6 @@
         async function deleteReminderEntry(id) {
             const rem = reminderEntries.find(e => e.id === id);
             
-            // Erst lokal entfernen für sofortiges UI-Feedback
             reminderEntries = reminderEntries.filter(e => e.id !== id);
             setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
             renderAllLists();
@@ -991,8 +1066,7 @@
                 isRecording = true;
                 if (statusMessage) statusMessage.textContent = "Höre zu...";
                 if (recordBtn) {
-                    recordBtn.classList.remove('bg-red-600', 'hover:bg-red-700', 'pulse-red');
-                    recordBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700', 'pulse-green');
+                    recordBtn.classList.add('recording');
                 }
                 if (recordText) recordText.textContent = "HÖRE...";
             };
@@ -1006,6 +1080,9 @@
         }
 
         function toggleSpeechRecognition() {
+            // Sound-Effekt von K.I.T.T.s Scanner abspielen
+            playKittScannerSound();
+
             if (!recognition) {
                 alert('Spracherkennung wird von diesem Browser leider nicht unterstützt.');
                 return;
@@ -1014,8 +1091,7 @@
                 recognition.stop();
             } else {
                 if (recordBtn) {
-                    recordBtn.classList.remove('bg-red-600', 'hover:bg-red-700', 'pulse-red');
-                    recordBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700', 'pulse-green');
+                    recordBtn.classList.add('recording');
                 }
                 if (recordText) recordText.textContent = "HÖRE...";
                 if (statusMessage) statusMessage.textContent = "Höre zu...";
@@ -1026,13 +1102,13 @@
         function resetButton() {
             isRecording = false;
             if (recordBtn) {
-                recordBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700', 'pulse-green');
-                recordBtn.classList.add('bg-red-600', 'hover:bg-red-700', 'pulse-red');
+                recordBtn.classList.remove('recording');
             }
             if (recordText) recordText.textContent = "SPRECHEN";
         }
 
         async function triggerDailyBriefing() {
+            playKittScannerSound();
             const now = new Date();
             const hour = parseInt(now.toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', hour12: false }), 10);
             const timeStr = now.toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' });
@@ -1503,6 +1579,5 @@
             renderAssistantOverview();  
         }
     </script>
-    <div class="hidden bg-emerald-600 bg-red-600 pulse-red pulse-green" aria-hidden="true"></div>
 </body>
 </html>
