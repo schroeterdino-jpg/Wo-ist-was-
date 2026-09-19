@@ -17,71 +17,79 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#0f172a">
-    <style>
+     <style>
     body { font-size: 1.15rem; }
     
-    /* Knight Rider Scanner Bar Style */
+    /* Echter K.I.T.T. Scanner Balken */
     .kitt-scanner-container {
-        width: 100%;
-        max-width: 280px;
-        height: 54px;
-        background-color: #050505;
+        width: 280px;
+        height: 60px;
+        background-color: #000000;
         border: 2px solid #334155;
         border-radius: 12px;
         position: relative;
         overflow: hidden;
-        box-shadow: 0 0 15px rgba(220, 38, 38, 0.3), inset 0 0 10px rgba(0, 0, 0, 0.8);
+        box-shadow: 0 0 15px rgba(220, 38, 38, 0.4), inset 0 0 10px rgba(0, 0, 0, 0.9);
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        transition: all 0.3s ease;
+        user-select: none;
+        transition: border-color 0.3s, box-shadow 0.3s;
     }
 
     .kitt-scanner-container:hover {
         border-color: #ef4444;
-        box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+        box-shadow: 0 0 22px rgba(239, 68, 68, 0.7);
     }
 
+    /* Das rote wandernde LED-Licht */
     .kitt-light {
         position: absolute;
-        top: 6px;
-        bottom: 6px;
-        width: 45px;
-        background: linear-gradient(90deg, transparent, #ff0000, #ffffff, #ff0000, transparent);
-        border-radius: 6px;
-        box-shadow: 0 0 15px #ff0000, 0 0 30px #ff0000;
-        animation: kittScan 1.4s infinite alternate ease-in-out;
+        top: 0;
+        bottom: 0;
+        width: 50px;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, #ff0000 30%, #ffffff 50%, #ff0000 70%, transparent);
+        box-shadow: 0 0 20px #ff0000, 0 0 35px #ff0000;
+        animation: kittScan 1.3s infinite alternate ease-in-out;
+        z-index: 1;
     }
 
+    /* Modus während der Aufnahme (Grün) */
     .kitt-scanner-container.recording .kitt-light {
-        background: linear-gradient(90deg, transparent, #10b981, #ffffff, #10b981, transparent);
-        box-shadow: 0 0 15px #10b981, 0 0 30px #10b981;
-        animation: kittScan 0.8s infinite alternate ease-in-out;
+        background: linear-gradient(90deg, transparent, #10b981 30%, #ffffff 50%, #10b981 70%, transparent);
+        box-shadow: 0 0 20px #10b981, 0 0 35px #10b981;
+        animation: kittScan 0.7s infinite alternate ease-in-out;
     }
 
     .kitt-scanner-container.recording {
         border-color: #10b981;
-        box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.7);
     }
 
     @keyframes kittScan {
         0% {
-            left: 4px;
+            left: 0%;
+            transform: translateX(0);
         }
         100% {
-            left: calc(100% - 49px);
+            left: 100%;
+            transform: translateX(-100%);
         }
     }
 
     .kitt-text {
         position: relative;
         z-index: 10;
-        font-weight: 800;
-        letter-spacing: 0.1em;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+        font-weight: 900;
+        letter-spacing: 0.15em;
+        color: #ffffff;
+        text-shadow: 0 0 8px rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,1);
+        pointer-events: none;
     }
 </style>
+
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between">
 
