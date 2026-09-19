@@ -316,13 +316,11 @@
 
         function getPersistentData(key, defaultValue) {
             let val = localStorage.getItem(key);
-            if (!val || val === "null" || val === "undefined") val = sessionStorage.getItem(key);
             return (!val || val === "null" || val === "undefined") ? defaultValue : val;
         }
 
         function setPersistentData(key, value) {
             try { localStorage.setItem(key, value); } catch (e) {}
-            try { sessionStorage.setItem(key, value); } catch (e) {}
         }
 
         let currentUserName = getPersistentData('user_custom_name', 'Dino');
@@ -474,7 +472,7 @@
                 setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
                 renderAllLists();
             }
-        }, 1000);
+        }, 15000);
 
         let tokenClient = null;
         let accessToken = getPersistentData('google_access_token', '');
@@ -1285,8 +1283,6 @@
                     const match = reminderEntries.find(e => e.text.toLowerCase().includes(query) || (query.length > 2 && query.includes(e.text.toLowerCase())));
                     if (match) {
                         await deleteReminderEntry(match.id);
-                    } else if (reminderEntries.length > 0) {
-                        await deleteReminderEntry(reminderEntries[0].id);
                     }
                 } else if (ai.type === 'reminder') {
                     let rText = ai.reminder_text || text;
@@ -1310,8 +1306,6 @@
 
                     if (match) {
                         await deleteCalendarEntry(match.id);
-                    } else if (calendarEntries.length > 0 && query.length < 3) {
-                        await deleteCalendarEntry(calendarEntries[0].id);
                     }
                 } else if (ai.type === 'calendar' || ai.calendar_text) {
                     let cText = ai.calendar_text || text;
