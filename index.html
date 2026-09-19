@@ -316,7 +316,7 @@
 
     <footer class="bg-slate-800 border-t border-slate-700 text-center p-3 text-xs text-slate-400 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 9.4 (Stabilized)</span>
+        <span>Version 9.5 (Stabilized)</span>
     </footer>
 
     <script>
@@ -476,7 +476,7 @@
                     .sort((a, b) => new Date(a.isoDate) - new Date(b.isoDate));
                 if (validCal.length > 0) {
                     const topCal = validCal[0];
-                    const dateFormatted = new Date(topCal.isoDate).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'short' });
+                    const dateFormatted = new Date(topCal.isoDate).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
                     nextCal = `${topCal.text} (${dateFormatted})`;
                 } else if (calendarEntries[0].text) {
                     nextCal = calendarEntries[0].text;
@@ -490,7 +490,7 @@
                     .sort((a, b) => new Date(a.time) - new Date(b.time));
                 if (validRem.length > 0) {
                     const topRem = validRem[0];
-                    const remFormatted = new Date(topRem.time).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'short' });
+                    const remFormatted = new Date(topRem.time).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
                     nextRem = `${topRem.text} (${remFormatted})`;
                 }
             }
@@ -667,7 +667,7 @@
             calendarEntries.unshift({
                 id: createdId,
                 text: text,
-                date: eventDate.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: 'short' }),
+                date: eventDate.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
                 isoDate: eventDate.toISOString()
             });
             setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
@@ -805,7 +805,7 @@
                             return {
                                 id: item.id,
                                 text: item.summary || 'Termin',
-                                date: d.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: item.start.dateTime ? 'short' : undefined }),
+                                date: d.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', weekday: 'short', day: '2-digit', month: '2-digit', hour: item.start.dateTime ? '2-digit' : undefined, minute: item.start.dateTime ? '2-digit' : undefined }),
                                 isoDate: item.start.dateTime || item.start.date
                             };
                         });
@@ -1115,8 +1115,24 @@
             const activeReminders = (reminderEntries || []).filter(e => !e.triggered);
             if (activeReminders.length > 0) {
                 const remList = activeReminders.map(e => {
-                    const timeFormatted = new Date(e.time).toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' });
-                    return `${e.text} um ${timeFormatted} Uhr`;
+                    const remDate = new Date(e.time);
+                    const isToday = remDate.toDateString() === todayStr;
+                    const isTomorrow = remDate.toDateString() === tomorrowStr;
+                    
+                    const timeFormatted = remDate.toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' });
+                    const dateFormatted = remDate.toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin', day: 'numeric', month: 'long' });
+                    const weekdayFormatted = remDate.toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin', weekday: 'long' });
+
+                    let dayText = "";
+                    if (isToday) {
+                        dayText = "heute";
+                    } else if (isTomorrow) {
+                        dayText = "morgen";
+                    } else {
+                        dayText = `am ${weekdayFormatted}, den ${dateFormatted},`;
+                    }
+
+                    return `${e.text} (${dayText} um ${timeFormatted} Uhr)`;
                 }).join(' und ');
                 text += `Denk bitte an deine aktiven Erinnerungen: ${remList}. `;
             }
@@ -1281,9 +1297,23 @@
 
             const now = new Date();
             const nowGermanIso = now.toLocaleString('sv-SE', { timeZone: 'Europe/Berlin' }).replace(' ', 'T');
+            const wochentag = now.toLocaleDateString('de-DE', { weekday: 'long', timeZone: 'Europe/Berlin' });
+
+            const tomorrow = new Date(now);
+            tomorrow.setDate(now.getDate() + 1);
+            const morgenDateStr = tomorrow.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Berlin' });
+
+            // Nächsten Sonntag berechnen
+            const nextSunday = new Date(now);
+            const daysUntilSunday = (7 - now.getDay()) % 7;
+            nextSunday.setDate(now.getDate() + (daysUntilSunday === 0 ? 7 : daysUntilSunday));
+            const nextSundayStr = nextSunday.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Berlin' });
 
             const contextData = {
                 heute_datum: nowGermanIso,
+                heute_wochentag: wochentag,
+                morgen_datum: morgenDateStr,
+                naechster_sonntag_datum: nextSundayStr,
                 aktuelles_jahr: now.getFullYear(),
                 gedächtnis: memoryItems,
                 kontakte: savedContacts,
@@ -1299,7 +1329,10 @@
             "Aktueller Daten-Kontext: " + JSON.stringify(contextData) + "\n\n" +
             "WICHTIG ZUR ZEIT & DATUM:\n" +
             "- Aktuelles Datum und deutsche Ortszeit: " + nowGermanIso + ".\n" +
-            "- Berücksichtige bei Datums- und Zeitangaben immer die deutsche Zeitzone (Europe/Berlin).\n\n" +
+            "- Aktueller Wochentag: " + wochentag + ".\n" +
+            "- Morgen ist: " + morgenDateStr + ".\n" +
+            "- Der kommende/nächste Sonntag ist der: " + nextSundayStr + ".\n" +
+            "- Berechne relative Datumsangaben (z.B. 'morgen', 'am Sonntag', 'übermorgen', 'am Freitag') STRENG basierend auf dem aktuellen Wochentag (" + wochentag + "). Wenn heute Samstag ist, ist 'am Sonntag' MORGEN (" + nextSundayStr + ")!\n\n" +
             "WICHTIG ZUM STANDORT UND WETTER:\n" +
             "- Verwende bei Wetterfragen IMMER den im Kontext übergebenen Ort (aus 'standort' oder 'wetter.ort'). Wenn der Benutzer fragt, wo er ist oder wie das Wetter wird, nenne diesen genauen Ort und NIEMALS automatisch Berlin oder Hamburg, außer er befindet sich tatsächlich dort.\n\n" +
             "Analysiere den Sprachbefehl des Benutzers und unterscheide PRÄZISE:\n\n" +
@@ -1309,7 +1342,7 @@
             "- \"chat\": Fragen nach Wetter, Allgemeinwissen oder Inhalten aus den Listen (Einkauf, Aufgaben, Termine).\n" +
             "- \"shopping\": NEUE Artikel zur Einkaufsliste HINZUFÜGEN.\n" +
             "- \"todo\": Reine zeitlose Aufgaben, Notizen oder Gedanken speichern OHNE zeitlichen Bezug.\n" +
-            "- \"reminder\": Neue zeitgesteuerte Erinnerung anlegen. WICHTIG: Wenn eine Aufgabe einen Zeitbezug oder ein Datum enthält (z.B. 'morgen', 'heute Abend', 'am Freitag', 'um 14 Uhr'), benutze IMMER 'reminder' statt 'todo'.\n" +
+            "- \"reminder\": Neue zeitgesteuerte Erinnerung anlegen. WICHTIG: Wenn eine Aufgabe einen Zeitbezug oder ein Datum enthält (z.B. 'morgen', 'heute Abend', 'am Freitag', 'am Sonntag', 'um 14 Uhr'), benutze IMMER 'reminder' statt 'todo'.\n" +
             "- \"memory_store\": Feste Fakten, Standorte von Gegenständen oder persönliches Wissen SPEICHERN.\n" +
             "- \"memory_search\": Nach gespeicherten Infos im Gedächtnis fragen.\n" +
             "- \"calendar_delete\": Termin LÖSCHEN oder ENTFERNEN.\n" +
@@ -1526,7 +1559,7 @@
             if (calendarList) calendarList.innerHTML = calendarEntries.length === 0 ? '<li class="text-slate-400">Keine Termine.</li>' : calendarEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>📅 ${e.text} (${e.date})</span><button onclick="deleteCalendarEntry('${e.id}')" class="text-red-400 font-bold text-xs">Löschen</button></li>`).join('');
             if (todoList) todoList.innerHTML = todoEntries.length === 0 ? '<li class="text-slate-400">Keine offenen Aufgaben.</li>' : todoEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>📝 ${e.text}</span><button onclick="deleteTodoEntry(${e.id})" class="text-emerald-400 font-bold text-xs">Erledigt</button></li>`).join('');
             if (shoppingList) shoppingList.innerHTML = shoppingEntries.length === 0 ? '<li class="text-slate-400">Liste ist leer.</li>' : shoppingEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>🛒 ${e.text}</span><button onclick="deleteShoppingEntry(${e.id})" class="text-emerald-400 font-bold text-xs">Gekauft</button></li>`).join('');
-            if (reminderList) reminderList.innerHTML = reminderEntries.length === 0 ? '<li class="text-slate-400">Keine Erinnerungen.</li>' : reminderEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>🔔 ${e.text} (${new Date(e.time).toLocaleString('de-DE', {timeZone: 'Europe/Berlin', dateStyle:'short', timeStyle:'short'})})</span><button onclick="deleteReminderEntry(${e.id})" class="text-red-400 font-bold text-xs">Löschen</button></li>`).join('');
+            if (reminderList) reminderList.innerHTML = reminderEntries.length === 0 ? '<li class="text-slate-400">Keine Erinnerungen.</li>' : reminderEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>🔔 ${e.text} (${new Date(e.time).toLocaleString('de-DE', {timeZone: 'Europe/Berlin', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'})})</span><button onclick="deleteReminderEntry(${e.id})" class="text-red-400 font-bold text-xs">Löschen</button></li>`).join('');
 
             if (categoryContainer) {
                 const memKeys = Object.keys(memoryItems);
