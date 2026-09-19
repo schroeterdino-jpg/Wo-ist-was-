@@ -316,7 +316,7 @@
 
     <footer class="bg-slate-800 border-t border-slate-700 text-center p-3 text-xs text-slate-400 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 9.2 (Präzise Ortung)</span>
+        <span>Version 9.3 (Todo-Ablauf-Schutz)</span>
     </footer>
 
     <script>
@@ -729,7 +729,7 @@
             if (!inputEl) return;
             const val = inputEl.value.trim();
             if (val) {
-                todoEntries.unshift({ id: Date.now(), text: val, createdDate: 'Manuell' });
+                todoEntries.unshift({ id: Date.now(), text: val, createdDate: 'Manuell', createdAt: new Date().toISOString() });
                 setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
                 inputEl.value = '';
                 renderAllLists();
@@ -1113,8 +1113,9 @@
                 text += "Was deine Termine angeht: Für heute und morgen steht nichts weiter im Kalender. ";
             }
 
-            if (reminderEntries && reminderEntries.length > 0) {
-                const remList = reminderEntries.map(e => {
+            const activeReminders = (reminderEntries || []).filter(e => !e.triggered);
+            if (activeReminders.length > 0) {
+                const remList = activeReminders.map(e => {
                     const timeFormatted = new Date(e.time).toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' });
                     return `${e.text} um ${timeFormatted} Uhr`;
                 }).join(' und ');
@@ -1155,11 +1156,18 @@
                 text += `Kurzer Hinweis für unterwegs: Denk daran, ${memList}. `;
             }
 
-            if (todoEntries && todoEntries.length > 0) {
-                if (todoEntries.length === 1) {
-                    text += `Auf deiner Aufgabenliste steht noch: ${todoEntries[0].text}. `;
+            // HARTER FIX: Nur Todos berücksichtigen, die nicht älter als 48 Stunden sind
+            const fortyEightHoursAgo = new Date(now.getTime() - (48 * 60 * 60 * 1000));
+            const recentTodoEntries = (todoEntries || []).filter(e => {
+                if (!e.createdAt) return true; // Fallback für ältere Todos
+                return new Date(e.createdAt) >= fortyEightHoursAgo;
+            });
+
+            if (recentTodoEntries.length > 0) {
+                if (recentTodoEntries.length === 1) {
+                    text += `Auf deiner Aufgabenliste steht noch: ${recentTodoEntries[0].text}. `;
                 } else {
-                    const todoListTexts = todoEntries.map(e => e.text).join(', ');
+                    const todoListTexts = recentTodoEntries.map(e => e.text).join(', ');
                     text += `Offene Aufgaben hast du aktuell folgende: ${todoListTexts}. `;
                 }
             }
@@ -1303,13 +1311,13 @@
             "- \"forgot_check\": Wenn der Benutzer fragt, ob er etwas vergessen hat.\n" +
             "- \"chat\": Fragen nach Wetter, Allgemeinwissen oder Inhalten aus den Listen (Einkauf, Aufgaben, Termine).\n" +
             "- \"shopping\": NEUE Artikel zur Einkaufsliste HINZUFÜGEN.\n" +
-            "- \"todo\": Aufgaben, Notizen oder Gedanken speichern.\n" +
+            "- \"todo\": Reine zeitlose Aufgaben, Notizen oder Gedanken speichern OHNE zeitlichen Bezug.\n" +
+            "- \"reminder\": Neue zeitgesteuerte Erinnerung anlegen. WICHTIG: Wenn eine Aufgabe einen Zeitbezug oder ein Datum enthält (z.B. 'morgen', 'heute Abend', 'am Freitag', 'um 14 Uhr'), benutze IMMER 'reminder' statt 'todo'.\n" +
             "- \"memory_store\": Feste Fakten, Standorte von Gegenständen oder persönliches Wissen SPEICHERN.\n" +
             "- \"memory_search\": Nach gespeicherten Infos im Gedächtnis fragen.\n" +
             "- \"calendar_delete\": Termin LÖSCHEN oder ENTFERNEN.\n" +
             "- \"reminder_delete\": Erinnerung löschen.\n" +
             "- \"name_change\": Wie der Benutzer genannt werden möchte.\n" +
-            "- \"reminder\": Neue zeitgesteuerte Erinnerung anlegen.\n" +
             "- \"calendar\": Neuer fester Kalender-Termin anlegen.\n" +
             "- \"call\": Telefonanruf starten.\n\n" +
             "MEHRSPRACHIGKEIT:\n" +
@@ -1390,7 +1398,7 @@
                     const items = ai.todo_items || (ai.todo_text ? [ai.todo_text] : []);
                     items.forEach((item, index) => {
                         if (item && item.trim()) {
-                            todoEntries.unshift({ id: Date.now() + index, text: item.trim(), createdDate: 'Per Sprache' });
+                            todoEntries.unshift({ id: Date.now() + index, text: item.trim(), createdDate: 'Per Sprache', createdAt: new Date().toISOString() });
                         }
                     });
                     setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
