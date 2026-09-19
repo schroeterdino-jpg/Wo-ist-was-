@@ -1156,25 +1156,10 @@
                 const memList = importantMemoryItems.map(k => {
                     const rawVal = typeof memoryItems[k] === 'object' ? JSON.stringify(memoryItems[k]) : memoryItems[k];
                     const valText = String(rawVal).trim();
-                    const lowerVal = valText.toLowerCase();
-                    
                     let formattedKey = k.charAt(0).toUpperCase() + k.slice(1);
-                    
-                    const hasVerb = /\b(hängt|liegt|steht|ist|befindet)\b/i.test(lowerVal);
-                    const hasPrep = /\b(auf|in|an|unter|über|neben|zwischen|vor|hinter)\b/i.test(lowerVal);
-                    
-                    let prefix = "";
-                    if (!hasVerb && !hasPrep) {
-                        prefix = "liegt auf dem ";
-                    } else if (!hasVerb && hasPrep) {
-                        prefix = "liegt ";
-                    } else {
-                        prefix = "";
-                    }
-                    
-                    return `deine ${formattedKey} ${prefix}${valText}`;
-                }).join(', und ');
-                text += `Kurzer Hinweis für unterwegs: Denk daran, ${memList}. `;
+                    return `${formattedKey}: ${valText}`;
+                }).join(', ');
+                text += `Kurzer Hinweis für unterwegs: ${memList}. `;
             }
 
             const fortyEightHoursAgo = new Date(now.getTime() - (48 * 60 * 60 * 1000));
@@ -1246,6 +1231,23 @@
             let locationInfo = null;
             const lowerText = text.toLowerCase();
 
+            // Korrektur: Direkt nach Gegenständen im Gedächtnis suchen, falls nach Gegenstands-Orten gefragt wird ("Wo ist meine Brille?")
+            const isObjectLocationQuery = 
+                (lowerText.includes('wo ist') || lowerText.includes('wo liegt') || lowerText.includes('wo befindet sich')) &&
+                !lowerText.includes('wo bin ich') && !lowerText.includes('wo befinde ich') && !lowerText.includes('mein standort');
+
+            if (isObjectLocationQuery) {
+                const searchQuery = text.replace(/\b(wo ist|wo liegt|wo befindet sich|meine|mein|die|der|das|ein|eine)\b/gi, '').trim();
+                const memResults = searchMemory(searchQuery);
+                if (memResults.length > 0) {
+                    const r = memResults[0];
+                    const replyText = `Laut deinem Gedächtnis: ${r.key} ist ${r.value}.`;
+                    speak(replyText);
+                    if (statusMessage) statusMessage.textContent = "Gedächtnis durchsucht.";
+                    return;
+                }
+            }
+
             const isLocationQuery = 
                 lowerText.includes('wo bin ich') || 
                 lowerText.includes('wo befinde ich') || 
@@ -1253,21 +1255,18 @@
                 lowerText.includes('aktueller ort') || 
                 lowerText.includes('welche straße') || 
                 lowerText.includes('welcher ort') || 
-                lowerText.includes('wo bin') || 
                 lowerText.includes('wo sind wir') || 
                 lowerText.includes('verwirrt') || 
                 lowerText.includes('orientierungslos') || 
                 lowerText.includes('nicht wo ich bin') ||
                 lowerText.includes('verlaufen') ||
-                lowerText.includes('hilfe wo') ||
-                lowerText.includes('sag mir wo') ||
-                lowerText.includes('standort') ||
+                lowerText.includes('hilfe wo bin ich') ||
+                lowerText.includes('sag mir wo ich bin') ||
                 lowerText.includes('wo ich mich aufhalte') ||
                 lowerText.includes('wo stehe ich') ||
                 lowerText.includes('wo ich stehe') ||
                 lowerText.includes('wo bin ich gerade') ||
-                lowerText.includes('meine adresse') ||
-                lowerText.includes('wo ich bin');
+                lowerText.includes('meine adresse');
 
             const isWeatherQuery = 
                 lowerText.includes('wetter') || 
@@ -1337,20 +1336,20 @@
             "- Aktueller Wochentag: " + wochentag + ".\n" +
             "- Morgen ist: " + morgenDateStr + ".\n" +
             "- Der kommende/nächste Sonntag ist der: " + nextSundayStr + ".\n" +
-            "- Berechne relative Datumsangaben (z.B. 'morgen', 'am Sonntag', 'übermorgen', 'am Freitag') STRENG basierend auf dem aktuellen Wochentag (" + wochentag + "). Wenn heute Samstag ist, ist 'am Sonntag' MORGEN (" + nextSundayStr + ")!\n\n" +
+            "- Berechne relative Datumsangaben STRENG basierend auf dem aktuellen Wochentag (" + wochentag + ").\n\n" +
             "WICHTIG ZUM STANDORT UND WETTER:\n" +
-            "- Verwende bei Wetterfragen IMMER den im Kontext übergebenen Ort (aus 'standort' oder 'wetter.ort'). Wenn der Benutzer fragt, wo er ist oder wie das Wetter wird, nenne diesen genauen Ort und NIEMALS automatisch Berlin oder Hamburg, außer er befindet sich tatsächlich dort.\n\n" +
+            "- Verwende bei Wetterfragen IMMER den im Kontext übergebenen Ort.\n\n" +
             "Analysiere den Sprachbefehl des Benutzers und unterscheide PRÄZISE:\n\n" +
             "STRIKTE CATEGORY-REGELN:\n" +
-            "- \"location\": JEDE Frage, die mit dem Standort, der Position, der Straße, dem Aufenthaltsort oder Verwirrung/Orientierung zu tun hat.\n" +
+            "- \"location\": Nur wenn der Benutzer nach SEINEM EIGENEN Standort/Aufenthaltsort fragt (z.B. 'Wo bin ich?'). Wenn er nach Gegenständen fragt (z.B. 'Wo ist meine Brille?'), wähle \"memory_search\".\n" +
             "- \"forgot_check\": Wenn der Benutzer fragt, ob er etwas vergessen hat.\n" +
-            "- \"chat\": Fragen nach Wetter, Allgemeinwissen oder Inhalten aus den Listen (Einkauf, Aufgaben, Termine).\n" +
+            "- \"chat\": Fragen nach Wetter, Allgemeinwissen oder Inhalten aus den Listen.\n" +
             "- \"shopping\": NEUE Artikel zur Einkaufsliste HINZUFÜGEN.\n" +
-            "- \"todo\": Reine zeitlose Aufgaben, Notizen oder Gedanken speichern OHNE zeitlichen Bezug.\n" +
-            "- \"reminder\": Neue zeitgesteuerte Erinnerung anlegen. WICHTIG: Wenn eine Aufgabe einen Zeitbezug oder ein Datum enthält (z.B. 'morgen', 'heute Abend', 'am Freitag', 'am Sonntag', 'um 14 Uhr'), benutze IMMER 'reminder' statt 'todo'.\n" +
+            "- \"todo\": Reine zeitlose Aufgaben, Notizen oder Gedanken speichern.\n" +
+            "- \"reminder\": Neue zeitgesteuerte Erinnerung anlegen.\n" +
             "- \"memory_store\": Feste Fakten, Standorte von Gegenständen oder persönliches Wissen SPEICHERN.\n" +
-            "- \"memory_search\": Nach gespeicherten Infos im Gedächtnis fragen.\n" +
-            "- \"calendar_delete\": Termin LÖSCHEN oder ENTFERNEN.\n" +
+            "- \"memory_search\": Nach gespeicherten Infos im Gedächtnis fragen (z.B. Wo ist die Brille?).\n" +
+            "- \"calendar_delete\": Termin LÖSCHEN.\n" +
             "- \"reminder_delete\": Erinnerung löschen.\n" +
             "- \"name_change\": Wie der Benutzer genannt werden möchte.\n" +
             "- \"calendar\": Neuer fester Kalender-Termin anlegen.\n" +
@@ -1388,7 +1387,7 @@
                     ai = typeof content === 'string' ? JSON.parse(content) : content;
                 }
 
-                if (ai.type === 'location' || isLocationQuery) {
+                if (ai.type === 'location' || (isLocationQuery && ai.type !== 'memory_search')) {
                     if (!locationInfo) {
                         if (statusMessage) statusMessage.textContent = "Bestimme Standort...";
                         locationInfo = await fetchLocationData();
