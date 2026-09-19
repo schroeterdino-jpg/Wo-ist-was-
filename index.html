@@ -1079,8 +1079,15 @@
                     text += "Es ist schön warm, du brauchst heute keine Jacke! ";
                 }
 
+                // Prüfen auf Regen (heute & morgen)
+                const regenMorgen = (weather.täglich && weather.täglich.precipitation_sum && weather.täglich.precipitation_sum[1]) ? weather.täglich.precipitation_sum[1] : 0;
+
                 if (regen > 0) {
-                    text += "Es regnet aktuell oder ist Regen gemeldet – nimm unbedingt einen Regenschirm mit! ";
+                    text += "Es regnet aktuell – nimm unbedingt einen Regenschirm mit! ";
+                } else if (regenMorgen > 0.5) {
+                    text += `Für morgen ist Regen gemeldet (ca. ${regenMorgen.toFixed(1).replace('.', ',')} mm) – denk morgen an deinen Regenschirm! `;
+                } else {
+                    text += "Ein Regenschirm ist für heute und morgen voraussichtlich nicht nötig. ";
                 }
 
                 if (wind > 25) {
@@ -1303,7 +1310,6 @@
             tomorrow.setDate(now.getDate() + 1);
             const morgenDateStr = tomorrow.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Berlin' });
 
-            // Nächsten Sonntag berechnen
             const nextSunday = new Date(now);
             const daysUntilSunday = (7 - now.getDay()) % 7;
             nextSunday.setDate(now.getDate() + (daysUntilSunday === 0 ? 7 : daysUntilSunday));
