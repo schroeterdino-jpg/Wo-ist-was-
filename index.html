@@ -258,7 +258,7 @@
 
     <footer class="bg-slate-800 border-t border-slate-700 text-center p-3 text-xs text-slate-400 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 9.3 (Update- & Kalender-Fix)</span>
+        <span>Version 9.4 (Sync- & Kalender-Fix)</span>
     </footer>
 
     <script>
@@ -552,7 +552,7 @@
             }
         }, 50 * 60 * 1000);
 
-        // Periodischer Kalenderabgleich (alle 30 Sek.) um gelöschte/veränderte Termine sofort zu spiegeln
+        // Periodischer Kalenderabgleich (alle 30 Sek.) um gelöschte/veränderte Termine und Erinnerungen sofort zu spiegeln
         setInterval(() => {
             if (accessToken) {
                 fetchGoogleCalendarEvents();
@@ -686,6 +686,7 @@
             reminderEntries.unshift({ id: Date.now(), googleId: googleEventId, text, time: remDate.toISOString(), triggered: false });
             setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
             renderAllLists();
+            fetchGoogleCalendarEvents();
         }
 
         async function addManualReminder() {
@@ -769,18 +770,23 @@
                 if (res.ok) {
                     const data = await res.json();
                     if (data.items) {
-                        const filteredItems = data.items.filter(item => {
+                        const validItems = data.items.filter(item => {
                             if (item.status === 'cancelled') return false;
                             const summary = (item.summary || '').toLowerCase();
                             const id = (item.id || '');
                             if (summary.includes('geburtstag') || summary.includes('geb.') || summary.includes('jahrestag')) return false;
                             if (id.includes('_R') || item.recurringEventId) return false;
                             if (item.start && item.start.date && !item.start.dateTime) return false;
-                            if (summary.includes('🔔') || summary.includes('erinnerung')) return false;
                             return true;
                         });
 
-                        calendarEntries = filteredItems.map(item => {
+                        // 1. Termine filtern
+                        const calItems = validItems.filter(item => {
+                            const summary = (item.summary || '').toLowerCase();
+                            return !summary.includes('🔔') && !summary.includes('erinnerung');
+                        });
+
+                        calendarEntries = calItems.map(item => {
                             const d = new Date(item.start.dateTime || item.start.date);
                             return {
                                 id: item.id,
@@ -790,10 +796,47 @@
                             };
                         });
                         setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
+
+                        // 2. Erinnerungen filtern und mit lokaler Liste abgleichen
+                        const googleReminders = validItems.filter(item => {
+                            const summary = (item.summary || '').toLowerCase();
+                            return summary.includes('🔔') || summary.includes('erinnerung');
+                        });
+
+                        // Aktualisiere reminderEntries mit den echten Daten aus Google
+                        const newReminderEntries = [];
+                        googleReminders.forEach(gItem => {
+                            const cleanText = (gItem.summary || '').replace(/^🔔\s*/, '').trim();
+                            const isoTime = gItem.start.dateTime || gItem.start.date;
+                            
+                            // Prüfen, ob lokal bereits vorhanden
+                            const existing = reminderEntries.find(r => r.googleId === gItem.id || (r.text === cleanText && r.time === isoTime));
+                            
+                            newReminderEntries.push({
+                                id: existing ? existing.id : Date.now() + Math.floor(Math.random() * 1000),
+                                googleId: gItem.id,
+                                text: cleanText,
+                                time: isoTime,
+                                triggered: existing ? existing.triggered : false
+                            });
+                        });
+
+                        // Behalte auch noch nicht hochgeladene/lokale Erinnerungen
+                        reminderEntries.forEach(r => {
+                            if (!r.googleId && !newReminderEntries.some(nr => nr.text === r.text && nr.time === r.time)) {
+                                newReminderEntries.push(r);
+                            }
+                        });
+
+                        reminderEntries = newReminderEntries;
+                        setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
+
                         renderAllLists();
                     }
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.error("Fehler beim Abrufen der Google Kalender Events", e);
+            }
         }
 
         async function deleteCalendarEntry(id) {
@@ -820,9 +863,15 @@
 
         async function deleteReminderEntry(id) {
             const rem = reminderEntries.find(e => e.id === id);
+            
+            // Erst lokal entfernen für sofortiges UI-Feedback
+            reminderEntries = reminderEntries.filter(e => e.id !== id);
+            setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
+            renderAllLists();
+
             if (rem && accessToken) {
                 let targetGoogleId = rem.googleId;
-                
+
                 if (!targetGoogleId) {
                     try {
                         const nowIso = new Date().toISOString();
@@ -844,21 +893,15 @@
 
                 if (targetGoogleId) {
                     try {
-                        const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(targetGoogleId)}`, {
+                        await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(targetGoogleId)}`, {
                             method: 'DELETE',
                             headers: { 'Authorization': `Bearer ${accessToken}` }
                         });
-                        if (res.status === 401) {
-                            loginWithGoogle(true, () => deleteReminderEntry(id));
-                            return;
-                        }
-                    } catch (e) {}
+                    } catch (e) {
+                        console.error("Fehler beim Löschen der Erinnerung aus Google", e);
+                    }
                 }
             }
-
-            reminderEntries = reminderEntries.filter(e => e.id !== id);
-            setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
-            renderAllLists();
         }
 
         async function fetchLocationData() {
@@ -1407,7 +1450,7 @@
                     }
                 }
 
-                if (ai.type === 'calendar' || ai.type === 'calendar_delete' || ai.type === 'calendar_update') {
+                if (ai.type === 'calendar' || ai.type === 'calendar_delete' || ai.type === 'calendar_update' || ai.type === 'reminder' || ai.type === 'reminder_delete') {
                     await fetchGoogleCalendarEvents();
                 } else {
                     renderAllLists();
