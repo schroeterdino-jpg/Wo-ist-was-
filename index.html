@@ -316,7 +316,7 @@
 
     <footer class="bg-slate-800 border-t border-slate-700 text-center p-3 text-xs text-slate-400 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 9.1 (Sicherer Proxy)</span>
+        <span>Version 9.2 (Präzise Ortung)</span>
     </footer>
 
     <script>
@@ -908,11 +908,11 @@
             });
         }
 
-        async function fetchWeatherData() {
+        async function fetchWeatherData(customLat = null, customLon = null) {
             return new Promise((resolve) => {
                 const getMeteo = async (lat, lon) => {
                     try {
-                        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m`);
+                        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Europe%2FBerlin`);
                         const data = await res.json();
                         resolve({
                             temperatur: Math.round(data.current.temperature_2m),
@@ -920,6 +920,7 @@
                             niederschlag: data.current.precipitation,
                             windstärke: data.current.wind_speed_10m,
                             wettercode: data.current.weather_code,
+                            täglich: data.daily || {},
                             koordinaten: { lat, lon }
                         });
                     } catch (e) {
@@ -927,14 +928,16 @@
                     }
                 };
 
-                if (navigator.geolocation) {
+                if (customLat && customLon) {
+                    getMeteo(customLat, customLon);
+                } else if (navigator.geolocation) {
                     navigator.geolocation.getCurrentPosition(
                         (pos) => getMeteo(pos.coords.latitude, pos.coords.longitude),
-                        () => getMeteo(53.5511, 9.9937),
+                        () => getMeteo(53.5008, 10.4722), // Standard-Fallback: Schwarzenbek
                         { timeout: 5000 }
                     );
                 } else {
-                    getMeteo(53.5511, 9.9937);
+                    getMeteo(53.5008, 10.4722); // Standard-Fallback: Schwarzenbek
                 }
             });
         }
@@ -1050,14 +1053,22 @@
 
             let text = `${greeting} ${currentUserName}! Es ist jetzt ${timeStr} Uhr. `;
             
-            if (statusMessage) statusMessage.textContent = "Hole Wetter...";
-            const weather = await fetchWeatherData();
+            if (statusMessage) statusMessage.textContent = "Hole Standort & Wetter...";
+            const locData = await fetchLocationData();
+            let weather = null;
+            if (locData && locData.koordinaten) {
+                weather = await fetchWeatherData(locData.koordinaten.lat, locData.koordinaten.lon);
+            } else {
+                weather = await fetchWeatherData();
+            }
+
             if (weather && !weather.fehler) {
                 const temp = weather.temperatur;
                 const regen = weather.niederschlag;
                 const wind = weather.windstärke;
+                const ortName = (locData && locData.details) ? (locData.details.town || locData.details.city || locData.details.village || "deinem Standort") : "deinem Standort";
 
-                text += `Draußen sind es aktuell ${temp} Grad. `;
+                text += `In ${ortName} sind es aktuell ${temp} Grad. `;
 
                 if (temp < 10) {
                     text += "Es ist recht kalt, zieh dir am besten eine dicke Winterjacke an. ";
@@ -1230,12 +1241,7 @@
                 lowerText.includes('meine adresse') ||
                 lowerText.includes('wo ich bin');
 
-            if (isLocationQuery) {
-                if (statusMessage) statusMessage.textContent = "Bestimme Standort...";
-                locationInfo = await fetchLocationData();
-            }
-
-            if (
+            const isWeatherQuery = 
                 lowerText.includes('wetter') || 
                 lowerText.includes('regenschirm') || 
                 lowerText.includes('regen') || 
@@ -1247,10 +1253,25 @@
                 lowerText.includes('kalt') ||
                 lowerText.includes('warm') ||
                 lowerText.includes('sonne') ||
-                lowerText.includes('frieren')
-            ) {
-                if (statusMessage) statusMessage.textContent = "Hole Wetter...";
-                weatherInfo = await fetchWeatherData();
+                lowerText.includes('frieren');
+
+            // Präzise Standort- und Wetterermittlung
+            if (isLocationQuery || isWeatherQuery) {
+                if (statusMessage) statusMessage.textContent = "Ermittle Standort...";
+                locationInfo = await fetchLocationData();
+            }
+
+            if (isWeatherQuery) {
+                if (statusMessage) statusMessage.textContent = "Hole Wetterdaten...";
+                if (locationInfo && locationInfo.koordinaten) {
+                    weatherInfo = await fetchWeatherData(locationInfo.koordinaten.lat, locationInfo.koordinaten.lon);
+                } else {
+                    weatherInfo = await fetchWeatherData();
+                }
+                
+                if (locationInfo && locationInfo.details) {
+                    weatherInfo.ort = locationInfo.details.town || locationInfo.details.city || locationInfo.details.village || "deinem aktuellen Standort";
+                }
             }
 
             const now = new Date();
@@ -1274,11 +1295,13 @@
             "WICHTIG ZUR ZEIT & DATUM:\n" +
             "- Aktuelles Datum und deutsche Ortszeit: " + nowGermanIso + ".\n" +
             "- Berücksichtige bei Datums- und Zeitangaben immer die deutsche Zeitzone (Europe/Berlin).\n\n" +
+            "WICHTIG ZUM STANDORT UND WETTER:\n" +
+            "- Verwende bei Wetterfragen IMMER den im Kontext übergebenen Ort (aus 'standort' oder 'wetter.ort'). Wenn der Benutzer fragt, wo er ist oder wie das Wetter wird, nenne diesen genauen Ort und NIEMALS automatisch Berlin oder Hamburg, außer er befindet sich tatsächlich dort.\n\n" +
             "Analysiere den Sprachbefehl des Benutzers und unterscheide PRÄZISE:\n\n" +
             "STRIKTE CATEGORY-REGELN:\n" +
             "- \"location\": JEDE Frage, die mit dem Standort, der Position, der Straße, dem Aufenthaltsort oder Verwirrung/Orientierung zu tun hat.\n" +
             "- \"forgot_check\": Wenn der Benutzer fragt, ob er etwas vergessen hat.\n" +
-            "- \"chat\": Fragen nach Inhalten aus den Listen (Einkauf, Aufgaben, Termine).\n" +
+            "- \"chat\": Fragen nach Wetter, Allgemeinwissen oder Inhalten aus den Listen (Einkauf, Aufgaben, Termine).\n" +
             "- \"shopping\": NEUE Artikel zur Einkaufsliste HINZUFÜGEN.\n" +
             "- \"todo\": Aufgaben, Notizen oder Gedanken speichern.\n" +
             "- \"memory_store\": Feste Fakten, Standorte von Gegenständen oder persönliches Wissen SPEICHERN.\n" +
