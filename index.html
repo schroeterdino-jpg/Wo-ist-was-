@@ -125,7 +125,7 @@
                     </svg>
                     <span id="recordText" class="text-sm font-semibold tracking-wide">SPRECHEN</span>
                 </button>
-                <p id="statusMessage" class="text-center font-medium text-slate-300 h-6">Drücken und sprechen...</p>
+                <p id="statusMessage" class="text-center font-medium text-slate-300 h-6">Sag „Hey Luzifer“ oder drücke den Knopf...</p>
             </div>
 
             <button onclick="triggerDailyBriefing()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 px-4 rounded-xl shadow-md font-bold text-base flex items-center justify-center gap-2 border border-indigo-500/30">
@@ -211,6 +211,20 @@
 
             <details class="bg-slate-800 rounded-xl shadow-sm border border-slate-700 overflow-hidden">
                 <summary class="p-4 font-bold text-slate-200 cursor-pointer bg-slate-800/80 flex justify-between items-center">
+                    <span>🗣️ Codewort / Wake-Word („Hey Luzifer“)</span>
+                </summary>
+                <div class="p-4 space-y-3 border-t border-slate-700 text-xs text-slate-300">
+                    <p>Reagiere automatisch, wenn du „Hey Luzifer“ sagst, ohne einen Knopf drücken zu müssen.</p>
+                    <div class="flex items-center justify-between bg-slate-900 p-3 rounded-lg border border-slate-700">
+                        <span class="font-bold text-slate-200">Codewort-Erkennung aktiv</span>
+                        <input type="checkbox" id="wakeWordToggle" onchange="toggleWakeWordSetting(this.checked)" class="w-5 h-5 accent-blue-600 cursor-pointer">
+                    </div>
+                    <p id="wakeWordStatus" class="text-slate-400 italic">Status wird geladen...</p>
+                </div>
+            </details>
+
+            <details class="bg-slate-800 rounded-xl shadow-sm border border-slate-700 overflow-hidden">
+                <summary class="p-4 font-bold text-slate-200 cursor-pointer bg-slate-800/80 flex justify-between items-center">
                     <span>🔑 Schnittstellen & Konten</span>
                 </summary>
                 <div class="p-4 space-y-3 border-t border-slate-700">
@@ -258,7 +272,7 @@
 
     <footer class="bg-slate-800 border-t border-slate-700 text-center p-3 text-xs text-slate-400 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 9.4 (Sync- & Kalender-Fix)</span>
+        <span>Version 9.5 (Wake-Word „Hey Luzifer“)</span>
     </footer>
 
     <script>
@@ -963,23 +977,35 @@
 
         let currentAudio = null;
         function speak(text, onComplete) {
+            pauseWakeWord(); // Während der Ausgabe Wake-Word pausieren
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'de-DE';
                 utterance.rate = 1.15;
                 utterance.pitch = 1.0;
-                utterance.onend = () => { if (onComplete) onComplete(); };
+                utterance.onend = () => { 
+                    resumeWakeWord();
+                    if (onComplete) onComplete(); 
+                };
+                utterance.onerror = () => {
+                    resumeWakeWord();
+                };
                 window.speechSynthesis.speak(utterance);
             } else {
                 if (currentAudio) { currentAudio.pause(); currentAudio = null; }
                 currentAudio = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=de&client=tw-ob`);
                 currentAudio.playbackRate = 1.25;
                 currentAudio.play().catch(() => {});
-                currentAudio.onended = () => { currentAudio = null; if (onComplete) onComplete(); };
+                currentAudio.onended = () => { 
+                    currentAudio = null; 
+                    resumeWakeWord();
+                    if (onComplete) onComplete(); 
+                };
             }
         }
 
+        // Standard Spracherkennung für Befehle
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition = null;
         let isRecording = false;
@@ -987,8 +1013,12 @@
         if (SpeechRecognition) {
             recognition = new SpeechRecognition();
             recognition.lang = 'de-DE';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
             recognition.onstart = () => {
                 isRecording = true;
+                pauseWakeWord();
                 if (statusMessage) statusMessage.textContent = "Höre zu...";
                 if (recordBtn) {
                     recordBtn.classList.remove('bg-red-600', 'hover:bg-red-700', 'pulse-red');
@@ -1003,6 +1033,21 @@
             };
             recognition.onerror = () => resetButton();
             recognition.onend = () => resetButton();
+        }
+
+        function playActivationBeep() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.15);
+            } catch(e) {}
         }
 
         function toggleSpeechRecognition() {
@@ -1030,7 +1075,135 @@
                 recordBtn.classList.add('bg-red-600', 'hover:bg-red-700', 'pulse-red');
             }
             if (recordText) recordText.textContent = "SPRECHEN";
+            if (statusMessage && statusMessage.textContent === "Höre zu...") {
+                statusMessage.textContent = "Sag „Hey Luzifer“ oder drücke den Knopf...";
+            }
+            resumeWakeWord();
         }
+
+        /* -------------------------------------------------------------
+           WAKE-WORD RECOGNIZER („Hey Luzifer“)
+        ------------------------------------------------------------- */
+        let wakeWordRecognition = null;
+        let wakeWordActive = getPersistentData('helfer_wakeword_enabled', 'true') === 'true';
+        let isWakeWordPaused = false;
+
+        function initWakeWord() {
+            if (!SpeechRecognition) return;
+
+            wakeWordRecognition = new SpeechRecognition();
+            wakeWordRecognition.lang = 'de-DE';
+            wakeWordRecognition.continuous = true;
+            wakeWordRecognition.interimResults = true;
+
+            wakeWordRecognition.onresult = (event) => {
+                if (isRecording || isWakeWordPaused) return;
+
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript.toLowerCase();
+                    
+                    // Erkennungs-Varianten für "Hey Luzifer"
+                    if (
+                        transcript.includes('hey luzifer') || 
+                        transcript.includes('luzifer') || 
+                        transcript.includes('lucifer') || 
+                        transcript.includes('hey lucifer') ||
+                        transcript.includes('hi luzifer')
+                    ) {
+                        try { wakeWordRecognition.stop(); } catch(e) {}
+                        playActivationBeep();
+                        
+                        // Befehl direkt nach dem Codewort extrahieren
+                        let cleanText = transcript
+                            .replace(/.*?(hey luzifer|luzifer|hey lucifer|lucifer|hi luzifer)/gi, '')
+                            .trim();
+
+                        if (cleanText.length > 2) {
+                            if (statusMessage) statusMessage.textContent = `Erkannt: "${cleanText}"`;
+                            sendToGroqSmart(cleanText);
+                        } else {
+                            setTimeout(() => {
+                                toggleSpeechRecognition();
+                            }, 200);
+                        }
+                        break;
+                    }
+                }
+            };
+
+            wakeWordRecognition.onerror = (err) => {
+                if (wakeWordActive && !isWakeWordPaused && !isRecording) {
+                    setTimeout(() => restartWakeWord(), 1000);
+                }
+            };
+
+            wakeWordRecognition.onend = () => {
+                if (wakeWordActive && !isWakeWordPaused && !isRecording) {
+                    setTimeout(() => restartWakeWord(), 500);
+                }
+            };
+
+            updateWakeWordUI();
+            if (wakeWordActive) {
+                startWakeWord();
+            }
+        }
+
+        function startWakeWord() {
+            if (!wakeWordRecognition) return;
+            try {
+                wakeWordRecognition.start();
+                updateWakeWordUI("Aktiv - Lauscht auf „Hey Luzifer“");
+            } catch(e) {
+                updateWakeWordUI("Fehler beim Starten");
+            }
+        }
+
+        function restartWakeWord() {
+            if (!wakeWordActive || isWakeWordPaused || isRecording) return;
+            try {
+                wakeWordRecognition.start();
+            } catch(e) {}
+        }
+
+        function pauseWakeWord() {
+            isWakeWordPaused = true;
+            if (wakeWordRecognition) {
+                try { wakeWordRecognition.stop(); } catch(e) {}
+            }
+        }
+
+        function resumeWakeWord() {
+            isWakeWordPaused = false;
+            if (wakeWordActive && !isRecording) {
+                restartWakeWord();
+            }
+        }
+
+        function toggleWakeWordSetting(enabled) {
+            wakeWordActive = enabled;
+            setPersistentData('helfer_wakeword_enabled', enabled ? 'true' : 'false');
+            if (enabled) {
+                isWakeWordPaused = false;
+                startWakeWord();
+            } else {
+                pauseWakeWord();
+                updateWakeWordUI("Deaktiviert");
+            }
+        }
+
+        function updateWakeWordUI(customMsg) {
+            const toggle = document.getElementById('wakeWordToggle');
+            const status = document.getElementById('wakeWordStatus');
+            if (toggle) toggle.checked = wakeWordActive;
+            if (status) {
+                status.textContent = customMsg || (wakeWordActive ? "Aktiv - Lauscht auf „Hey Luzifer“" : "Deaktiviert");
+            }
+        }
+
+        window.addEventListener('load', () => {
+            initWakeWord();
+        });
 
         async function triggerDailyBriefing() {
             const now = new Date();
