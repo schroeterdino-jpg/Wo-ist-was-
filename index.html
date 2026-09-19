@@ -18,50 +18,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#0f172a">
     <style>
-    :root {
-        --app-font-scale: 1;
-    }
-
-    body { 
-        font-size: calc(1.15rem * var(--app-font-scale)); 
-    }
-
-    body.large-font-mode {
-        --app-font-scale: 1.3;
-    }
-
-    /* Starker Kontrast Modus */
-    body.high-contrast-mode {
-        background-color: #000000 !important;
-        color: #ffffff !important;
-    }
-    body.high-contrast-mode header,
-    body.high-contrast-mode nav,
-    body.high-contrast-mode footer,
-    body.high-contrast-mode section,
-    body.high-contrast-mode div,
-    body.high-contrast-mode details {
-        background-color: #000000 !important;
-        border-color: #ffffff !important;
-        color: #ffffff !important;
-    }
-    body.high-contrast-mode button {
-        border: 2px solid #ffffff !important;
-        background-color: #000000 !important;
-        color: #ffff00 !important;
-    }
-    body.high-contrast-mode input {
-        background-color: #000000 !important;
-        color: #ffffff !important;
-        border: 2px solid #ffffff !important;
-    }
-    body.high-contrast-mode h1, 
-    body.high-contrast-mode h2, 
-    body.high-contrast-mode span,
-    body.high-contrast-mode p {
-        color: #ffffff !important;
-    }
-
+    body { font-size: 1.15rem; }
+    
     /* Pulsieren Rot */
     @keyframes pulseRingRed {
         0%   { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.8); }
@@ -241,22 +199,6 @@
 
             <details class="bg-slate-800 rounded-xl shadow-sm border border-slate-700 overflow-hidden" open>
                 <summary class="p-4 font-bold text-slate-200 cursor-pointer bg-slate-800/80 flex justify-between items-center">
-                    <span>👓 Anzeige & Lesbarkeit</span>
-                </summary>
-                <div class="p-4 space-y-4 border-t border-slate-700">
-                    <div class="flex items-center justify-between">
-                        <label for="toggleContrast" class="text-sm font-bold text-slate-300">Starker Kontrast (Schwarz/Weiß)</label>
-                        <input type="checkbox" id="toggleContrast" onchange="toggleHighContrast(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer">
-                    </div>
-                    <div class="flex items-center justify-between border-t border-slate-700/60 pt-3">
-                        <label for="toggleFont" class="text-sm font-bold text-slate-300">Sehr große Schrift</label>
-                        <input type="checkbox" id="toggleFont" onchange="toggleLargeFont(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer">
-                    </div>
-                </div>
-            </details>
-
-            <details class="bg-slate-800 rounded-xl shadow-sm border border-slate-700 overflow-hidden">
-                <summary class="p-4 font-bold text-slate-200 cursor-pointer bg-slate-800/80 flex justify-between items-center">
                     <span>👤 Profil & Anrede</span>
                 </summary>
                 <div class="p-4 space-y-3 border-t border-slate-700">
@@ -316,7 +258,7 @@
 
     <footer class="bg-slate-800 border-t border-slate-700 text-center p-3 text-xs text-slate-400 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 9.5 (Stabilized)</span>
+        <span>Version 9.1 (Sicherer Proxy)</span>
     </footer>
 
     <script>
@@ -354,26 +296,6 @@
             }
         }
 
-        function toggleHighContrast(enabled) {
-            if (enabled) {
-                document.body.classList.add('high-contrast-mode');
-                setPersistentData('helfer_high_contrast', 'true');
-            } else {
-                document.body.classList.remove('high-contrast-mode');
-                setPersistentData('helfer_high_contrast', 'false');
-            }
-        }
-
-        function toggleLargeFont(enabled) {
-            if (enabled) {
-                document.body.classList.add('large-font-mode');
-                setPersistentData('helfer_large_font', 'true');
-            } else {
-                document.body.classList.remove('large-font-mode');
-                setPersistentData('helfer_large_font', 'false');
-            }
-        }
-
         const recordBtn = document.getElementById('recordBtn');
         const recordText = document.getElementById('recordText');
         const statusMessage = document.getElementById('statusMessage');
@@ -394,22 +316,13 @@
 
         function getPersistentData(key, defaultValue) {
             let val = localStorage.getItem(key);
+            if (!val || val === "null" || val === "undefined") val = sessionStorage.getItem(key);
             return (!val || val === "null" || val === "undefined") ? defaultValue : val;
         }
 
         function setPersistentData(key, value) {
             try { localStorage.setItem(key, value); } catch (e) {}
-        }
-
-        if (getPersistentData('helfer_high_contrast', 'false') === 'true') {
-            document.body.classList.add('high-contrast-mode');
-            const chk = document.getElementById('toggleContrast');
-            if (chk) chk.checked = true;
-        }
-        if (getPersistentData('helfer_large_font', 'false') === 'true') {
-            document.body.classList.add('large-font-mode');
-            const chk = document.getElementById('toggleFont');
-            if (chk) chk.checked = true;
+            try { sessionStorage.setItem(key, value); } catch (e) {}
         }
 
         let currentUserName = getPersistentData('user_custom_name', 'Dino');
@@ -476,7 +389,7 @@
                     .sort((a, b) => new Date(a.isoDate) - new Date(b.isoDate));
                 if (validCal.length > 0) {
                     const topCal = validCal[0];
-                    const dateFormatted = new Date(topCal.isoDate).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                    const dateFormatted = new Date(topCal.isoDate).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'short' });
                     nextCal = `${topCal.text} (${dateFormatted})`;
                 } else if (calendarEntries[0].text) {
                     nextCal = calendarEntries[0].text;
@@ -490,7 +403,7 @@
                     .sort((a, b) => new Date(a.time) - new Date(b.time));
                 if (validRem.length > 0) {
                     const topRem = validRem[0];
-                    const remFormatted = new Date(topRem.time).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                    const remFormatted = new Date(topRem.time).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'short' });
                     nextRem = `${topRem.text} (${remFormatted})`;
                 }
             }
@@ -561,13 +474,13 @@
                 setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
                 renderAllLists();
             }
-        }, 15000);
+        }, 1000);
 
         let tokenClient = null;
         let accessToken = getPersistentData('google_access_token', '');
         let pendingAction = null;
 
-        function initTokenClient() {
+        function initTokenClient(callbackAction) {
             const clientId = getPersistentData('google_client_id', DEFAULT_CLIENT_ID);
             if (!clientId) return false;
 
@@ -656,7 +569,7 @@
                     if (res.ok) {
                         const data = await res.json();
                         createdId = data.id;
-                        await fetchGoogleCalendarEvents();
+                        fetchGoogleCalendarEvents();
                         return;
                     }
                 } catch (e) {
@@ -667,7 +580,7 @@
             calendarEntries.unshift({
                 id: createdId,
                 text: text,
-                date: eventDate.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
+                date: eventDate.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: 'short' }),
                 isoDate: eventDate.toISOString()
             });
             setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
@@ -728,7 +641,7 @@
             if (!inputEl) return;
             const val = inputEl.value.trim();
             if (val) {
-                todoEntries.unshift({ id: Date.now(), text: val, createdDate: 'Manuell', createdAt: new Date().toISOString() });
+                todoEntries.unshift({ id: Date.now(), text: val, createdDate: 'Manuell' });
                 setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
                 inputEl.value = '';
                 renderAllLists();
@@ -805,7 +718,7 @@
                             return {
                                 id: item.id,
                                 text: item.summary || 'Termin',
-                                date: d.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', weekday: 'short', day: '2-digit', month: '2-digit', hour: item.start.dateTime ? '2-digit' : undefined, minute: item.start.dateTime ? '2-digit' : undefined }),
+                                date: d.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: item.start.dateTime ? 'short' : undefined }),
                                 isoDate: item.start.dateTime || item.start.date
                             };
                         });
@@ -907,11 +820,11 @@
             });
         }
 
-        async function fetchWeatherData(customLat = null, customLon = null) {
+        async function fetchWeatherData() {
             return new Promise((resolve) => {
                 const getMeteo = async (lat, lon) => {
                     try {
-                        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Europe%2FBerlin`);
+                        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m`);
                         const data = await res.json();
                         resolve({
                             temperatur: Math.round(data.current.temperature_2m),
@@ -919,7 +832,6 @@
                             niederschlag: data.current.precipitation,
                             windstärke: data.current.wind_speed_10m,
                             wettercode: data.current.weather_code,
-                            täglich: data.daily || {},
                             koordinaten: { lat, lon }
                         });
                     } catch (e) {
@@ -927,16 +839,14 @@
                     }
                 };
 
-                if (customLat && customLon) {
-                    getMeteo(customLat, customLon);
-                } else if (navigator.geolocation) {
+                if (navigator.geolocation) {
                     navigator.geolocation.getCurrentPosition(
                         (pos) => getMeteo(pos.coords.latitude, pos.coords.longitude),
-                        () => getMeteo(53.5008, 10.4722), // Standard-Fallback: Schwarzenbek
+                        () => getMeteo(53.5511, 9.9937),
                         { timeout: 5000 }
                     );
                 } else {
-                    getMeteo(53.5008, 10.4722); // Standard-Fallback: Schwarzenbek
+                    getMeteo(53.5511, 9.9937);
                 }
             });
         }
@@ -947,14 +857,14 @@
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'de-DE';
-                utterance.rate = 1.0;
+                utterance.rate = 1.15;
                 utterance.pitch = 1.0;
                 utterance.onend = () => { if (onComplete) onComplete(); };
                 window.speechSynthesis.speak(utterance);
             } else {
                 if (currentAudio) { currentAudio.pause(); currentAudio = null; }
                 currentAudio = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=de&client=tw-ob`);
-                currentAudio.playbackRate = 1.0;
+                currentAudio.playbackRate = 1.25;
                 currentAudio.play().catch(() => {});
                 currentAudio.onended = () => { currentAudio = null; if (onComplete) onComplete(); };
             }
@@ -967,9 +877,6 @@
         if (SpeechRecognition) {
             recognition = new SpeechRecognition();
             recognition.lang = 'de-DE';
-            recognition.interimResults = false;
-            recognition.maxAlternatives = 1;
-
             recognition.onstart = () => {
                 isRecording = true;
                 if (statusMessage) statusMessage.textContent = "Höre zu...";
@@ -979,35 +886,13 @@
                 }
                 if (recordText) recordText.textContent = "HÖRE...";
             };
-
             recognition.onresult = (event) => {
-                const text = event.results[0] && event.results[0][0] ? event.results[0][0].transcript.trim() : "";
-                if (text.length > 0) {
-                    if (statusMessage) statusMessage.textContent = `Erkannt: "${text}"`;
-                    sendToGroqSmart(text);
-                } else {
-                    handleSpeechError('no-speech');
-                }
+                const text = event.results[0][0].transcript;
+                if (statusMessage) statusMessage.textContent = `Erkannt: "${text}"`;
+                sendToGroqSmart(text);
             };
-
-            recognition.onerror = (event) => {
-                console.error("Spracherkennungsfehler:", event.error);
-                handleSpeechError(event.error);
-                resetButton();
-            };
-
+            recognition.onerror = () => resetButton();
             recognition.onend = () => resetButton();
-        }
-
-        function handleSpeechError(errorCode) {
-            let errorMsg = "Ich habe dich nicht verstanden, bitte nochmal.";
-            if (errorCode === 'not-allowed') {
-                errorMsg = "Mikrofon-Zugriff verweigert. Bitte Einstellungen prüfen.";
-            } else if (errorCode === 'network') {
-                errorMsg = "Netzwerkfehler. Bitte Internetverbindung prüfen.";
-            }
-            if (statusMessage) statusMessage.textContent = errorMsg;
-            speak(errorMsg);
         }
 
         function toggleSpeechRecognition() {
@@ -1024,11 +909,7 @@
                 }
                 if (recordText) recordText.textContent = "HÖRE...";
                 if (statusMessage) statusMessage.textContent = "Höre zu...";
-                try {
-                    recognition.start();
-                } catch(e) {
-                    console.error("Start-Fehler:", e);
-                }
+                recognition.start();
             }
         }
 
@@ -1052,22 +933,14 @@
 
             let text = `${greeting} ${currentUserName}! Es ist jetzt ${timeStr} Uhr. `;
             
-            if (statusMessage) statusMessage.textContent = "Hole Standort & Wetter...";
-            const locData = await fetchLocationData();
-            let weather = null;
-            if (locData && locData.koordinaten) {
-                weather = await fetchWeatherData(locData.koordinaten.lat, locData.koordinaten.lon);
-            } else {
-                weather = await fetchWeatherData();
-            }
-
+            if (statusMessage) statusMessage.textContent = "Hole Wetter...";
+            const weather = await fetchWeatherData();
             if (weather && !weather.fehler) {
                 const temp = weather.temperatur;
                 const regen = weather.niederschlag;
                 const wind = weather.windstärke;
-                const ortName = (locData && locData.details) ? (locData.details.town || locData.details.city || locData.details.village || "deinem Standort") : "deinem Standort";
 
-                text += `In ${ortName} sind es aktuell ${temp} Grad. `;
+                text += `Draußen sind es aktuell ${temp} Grad. `;
 
                 if (temp < 10) {
                     text += "Es ist recht kalt, zieh dir am besten eine dicke Winterjacke an. ";
@@ -1112,27 +985,10 @@
                 text += "Was deine Termine angeht: Für heute und morgen steht nichts weiter im Kalender. ";
             }
 
-            const activeReminders = (reminderEntries || []).filter(e => !e.triggered);
-            if (activeReminders.length > 0) {
-                const remList = activeReminders.map(e => {
-                    const remDate = new Date(e.time);
-                    const isToday = remDate.toDateString() === todayStr;
-                    const isTomorrow = remDate.toDateString() === tomorrowStr;
-                    
-                    const timeFormatted = remDate.toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' });
-                    const dateFormatted = remDate.toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin', day: 'numeric', month: 'long' });
-                    const weekdayFormatted = remDate.toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin', weekday: 'long' });
-
-                    let dayText = "";
-                    if (isToday) {
-                        dayText = "heute";
-                    } else if (isTomorrow) {
-                        dayText = "morgen";
-                    } else {
-                        dayText = `am ${weekdayFormatted}, den ${dateFormatted},`;
-                    }
-
-                    return `${e.text} (${dayText} um ${timeFormatted} Uhr)`;
+            if (reminderEntries && reminderEntries.length > 0) {
+                const remList = reminderEntries.map(e => {
+                    const timeFormatted = new Date(e.time).toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' });
+                    return `${e.text} um ${timeFormatted} Uhr`;
                 }).join(' und ');
                 text += `Denk bitte an deine aktiven Erinnerungen: ${remList}. `;
             }
@@ -1171,17 +1027,11 @@
                 text += `Kurzer Hinweis für unterwegs: Denk daran, ${memList}. `;
             }
 
-            const fortyEightHoursAgo = new Date(now.getTime() - (48 * 60 * 60 * 1000));
-            const recentTodoEntries = (todoEntries || []).filter(e => {
-                if (!e.createdAt) return true;
-                return new Date(e.createdAt) >= fortyEightHoursAgo;
-            });
-
-            if (recentTodoEntries.length > 0) {
-                if (recentTodoEntries.length === 1) {
-                    text += `Auf deiner Aufgabenliste steht noch: ${recentTodoEntries[0].text}. `;
+            if (todoEntries && todoEntries.length > 0) {
+                if (todoEntries.length === 1) {
+                    text += `Auf deiner Aufgabenliste steht noch: ${todoEntries[0].text}. `;
                 } else {
-                    const todoListTexts = recentTodoEntries.map(e => e.text).join(', ');
+                    const todoListTexts = todoEntries.map(e => e.text).join(', ');
                     text += `Offene Aufgaben hast du aktuell folgende: ${todoListTexts}. `;
                 }
             }
@@ -1263,7 +1113,12 @@
                 lowerText.includes('meine adresse') ||
                 lowerText.includes('wo ich bin');
 
-            const isWeatherQuery = 
+            if (isLocationQuery) {
+                if (statusMessage) statusMessage.textContent = "Bestimme Standort...";
+                locationInfo = await fetchLocationData();
+            }
+
+            if (
                 lowerText.includes('wetter') || 
                 lowerText.includes('regenschirm') || 
                 lowerText.includes('regen') || 
@@ -1275,45 +1130,17 @@
                 lowerText.includes('kalt') ||
                 lowerText.includes('warm') ||
                 lowerText.includes('sonne') ||
-                lowerText.includes('frieren');
-
-            if (isLocationQuery || isWeatherQuery) {
-                if (statusMessage) statusMessage.textContent = "Ermittle Standort...";
-                locationInfo = await fetchLocationData();
-            }
-
-            if (isWeatherQuery) {
-                if (statusMessage) statusMessage.textContent = "Hole Wetterdaten...";
-                if (locationInfo && locationInfo.koordinaten) {
-                    weatherInfo = await fetchWeatherData(locationInfo.koordinaten.lat, locationInfo.koordinaten.lon);
-                } else {
-                    weatherInfo = await fetchWeatherData();
-                }
-                
-                if (locationInfo && locationInfo.details) {
-                    weatherInfo.ort = locationInfo.details.town || locationInfo.details.city || locationInfo.details.village || "deinem aktuellen Standort";
-                }
+                lowerText.includes('frieren')
+            ) {
+                if (statusMessage) statusMessage.textContent = "Hole Wetter...";
+                weatherInfo = await fetchWeatherData();
             }
 
             const now = new Date();
             const nowGermanIso = now.toLocaleString('sv-SE', { timeZone: 'Europe/Berlin' }).replace(' ', 'T');
-            const wochentag = now.toLocaleDateString('de-DE', { weekday: 'long', timeZone: 'Europe/Berlin' });
-
-            const tomorrow = new Date(now);
-            tomorrow.setDate(now.getDate() + 1);
-            const morgenDateStr = tomorrow.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Berlin' });
-
-            // Nächsten Sonntag berechnen
-            const nextSunday = new Date(now);
-            const daysUntilSunday = (7 - now.getDay()) % 7;
-            nextSunday.setDate(now.getDate() + (daysUntilSunday === 0 ? 7 : daysUntilSunday));
-            const nextSundayStr = nextSunday.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Berlin' });
 
             const contextData = {
                 heute_datum: nowGermanIso,
-                heute_wochentag: wochentag,
-                morgen_datum: morgenDateStr,
-                naechster_sonntag_datum: nextSundayStr,
                 aktuelles_jahr: now.getFullYear(),
                 gedächtnis: memoryItems,
                 kontakte: savedContacts,
@@ -1329,25 +1156,20 @@
             "Aktueller Daten-Kontext: " + JSON.stringify(contextData) + "\n\n" +
             "WICHTIG ZUR ZEIT & DATUM:\n" +
             "- Aktuelles Datum und deutsche Ortszeit: " + nowGermanIso + ".\n" +
-            "- Aktueller Wochentag: " + wochentag + ".\n" +
-            "- Morgen ist: " + morgenDateStr + ".\n" +
-            "- Der kommende/nächste Sonntag ist der: " + nextSundayStr + ".\n" +
-            "- Berechne relative Datumsangaben (z.B. 'morgen', 'am Sonntag', 'übermorgen', 'am Freitag') STRENG basierend auf dem aktuellen Wochentag (" + wochentag + "). Wenn heute Samstag ist, ist 'am Sonntag' MORGEN (" + nextSundayStr + ")!\n\n" +
-            "WICHTIG ZUM STANDORT UND WETTER:\n" +
-            "- Verwende bei Wetterfragen IMMER den im Kontext übergebenen Ort (aus 'standort' oder 'wetter.ort'). Wenn der Benutzer fragt, wo er ist oder wie das Wetter wird, nenne diesen genauen Ort und NIEMALS automatisch Berlin oder Hamburg, außer er befindet sich tatsächlich dort.\n\n" +
+            "- Berücksichtige bei Datums- und Zeitangaben immer die deutsche Zeitzone (Europe/Berlin).\n\n" +
             "Analysiere den Sprachbefehl des Benutzers und unterscheide PRÄZISE:\n\n" +
             "STRIKTE CATEGORY-REGELN:\n" +
             "- \"location\": JEDE Frage, die mit dem Standort, der Position, der Straße, dem Aufenthaltsort oder Verwirrung/Orientierung zu tun hat.\n" +
             "- \"forgot_check\": Wenn der Benutzer fragt, ob er etwas vergessen hat.\n" +
-            "- \"chat\": Fragen nach Wetter, Allgemeinwissen oder Inhalten aus den Listen (Einkauf, Aufgaben, Termine).\n" +
+            "- \"chat\": Fragen nach Inhalten aus den Listen (Einkauf, Aufgaben, Termine).\n" +
             "- \"shopping\": NEUE Artikel zur Einkaufsliste HINZUFÜGEN.\n" +
-            "- \"todo\": Reine zeitlose Aufgaben, Notizen oder Gedanken speichern OHNE zeitlichen Bezug.\n" +
-            "- \"reminder\": Neue zeitgesteuerte Erinnerung anlegen. WICHTIG: Wenn eine Aufgabe einen Zeitbezug oder ein Datum enthält (z.B. 'morgen', 'heute Abend', 'am Freitag', 'am Sonntag', 'um 14 Uhr'), benutze IMMER 'reminder' statt 'todo'.\n" +
+            "- \"todo\": Aufgaben, Notizen oder Gedanken speichern.\n" +
             "- \"memory_store\": Feste Fakten, Standorte von Gegenständen oder persönliches Wissen SPEICHERN.\n" +
             "- \"memory_search\": Nach gespeicherten Infos im Gedächtnis fragen.\n" +
             "- \"calendar_delete\": Termin LÖSCHEN oder ENTFERNEN.\n" +
             "- \"reminder_delete\": Erinnerung löschen.\n" +
             "- \"name_change\": Wie der Benutzer genannt werden möchte.\n" +
+            "- \"reminder\": Neue zeitgesteuerte Erinnerung anlegen.\n" +
             "- \"calendar\": Neuer fester Kalender-Termin anlegen.\n" +
             "- \"call\": Telefonanruf starten.\n\n" +
             "MEHRSPRACHIGKEIT:\n" +
@@ -1376,12 +1198,7 @@
                 });
 
                 const data = await res.json();
-                
-                let ai = {};
-                if (data.choices && data.choices[0] && data.choices[0].message) {
-                    const content = data.choices[0].message.content;
-                    ai = typeof content === 'string' ? JSON.parse(content) : content;
-                }
+                const ai = JSON.parse(data.choices[0].message.content);
 
                 if (ai.type === 'location' || isLocationQuery) {
                     if (!locationInfo) {
@@ -1433,7 +1250,7 @@
                     const items = ai.todo_items || (ai.todo_text ? [ai.todo_text] : []);
                     items.forEach((item, index) => {
                         if (item && item.trim()) {
-                            todoEntries.unshift({ id: Date.now() + index, text: item.trim(), createdDate: 'Per Sprache', createdAt: new Date().toISOString() });
+                            todoEntries.unshift({ id: Date.now() + index, text: item.trim(), createdDate: 'Per Sprache' });
                         }
                     });
                     setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
@@ -1464,21 +1281,12 @@
                     if (statusMessage) statusMessage.textContent = "Gedächtnis durchsucht.";
                     return;
                 } else if (ai.type === 'reminder_delete') {
-                    const rawQuery = (ai.reminder_delete_query || text).toLowerCase();
-                    const cleanQuery = rawQuery
-                        .replace(/\b(lösche|lösch|entferne|erinnerung|meine|meinen|mein|die|den|eine|einen|am|um)\b/gi, '')
-                        .trim();
-
-                    const searchWords = cleanQuery.split(/\s+/).filter(w => w.length > 1);
-
-                    const match = reminderEntries.find(e => {
-                        const entryText = e.text.toLowerCase();
-                        if (cleanQuery && entryText.includes(cleanQuery)) return true;
-                        return searchWords.some(word => entryText.includes(word));
-                    });
-
+                    const query = (ai.reminder_delete_query || text).toLowerCase().replace('lösche', '').replace('lösch', '').replace('erinnerung', '').trim();
+                    const match = reminderEntries.find(e => e.text.toLowerCase().includes(query) || (query.length > 2 && query.includes(e.text.toLowerCase())));
                     if (match) {
                         await deleteReminderEntry(match.id);
+                    } else if (reminderEntries.length > 0) {
+                        await deleteReminderEntry(reminderEntries[0].id);
                     }
                 } else if (ai.type === 'reminder') {
                     let rText = ai.reminder_text || text;
@@ -1488,21 +1296,22 @@
                     }
                     await addGoogleCalendarReminder(rText, ai.reminder_time);
                 } else if (ai.type === 'calendar_delete') {
-                    const rawQuery = (ai.calendar_delete_query || text).toLowerCase();
-                    const cleanQuery = rawQuery
-                        .replace(/\b(lösche|lösch|entferne|termin|meinen|mein|den|einen|am|um)\b/gi, '')
+                    const query = (ai.calendar_delete_query || text).toLowerCase()
+                        .replace('lösche', '')
+                        .replace('lösch', '')
+                        .replace('entferne', '')
+                        .replace('termin', '')
                         .trim();
-
-                    const searchWords = cleanQuery.split(/\s+/).filter(w => w.length > 1);
 
                     const match = calendarEntries.find(e => {
                         const entryText = e.text.toLowerCase();
-                        if (cleanQuery && entryText.includes(cleanQuery)) return true;
-                        return searchWords.some(word => entryText.includes(word));
+                        return entryText.includes(query) || (query.length > 2 && query.includes(entryText));
                     });
 
                     if (match) {
                         await deleteCalendarEntry(match.id);
+                    } else if (calendarEntries.length > 0 && query.length < 3) {
+                        await deleteCalendarEntry(calendarEntries[0].id);
                     }
                 } else if (ai.type === 'calendar' || ai.calendar_text) {
                     let cText = ai.calendar_text || text;
@@ -1527,7 +1336,6 @@
                 speak(ai.reply || `Erledigt, ${currentUserName}.`);
                 if (statusMessage) statusMessage.textContent = "Fertig.";
             } catch (e) {
-                console.error(e);
                 renderAllLists();
                 speak("Entschuldige, das konnte ich leider nicht genau verarbeiten.");
                 if (statusMessage) statusMessage.textContent = "Fehler bei der Verarbeitung.";
@@ -1559,7 +1367,7 @@
             if (calendarList) calendarList.innerHTML = calendarEntries.length === 0 ? '<li class="text-slate-400">Keine Termine.</li>' : calendarEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>📅 ${e.text} (${e.date})</span><button onclick="deleteCalendarEntry('${e.id}')" class="text-red-400 font-bold text-xs">Löschen</button></li>`).join('');
             if (todoList) todoList.innerHTML = todoEntries.length === 0 ? '<li class="text-slate-400">Keine offenen Aufgaben.</li>' : todoEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>📝 ${e.text}</span><button onclick="deleteTodoEntry(${e.id})" class="text-emerald-400 font-bold text-xs">Erledigt</button></li>`).join('');
             if (shoppingList) shoppingList.innerHTML = shoppingEntries.length === 0 ? '<li class="text-slate-400">Liste ist leer.</li>' : shoppingEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>🛒 ${e.text}</span><button onclick="deleteShoppingEntry(${e.id})" class="text-emerald-400 font-bold text-xs">Gekauft</button></li>`).join('');
-            if (reminderList) reminderList.innerHTML = reminderEntries.length === 0 ? '<li class="text-slate-400">Keine Erinnerungen.</li>' : reminderEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>🔔 ${e.text} (${new Date(e.time).toLocaleString('de-DE', {timeZone: 'Europe/Berlin', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'})})</span><button onclick="deleteReminderEntry(${e.id})" class="text-red-400 font-bold text-xs">Löschen</button></li>`).join('');
+            if (reminderList) reminderList.innerHTML = reminderEntries.length === 0 ? '<li class="text-slate-400">Keine Erinnerungen.</li>' : reminderEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>🔔 ${e.text} (${new Date(e.time).toLocaleString('de-DE', {timeZone: 'Europe/Berlin', dateStyle:'short', timeStyle:'short'})})</span><button onclick="deleteReminderEntry(${e.id})" class="text-red-400 font-bold text-xs">Löschen</button></li>`).join('');
 
             if (categoryContainer) {
                 const memKeys = Object.keys(memoryItems);
@@ -1575,5 +1383,6 @@
             renderAssistantOverview();  
         }
     </script>
+    <div class="hidden bg-emerald-600 bg-red-600 pulse-red pulse-green" aria-hidden="true"></div>
 </body>
 </html>
