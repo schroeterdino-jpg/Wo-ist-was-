@@ -1284,70 +1284,70 @@
             let locationInfo = null;
             const lowerText = text.toLowerCase();
 
-            // 1. Standort-Prüfung
-            const isLocationQuery = 
-                (lowerText.includes('wo bin ich') || 
-                lowerText.includes('wo befinde ich mich') || 
-                lowerText.includes('mein aktueller standort') || 
-                lowerText.includes('welche straße ist das') || 
-                lowerText.includes('welcher ort ist das') || 
-                lowerText.includes('wo sind wir hier') || 
-                lowerText.includes('wo stehe ich gerade') ||
-                lowerText.includes('wie ist meine adresse') ||
-                lowerText.includes('welche adresse ist hier')) &&
-                !lowerText.includes('wo ist') && 
-                !lowerText.includes('wo liegt');
-
-            if (isLocationQuery) {
-                if (statusMessage) statusMessage.textContent = "Bestimme Standort...";
-                locationInfo = await fetchLocationData();
-            }
-
-            // 2. Wetter-Prüfung
-            if (
-                lowerText.includes('wetter') || 
-                lowerText.includes('regenschirm') || 
-                lowerText.includes('regen') || 
-                lowerText.includes('draußen') || 
-                lowerText.includes('grad') || 
-                lowerText.includes('temperatur') ||
-                lowerText.includes('jacke') ||
-                lowerText.includes('anziehen') ||
-                lowerText.includes('kalt') ||
-                lowerText.includes('warm')
-            ) {
-                if (statusMessage) statusMessage.textContent = "Hole Wetter...";
-                weatherInfo = await fetchWeatherData();
-            }
-
-            // 3. Kalender-Sync vor Verarbeitung
-            await fetchGoogleCalendarEvents();
-
-            // 4. Antwortgenerierung & Sprachausgabe
             try {
-                // Standort-Antwort
+                // 1. Standort-Prüfung
+                const isLocationQuery = 
+                    (lowerText.includes('wo bin ich') || 
+                    lowerText.includes('wo befinde ich mich') || 
+                    lowerText.includes('mein aktueller standort') || 
+                    lowerText.includes('welche straße ist das') || 
+                    lowerText.includes('welcher ort ist das') || 
+                    lowerText.includes('wo sind wir hier') || 
+                    lowerText.includes('verlaufen') ||
+                    lowerText.includes('wo stehe ich gerade') ||
+                    lowerText.includes('wie ist meine adresse') ||
+                    lowerText.includes('welche adresse ist hier')) &&
+                    !lowerText.includes('wo ist') && 
+                    !lowerText.includes('wo liegt') && 
+                    !lowerText.includes('suche');
+
+                if (isLocationQuery) {
+                    if (statusMessage) statusMessage.textContent = "Bestimme Standort...";
+                    locationInfo = await fetchLocationData();
+                }
+
+                // 2. Wetter-Prüfung
+                if (
+                    lowerText.includes('wetter') || 
+                    lowerText.includes('regenschirm') || 
+                    lowerText.includes('regen') || 
+                    lowerText.includes('draußen') || 
+                    lowerText.includes('grad') || 
+                    lowerText.includes('temperatur') ||
+                    lowerText.includes('jacke') ||
+                    lowerText.includes('anziehen') ||
+                    lowerText.includes('kalt') ||
+                    lowerText.includes('warm') ||
+                    lowerText.includes('sonne') ||
+                    lowerText.includes('frieren')
+                ) {
+                    if (statusMessage) statusMessage.textContent = "Hole Wetter...";
+                    weatherInfo = await fetchWeatherData();
+                }
+
+                // 3. Kalender-Sync
+                await fetchGoogleCalendarEvents();
+
+                // 4. Antworten & Aktionen verarbeiten
                 if (locationInfo && locationInfo.adresse) {
                     const reply = `Du befindest dich aktuell hier: ${locationInfo.adresse}.`;
                     if (statusMessage) statusMessage.textContent = reply;
                     speak(reply);
                     showLocationSharePrompt(locationInfo.adresse, `Mein aktueller Standort: https://maps.google.com/?q=${locationInfo.koordinaten.lat},${locationInfo.koordinaten.lon}`);
-                    resetButton();
                     return;
                 }
 
-                // Wetter-Antwort
                 if (weatherInfo && !weatherInfo.fehler) {
                     const reply = `Aktuell sind es ${weatherInfo.temperatur} Grad. ${weatherInfo.niederschlag > 0 ? 'Es gibt Niederschlag.' : 'Kein Regen in Sicht.'}`;
                     if (statusMessage) statusMessage.textContent = reply;
                     speak(reply);
-                    resetButton();
                     return;
                 }
 
-                // Standard-Rückmeldung bei Verwertung
-                const responseText = `Ich habe verstanden: "${text}". Befehl wurde ausgeführt, Dino.`;
+                // Standard-Antwort für Befehle
+                const defaultReply = `Ich habe verstanden: "${text}". Befehl wurde verarbeitet, Dino.`;
                 if (statusMessage) statusMessage.textContent = "Fertig!";
-                speak(responseText);
+                speak(defaultReply);
 
             } catch (err) {
                 console.error("Fehler bei der Befehlsverarbeitung:", err);
@@ -1355,18 +1355,6 @@
                 speak("Entschuldige Dino, da ist ein Fehler aufgetreten.");
             } finally {
                 resetButton();
-            }
-            const now = new Date();
-            const nowGermanIso = now.toLocaleString('sv-SE', { timeZone: 'Europe/Berlin' }).replace(' ', 'T');
-
-            // Aktualisiere stets die Kalenderdaten vor KI-Anfrage
-            await fetchGoogleCalendarEvents();
-
-            // Einfache lokale Erkennung für Ändern von Termin-Uhrzeiten
-            if (lowerText.includes('verschiebe') || lowerText.includes('ändere') || lowerText.includes('verlege')) {
-                if (lowerText.includes('uhrzeit') || lowerText.includes('uhr') || lowerText.includes('termin')) {
-                    // Falls KI API genutzt wird, übergibst du die System-Prompts mit der Funktion `updateGoogleCalendarEvent`.
-                }
             }
         }
     </script>
