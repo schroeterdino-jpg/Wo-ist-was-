@@ -20,7 +20,7 @@
      <style>
     body { font-size: 1.15rem; }
     
-    /* Echter K.I.T.T. Scanner Balken */
+    /* K.I.T.T. Scanner Container */
     .kitt-scanner-container {
         width: 280px;
         height: 60px;
@@ -43,40 +43,26 @@
         box-shadow: 0 0 22px rgba(239, 68, 68, 0.7);
     }
 
-    /* Das rote wandernde LED-Licht */
-    .kitt-light {
+    /* GIF Image Styling */
+    .kitt-gif {
         position: absolute;
         top: 0;
-        bottom: 0;
-        width: 50px;
+        left: 0;
+        width: 100%;
         height: 100%;
-        background: linear-gradient(90deg, transparent, #ff0000 30%, #ffffff 50%, #ff0000 70%, transparent);
-        box-shadow: 0 0 20px #ff0000, 0 0 35px #ff0000;
-        animation: kittScan 1.3s infinite alternate ease-in-out;
+        object-fit: cover;
         z-index: 1;
+        opacity: 0.9;
     }
 
-    /* Modus während der Aufnahme (Grün) */
-    .kitt-scanner-container.recording .kitt-light {
-        background: linear-gradient(90deg, transparent, #10b981 30%, #ffffff 50%, #10b981 70%, transparent);
-        box-shadow: 0 0 20px #10b981, 0 0 35px #10b981;
-        animation: kittScan 0.7s infinite alternate ease-in-out;
+    /* Modus während der Aufnahme (Farbe wird per Filter auf Grün gedreht) */
+    .kitt-scanner-container.recording .kitt-gif {
+        filter: hue-rotate(120deg) brightness(1.2);
     }
 
     .kitt-scanner-container.recording {
         border-color: #10b981;
         box-shadow: 0 0 20px rgba(16, 185, 129, 0.7);
-    }
-
-    @keyframes kittScan {
-        0% {
-            left: 0%;
-            transform: translateX(0);
-        }
-        100% {
-            left: 100%;
-            transform: translateX(-100%);
-        }
     }
 
     .kitt-text {
@@ -167,9 +153,9 @@
             </div>
 
             <div class="my-auto flex flex-col items-center space-y-4 py-4">
-                <!-- Knight Rider Scanner Element -->
+                <!-- Knight Rider Scanner Element mit GIF -->
                 <div id="recordBtn" onclick="toggleSpeechRecognition()" class="kitt-scanner-container">
-                    <div class="kitt-light"></div>
+                    <img src="./40015.gif" alt="K.I.T.T. Scanner" class="kitt-gif">
                     <span id="recordText" class="kitt-text text-white text-base">SPRECHEN</span>
                 </div>
                 <p id="statusMessage" class="text-center font-medium text-slate-300 h-6">Drücken und sprechen...</p>
