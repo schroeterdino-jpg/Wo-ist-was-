@@ -871,10 +871,10 @@
                 isRecording = true;
                 if (statusMessage) statusMessage.textContent = "Höre zu...";
                 if (recordBtn) {
-    recordBtn.classList.replace('bg-red-600', 'bg-emerald-600');
-    recordBtn.classList.remove('pulse-red');
-    recordBtn.classList.add('pulse-green');
-}
+                    recordBtn.classList.replace('bg-red-600', 'bg-emerald-600');
+                    recordBtn.classList.remove('pulse-red');
+                    recordBtn.classList.add('pulse-green');
+                }
                 if (recordText) recordText.textContent = "HÖRE...";
             };
             recognition.onresult = (event) => {
@@ -887,30 +887,31 @@
         }
 
         function toggleSpeechRecognition() {
-    if (!recognition) {
-        alert('Spracherkennung wird von diesem Browser leider nicht unterstützt.');
-        return;
-    }
-    if (isRecording) {
-        recognition.stop();
-    } else {
-        // Grüner Effekt SOFORT beim Klick – unabhängig davon, was der Browser macht
-        if (recordBtn) {
-            recordBtn.classList.remove('bg-red-600');
-recordBtn.classList.remove('pulse-red');
-recordBtn.classList.add('bg-emerald-600');
-recordBtn.classList.add('pulse-green');
+            if (!recognition) {
+                alert('Spracherkennung wird von diesem Browser leider nicht unterstützt.');
+                return;
+            }
+            if (isRecording) {
+                recognition.stop();
+            } else {
+                if (recordBtn) {
+                    recordBtn.classList.remove('bg-red-600');
+                    recordBtn.classList.remove('pulse-red');
+                    recordBtn.classList.add('bg-emerald-600');
+                    recordBtn.classList.add('pulse-green');
+                }
+                if (recordText) recordText.textContent = "HÖRE...";
+                if (statusMessage) statusMessage.textContent = "Höre zu...";
+                recognition.start();
+            }
         }
-        if (recordText) recordText.textContent = "HÖRE...";
-        if (statusMessage) statusMessage.textContent = "Höre zu...";
-        recognition.start();
-    }
+
         function resetButton() {
             isRecording = false;
             if (recordBtn) {
                 recordBtn.classList.replace('bg-emerald-600', 'bg-red-600');
                 recordBtn.classList.remove('pulse-green');
-recordBtn.classList.add('pulse-red');
+                recordBtn.classList.add('pulse-red');
             }
             if (recordText) recordText.textContent = "SPRECHEN";
         }
@@ -1376,7 +1377,6 @@ recordBtn.classList.add('pulse-red');
             renderAssistantOverview();  
         }
     </script>
-    <!-- Tailwind-Klassen vorab bekanntmachen, damit sie beim Umschalten verfügbar sind -->
     <div class="hidden bg-emerald-600 bg-red-600 pulse-red pulse-green" aria-hidden="true"></div>
 </body>
 </html>
