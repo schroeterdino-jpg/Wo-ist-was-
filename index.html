@@ -1005,11 +1005,15 @@
             if (importantMemoryItems.length > 0) {
                 const memList = importantMemoryItems.map(k => {
                     const rawVal = typeof memoryItems[k] === 'object' ? JSON.stringify(memoryItems[k]) : memoryItems[k];
-                    const valText = String(rawVal).trim();
-                    const lowerVal = valText.toLowerCase();
+                    let valText = String(rawVal).trim();
+                    
+                    // Saubere Formatierung ohne Unterstriche oder "location"
+                    valText = valText.replace(/^location\s*/i, '').replace(/_/g, ' ').trim();
                     
                     let formattedKey = k.charAt(0).toUpperCase() + k.slice(1);
-                    
+                    formattedKey = formattedKey.replace(/_/g, ' ').trim();
+
+                    const lowerVal = valText.toLowerCase();
                     const hasVerb = /\b(hängt|liegt|steht|ist|befindet)\b/i.test(lowerVal);
                     const hasPrep = /\b(auf|in|an|unter|über|neben|zwischen|vor|hinter)\b/i.test(lowerVal);
                     
@@ -1090,28 +1094,21 @@
             let locationInfo = null;
             const lowerText = text.toLowerCase();
 
+            // Nur echte GPS-Standortfragen triggern (Keine Gegenstände / Suchanfragen)
             const isLocationQuery = 
-                lowerText.includes('wo bin ich') || 
-                lowerText.includes('wo befinde ich') || 
-                lowerText.includes('mein standort') || 
-                lowerText.includes('aktueller ort') || 
-                lowerText.includes('welche straße') || 
-                lowerText.includes('welcher ort') || 
-                lowerText.includes('wo bin') || 
-                lowerText.includes('wo sind wir') || 
-                lowerText.includes('verwirrt') || 
-                lowerText.includes('orientierungslos') || 
-                lowerText.includes('nicht wo ich bin') ||
+                (lowerText.includes('wo bin ich') || 
+                lowerText.includes('wo befinde ich mich') || 
+                lowerText.includes('mein aktueller standort') || 
+                lowerText.includes('welche straße ist das') || 
+                lowerText.includes('welcher ort ist das') || 
+                lowerText.includes('wo sind wir hier') || 
                 lowerText.includes('verlaufen') ||
-                lowerText.includes('hilfe wo') ||
-                lowerText.includes('sag mir wo') ||
-                lowerText.includes('standort') ||
-                lowerText.includes('wo ich mich aufhalte') ||
-                lowerText.includes('wo stehe ich') ||
-                lowerText.includes('wo ich stehe') ||
-                lowerText.includes('wo bin ich gerade') ||
-                lowerText.includes('meine adresse') ||
-                lowerText.includes('wo ich bin');
+                lowerText.includes('wo stehe ich gerade') ||
+                lowerText.includes('wie ist meine adresse') ||
+                lowerText.includes('welche adresse ist hier')) &&
+                !lowerText.includes('wo ist') && 
+                !lowerText.includes('wo liegt') && 
+                !lowerText.includes('suche');
 
             if (isLocationQuery) {
                 if (statusMessage) statusMessage.textContent = "Bestimme Standort...";
@@ -1159,13 +1156,13 @@
             "- Berücksichtige bei Datums- und Zeitangaben immer die deutsche Zeitzone (Europe/Berlin).\n\n" +
             "Analysiere den Sprachbefehl des Benutzers und unterscheide PRÄZISE:\n\n" +
             "STRIKTE CATEGORY-REGELN:\n" +
-            "- \"location\": JEDE Frage, die mit dem Standort, der Position, der Straße, dem Aufenthaltsort oder Verwirrung/Orientierung zu tun hat.\n" +
+            "- \"location\": NUR wenn der Benutzer explizit nach seinem eigenen GPS-Aufenthaltsort, der aktuellen Straße oder Stadt fragt (\"Wo bin ich?\", \"Wo befinden wir uns?\"). NIEMALS bei der Suche nach Gegenständen!\n" +
+            "- \"memory_search\": Wenn der Benutzer nach Gegenständen, Standorten von Dingen, Schlüssel, Brille, Notizen oder gespeicherten Informationen fragt (z.B. \"Wo ist mein Schlüssel?\", \"Ich suche meine Brille\", \"Wo liegt...\").\n" +
             "- \"forgot_check\": Wenn der Benutzer fragt, ob er etwas vergessen hat.\n" +
             "- \"chat\": Fragen nach Inhalten aus den Listen (Einkauf, Aufgaben, Termine).\n" +
             "- \"shopping\": NEUE Artikel zur Einkaufsliste HINZUFÜGEN.\n" +
             "- \"todo\": Aufgaben, Notizen oder Gedanken speichern.\n" +
-            "- \"memory_store\": Feste Fakten, Standorte von Gegenständen oder persönliches Wissen SPEICHERN.\n" +
-            "- \"memory_search\": Nach gespeicherten Infos im Gedächtnis fragen.\n" +
+            "- \"memory_store\": Feste Fakten, Aufbewahrungsorte von Gegenständen oder persönliches Wissen SPEICHERN.\n" +
             "- \"calendar_delete\": Termin LÖSCHEN oder ENTFERNEN.\n" +
             "- \"reminder_delete\": Erinnerung löschen.\n" +
             "- \"name_change\": Wie der Benutzer genannt werden möchte.\n" +
@@ -1200,7 +1197,7 @@
                 const data = await res.json();
                 const ai = JSON.parse(data.choices[0].message.content);
 
-                if (ai.type === 'location' || isLocationQuery) {
+                if (ai.type === 'location' && isLocationQuery) {
                     if (!locationInfo) {
                         if (statusMessage) statusMessage.textContent = "Bestimme Standort...";
                         locationInfo = await fetchLocationData();
@@ -1261,7 +1258,7 @@
                     }
                     memoryItems[ai.memory_key.toLowerCase()] = String(val);
                     setPersistentData('helfer_memory', JSON.stringify(memoryItems));
-                } else if (ai.type === 'memory_search') {
+                } else if (ai.type === 'memory_search' || lowerText.includes('suche') || lowerText.includes('wo ist') || lowerText.includes('wo liegt')) {
                     const searchQuery = ai.memory_search_query || text;
                     const results = searchMemory(searchQuery);
 
