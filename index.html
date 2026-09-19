@@ -301,45 +301,13 @@
             });
         }
 
-        // Web Audio Synth für den echten Knight Rider Scanner Sound ("Wuuush Wuuush")
+        // Original MP3 Sound-Datei für K.I.T.T. laden
+        const kittAudio = new Audio('./kitt.mp3');
+
         function playKittScannerSound() {
             try {
-                const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                if (!AudioCtx) return;
-                const ctx = new AudioCtx();
-                
-                // Rauschen für das "Wuuush"-Geräusch
-                const bufferSize = ctx.sampleRate * 0.45;
-                const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-                const output = buffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) {
-                    output[i] = Math.random() * 2 - 1;
-                }
-
-                const whiteNoise = ctx.createBufferSource();
-                whiteNoise.buffer = buffer;
-
-                // Bandpass-Filter simuliert das Zischen/Woschen des Scanners
-                const filter = ctx.createBiquadFilter();
-                filter.type = 'bandpass';
-                filter.Q.setValueAtTime(4.0, ctx.currentTime);
-                
-                // Frequenz-Sweep hin und zurück
-                filter.frequency.setValueAtTime(300, ctx.currentTime);
-                filter.frequency.exponentialRampToValueAtTime(1800, ctx.currentTime + 0.22);
-                filter.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.45);
-
-                const gain = ctx.createGain();
-                gain.gain.setValueAtTime(0.01, ctx.currentTime);
-                gain.gain.linearRampToValueAtTime(0.35, ctx.currentTime + 0.22);
-                gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.45);
-
-                whiteNoise.connect(filter);
-                filter.connect(gain);
-                gain.connect(ctx.destination);
-
-                whiteNoise.start();
-                whiteNoise.stop(ctx.currentTime + 0.45);
+                kittAudio.currentTime = 0; // Spielt die Audiodatei sofort von vorne ab, falls man mehrfach klickt
+                kittAudio.play().catch(err => console.log('Audio Wiedergabe ignoriert:', err));
             } catch (e) {
                 console.log('Audio Sound Effekt Fehler:', e);
             }
@@ -1074,7 +1042,7 @@
         }
 
         function toggleSpeechRecognition() {
-            // Sound-Effekt von K.I.T.T.s Scanner abspielen
+            // Sound-Effekt von K.I.T.T.s Scanner (mp3) abspielen
             playKittScannerSound();
 
             if (!recognition) {
