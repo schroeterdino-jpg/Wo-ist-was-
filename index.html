@@ -1155,30 +1155,46 @@
             
             if (statusMessage) statusMessage.textContent = "Hole Wetter...";
             const weather = await fetchWeatherData();
+            
             if (weather && !weather.fehler) {
                 const temp = weather.temperatur;
                 const regen = weather.niederschlag;
                 const wind = weather.windstärke;
+                const weatherCode = weather.wettercode;
 
-                text += `Draußen sind es aktuell ${temp} Grad. `;
+                text += `Draußen haben wir aktuell ${temp} Grad. `;
 
-                if (temp < 10) {
-                    text += "Es ist recht kalt, zieh dir am besten eine dicke Winterjacke an. ";
-                } else if (temp < 18) {
-                    text += "Nimm heute auf jeden Fall eine Übergangsjacke mit. ";
-                } else if (temp < 22) {
-                    text += "Eine leichte Strickjacke oder dünne Jacke reicht heute völlig aus. ";
+                // Dynamische Jacken- und Temperatur-Empfehlung
+                if (temp <= 5) {
+                    text += "Es ist eiskalt draußen. Zieh unbedingt eine dicke Winterjacke, Mütze und Handschuhe an! ";
+                } else if (temp > 5 && temp <= 12) {
+                    text += "Es ist frisch und kühl, eine warme Jacke ist heute Pflicht. ";
+                } else if (temp > 12 && temp <= 18) {
+                    text += "Das Wetter ist mild, eine Übergangsjacke oder ein Pullover reichen völlig aus. ";
+                } else if (temp > 18 && temp <= 25) {
+                    text += "Es ist angenehm warm, du kommst heute bestens ohne dicke Jacke aus. ";
                 } else {
-                    text += "Es ist schön warm, du brauchst heute keine Jacke! ";
+                    text += "Es ist richtig sommerlich warm! Genieß das tolle Wetter. ";
                 }
 
-                if (regen > 0) {
-                    text += "Es regnet aktuell oder ist Regen gemeldet – nimm unbedingt einen Regenschirm mit! ";
+                // Präzisere Regen- und Wettercode-Prüfung (Open-Meteo Wettercodes)
+                // Codes ab 51+ bedeuten Nieselregen, Regen, Schauer oder Gewitter
+                const isRainingOrShowers = (regen > 0) || (weatherCode >= 51 && weatherCode <= 67) || (weatherCode >= 80 && weatherCode <= 99);
+                
+                if (isRainingOrShowers) {
+                    text += "Achtung, es regnet oder es sind Schauer gemeldet – pack unbedingt einen Regenschirm ein! ";
+                } else {
+                    text += "Regen ist aktuell zum Glück keiner in Sicht. ";
                 }
 
-                if (wind > 25) {
-                    text += "Achte darauf, dass es draußen ziemlich windig ist. ";
+                // Dynamische Wind-Warnung
+                if (wind > 35) {
+                    text += `Es geht ein stürmischer Wind mit ${Math.round(wind)} Kilometern pro Stunde,pass draußen gut auf! `;
+                } else if (wind > 20) {
+                    text += "Es ist etwas windig da draußen. ";
                 }
+            } else {
+                text += "Wetterdaten konnten leider nicht geladen werden. ";
             }
 
             const todayStr = now.toDateString();
@@ -1200,9 +1216,9 @@
                     const dayLabel = isToday ? 'heute' : 'morgen';
                     return `${e.text} ${dayLabel} um ${timeFormatted} Uhr`;
                 }).join(', sowie ');
-                text += `Hier ist deine Übersicht: Du hast anstehende Termine: ${termList}. `;
+                text += `Zu deinen Terminen: Du hast ${termList}. `;
             } else {
-                text += "Was deine Termine angeht: Für heute und morgen steht nichts weiter im Kalender. ";
+                text += "Für heute und morgen stehen keine weiteren Termine an. ";
             }
 
             if (reminderEntries && reminderEntries.length > 0) {
@@ -1210,7 +1226,7 @@
                     const timeFormatted = new Date(e.time).toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' });
                     return `${e.text} um ${timeFormatted} Uhr`;
                 }).join(' und ');
-                text += `Denk bitte an deine aktiven Erinnerungen: ${remList}. `;
+                text += `Vergiss deine Erinnerungen nicht: ${remList}. `;
             }
 
             const memoryKeys = Object.keys(memoryItems);
@@ -1243,35 +1259,32 @@
                     
                     return `deine ${formattedKey} ${prefix}${valText}`;
                 }).join(', und ');
-                text += `Kurzer Hinweis für unterwegs: Denk daran, ${memList}. `;
+                text += `Denk an deine Wertsachen: ${memList}. `;
             }
 
             if (todoEntries && todoEntries.length > 0) {
                 if (todoEntries.length === 1) {
-                    text += `Auf deiner Aufgabenliste steht noch: ${todoEntries[0].text}. `;
+                    text += `Offene Aufgabe: ${todoEntries[0].text}. `;
                 } else {
-                    const todoListTexts = todoEntries.map(e => e.text).join(', ');
-                    text += `Offene Aufgaben hast du aktuell folgende: ${todoListTexts}. `;
+                    text += `Du hast noch ${todoEntries.length} offene Aufgaben auf der Liste. `;
                 }
             }
 
             if (shoppingEntries && shoppingEntries.length > 0) {
-                const shopList = shoppingEntries.map(e => e.text).join(', ');
-                text += `Auf dem Einkaufszettel steht übrigens: ${shopList}. `;
+                text += `Auf dem Einkaufszettel stehen ${shoppingEntries.length} Artikel. `;
             }
 
             const closingPhrases = [
-                `Das war’s erst mal von mir! Ich wünsche dir noch einen wunderbaren Tag, ${currentUserName}.`,
-                `Damit bist du bestens informiert. Hab einen fantastischen Tag!`,
-                `Das ist der aktuelle Stand. Mach dir einen entspannten Tag, ${currentUserName}!`,
-                `Damit bist du startklar für den Tag. Wir hören uns später!`
+                `Das war dein aktueller Lagebericht. Mach dir einen schönen Tag, ${currentUserName}!`,
+                `Damit bist du bestens vorbereitet. Hab einen tollen Tag!`,
+                `Alles im Blick. Genieß deinen Tag, ${currentUserName}!`
             ];
-            const randomClosing = closingPhrases[Math.floor(Math.random() * closingPhrases.length)];
-            text += randomClosing;
+            text += closingPhrases[Math.floor(Math.random() * closingPhrases.length)];
 
             if (statusMessage) statusMessage.textContent = "Briefing aktiv.";
             speak(text);
         }
+
 
         function showLocationSharePrompt(locationName, shareText) {
             const card = document.getElementById('locationShareCard');
