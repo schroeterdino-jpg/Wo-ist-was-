@@ -855,14 +855,14 @@
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'de-DE';
-                utterance.rate = 1.15;
+                utterance.rate = 1.0; // Auf normale Sprachgeschwindigkeit angepasst
                 utterance.pitch = 1.0;
                 utterance.onend = () => { if (onComplete) onComplete(); };
                 window.speechSynthesis.speak(utterance);
             } else {
                 if (currentAudio) { currentAudio.pause(); currentAudio = null; }
                 currentAudio = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=de&client=tw-ob`);
-                currentAudio.playbackRate = 1.25;
+                currentAudio.playbackRate = 1.0; // Auf normale Wiedergabegeschwindigkeit angepasst
                 currentAudio.play().catch(() => {});
                 currentAudio.onended = () => { currentAudio = null; if (onComplete) onComplete(); };
             }
