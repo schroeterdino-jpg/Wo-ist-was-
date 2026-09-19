@@ -316,7 +316,7 @@
 
     <footer class="bg-slate-800 border-t border-slate-700 text-center p-3 text-xs text-slate-400 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 9.3 (Todo-Ablauf-Schutz)</span>
+        <span>Version 9.4 (Stabilized)</span>
     </footer>
 
     <script>
@@ -401,7 +401,6 @@
             try { localStorage.setItem(key, value); } catch (e) {}
         }
 
-        // Anzeige-Einstellungen beim Laden wiederherstellen
         if (getPersistentData('helfer_high_contrast', 'false') === 'true') {
             document.body.classList.add('high-contrast-mode');
             const chk = document.getElementById('toggleContrast');
@@ -568,7 +567,7 @@
         let accessToken = getPersistentData('google_access_token', '');
         let pendingAction = null;
 
-        function initTokenClient(callbackAction) {
+        function initTokenClient() {
             const clientId = getPersistentData('google_client_id', DEFAULT_CLIENT_ID);
             if (!clientId) return false;
 
@@ -657,7 +656,7 @@
                     if (res.ok) {
                         const data = await res.json();
                         createdId = data.id;
-                        fetchGoogleCalendarEvents();
+                        await fetchGoogleCalendarEvents();
                         return;
                     }
                 } catch (e) {
@@ -1156,10 +1155,9 @@
                 text += `Kurzer Hinweis für unterwegs: Denk daran, ${memList}. `;
             }
 
-            // HARTER FIX: Nur Todos berücksichtigen, die nicht älter als 48 Stunden sind
             const fortyEightHoursAgo = new Date(now.getTime() - (48 * 60 * 60 * 1000));
             const recentTodoEntries = (todoEntries || []).filter(e => {
-                if (!e.createdAt) return true; // Fallback für ältere Todos
+                if (!e.createdAt) return true;
                 return new Date(e.createdAt) >= fortyEightHoursAgo;
             });
 
@@ -1263,7 +1261,6 @@
                 lowerText.includes('sonne') ||
                 lowerText.includes('frieren');
 
-            // Präzise Standort- und Wetterermittlung
             if (isLocationQuery || isWeatherQuery) {
                 if (statusMessage) statusMessage.textContent = "Ermittle Standort...";
                 locationInfo = await fetchLocationData();
@@ -1346,7 +1343,12 @@
                 });
 
                 const data = await res.json();
-                const ai = JSON.parse(data.choices[0].message.content);
+                
+                let ai = {};
+                if (data.choices && data.choices[0] && data.choices[0].message) {
+                    const content = data.choices[0].message.content;
+                    ai = typeof content === 'string' ? JSON.parse(content) : content;
+                }
 
                 if (ai.type === 'location' || isLocationQuery) {
                     if (!locationInfo) {
@@ -1492,6 +1494,7 @@
                 speak(ai.reply || `Erledigt, ${currentUserName}.`);
                 if (statusMessage) statusMessage.textContent = "Fertig.";
             } catch (e) {
+                console.error(e);
                 renderAllLists();
                 speak("Entschuldige, das konnte ich leider nicht genau verarbeiten.");
                 if (statusMessage) statusMessage.textContent = "Fehler bei der Verarbeitung.";
@@ -1539,6 +1542,5 @@
             renderAssistantOverview();  
         }
     </script>
-    <div class="hidden bg-emerald-600 bg-red-600 pulse-red pulse-green" aria-hidden="true"></div>
 </body>
 </html>
