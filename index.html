@@ -896,8 +896,10 @@
     } else {
         // Grüner Effekt SOFORT beim Klick – unabhängig davon, was der Browser macht
         if (recordBtn) {
-            recordBtn.classList.remove('bg-red-600', 'pulse-red');
-            recordBtn.classList.add('bg-emerald-600', 'pulse-green');
+            recordBtn.classList.remove('bg-red-600');
+recordBtn.classList.remove('pulse-red');
+recordBtn.classList.add('bg-emerald-600');
+recordBtn.classList.add('pulse-green');
         }
         if (recordText) recordText.textContent = "HÖRE...";
         if (statusMessage) statusMessage.textContent = "Höre zu...";
