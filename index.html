@@ -135,10 +135,7 @@
 
         <section id="sec-planner" class="hidden space-y-4">
             <div class="bg-slate-800 p-5 rounded-2xl shadow-md border border-slate-700">
-                <div class="flex justify-between items-center mb-3">
-                    <h2 class="text-xl font-bold text-blue-400">📅 Termine (14-Tage-Vorschau):</h2>
-                    <button onclick="fetchGoogleCalendarEvents()" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-2 py-1 rounded border border-slate-600">🔄 Sync</button>
-                </div>
+                <h2 class="text-xl font-bold text-blue-400 mb-3">📅 Termine (14-Tage-Vorschau):</h2>
                 <ul id="calendarList" class="space-y-2 text-base">
                     <li class="text-slate-400">Keine Termine eingetragen.</li>
                 </ul>
@@ -261,7 +258,7 @@
 
     <footer class="bg-slate-800 border-t border-slate-700 text-center p-3 text-xs text-slate-400 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 9.3 (Update & Sync-Fix)</span>
+        <span>Version 9.3 (Update- & Kalender-Fix)</span>
     </footer>
 
     <script>
@@ -366,124 +363,6 @@
         let shoppingEntries = JSON.parse(getPersistentData('helfer_shopping', '[]')) || [];
         let memoryItems = JSON.parse(getPersistentData('helfer_memory', '{}')) || {};
         let savedContacts = JSON.parse(getPersistentData('helfer_contacts', '{}')) || {};
-
-        function renderAllLists() {
-            renderCalendarList();
-            renderTodoList();
-            renderReminderList();
-            renderShoppingList();
-            renderMemoryList();
-            renderAssistantOverview();
-        }
-
-        function renderCalendarList() {
-            if (!calendarList) return;
-            if (calendarEntries.length === 0) {
-                calendarList.innerHTML = '<li class="text-slate-400">Keine Termine eingetragen.</li>';
-                return;
-            }
-            calendarList.innerHTML = calendarEntries.map(e => `
-                <li class="bg-slate-900 p-3 rounded-lg border border-slate-700 flex justify-between items-center">
-                    <div>
-                        <div class="font-semibold text-slate-100">${e.text}</div>
-                        <div class="text-xs text-blue-400">${e.date}</div>
-                    </div>
-                    <button onclick="deleteCalendarEntry('${e.id}')" class="text-red-400 hover:text-red-300 p-1 font-bold">🗑️</button>
-                </li>
-            `).join('');
-        }
-
-        function renderTodoList() {
-            if (!todoList) return;
-            if (todoEntries.length === 0) {
-                todoList.innerHTML = '<li class="text-slate-400">Keine offenen To-Dos.</li>';
-                return;
-            }
-            todoList.innerHTML = todoEntries.map(e => `
-                <li class="bg-slate-900 p-3 rounded-lg border border-slate-700 flex justify-between items-center">
-                    <span>${e.text}</span>
-                    <button onclick="deleteTodoEntry(${e.id})" class="text-emerald-400 hover:text-emerald-300 font-bold">✓ Erledigt</button>
-                </li>
-            `).join('');
-        }
-
-        function renderReminderList() {
-            if (!reminderList) return;
-            if (reminderEntries.length === 0) {
-                reminderList.innerHTML = '<li class="text-slate-400">Keine aktiven Erinnerungen.</li>';
-                return;
-            }
-            reminderList.innerHTML = reminderEntries.map(e => {
-                const dateStr = new Date(e.time).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'short' });
-                return `
-                    <li class="bg-slate-900 p-2.5 rounded-lg border border-slate-700 flex justify-between items-center">
-                        <div>
-                            <span class="font-medium text-slate-200">${e.text}</span>
-                            <span class="block text-xs text-amber-400">${dateStr}</span>
-                        </div>
-                        <button onclick="deleteReminderEntry(${e.id})" class="text-red-400 hover:text-red-300 p-1 font-bold">🗑️</button>
-                    </li>
-                `;
-            }).join('');
-        }
-
-        function renderShoppingList() {
-            if (!shoppingList) return;
-            if (shoppingEntries.length === 0) {
-                shoppingList.innerHTML = '<li class="text-slate-400">Einkaufsliste ist leer.</li>';
-                return;
-            }
-            shoppingList.innerHTML = shoppingEntries.map(e => `
-                <li class="bg-slate-900 p-3 rounded-lg border border-slate-700 flex justify-between items-center">
-                    <span>${e.text}</span>
-                    <button onclick="deleteShoppingEntry(${e.id})" class="text-emerald-400 hover:text-emerald-300 font-bold">✓ Gekauft</button>
-                </li>
-            `).join('');
-        }
-
-        function renderMemoryList() {
-            if (!categoryContainer) return;
-            const keys = Object.keys(memoryItems);
-            if (keys.length === 0) {
-                categoryContainer.innerHTML = '<p class="text-slate-400 text-xs">Noch nichts im Gedächtnis gespeichert.</p>';
-                return;
-            }
-            categoryContainer.innerHTML = keys.map(k => `
-                <div class="flex justify-between items-center bg-slate-800 p-2 rounded border border-slate-700 my-1">
-                    <div>
-                        <span class="font-bold text-blue-400">${k}:</span>
-                        <span class="text-slate-200 ml-1">${parseMemoryValue(memoryItems[k])}</span>
-                    </div>
-                    <button onclick="deleteMemoryKey('${k}')" class="text-red-400 hover:text-red-300 text-xs font-bold">🗑️</button>
-                </div>
-            `).join('');
-        }
-
-        function deleteTodoEntry(id) {
-            todoEntries = todoEntries.filter(e => e.id !== id);
-            setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
-            renderAllLists();
-        }
-
-        function deleteShoppingEntry(id) {
-            shoppingEntries = shoppingEntries.filter(e => e.id !== id);
-            setPersistentData('helfer_shopping', JSON.stringify(shoppingEntries));
-            renderAllLists();
-        }
-
-        function deleteMemoryKey(key) {
-            delete memoryItems[key];
-            setPersistentData('helfer_memory', JSON.stringify(memoryItems));
-            renderAllLists();
-        }
-
-        function clearAllMemory() {
-            if (confirm("Möchtest du wirklich das gesamte Gedächtnis leeren?")) {
-                memoryItems = {};
-                setPersistentData('helfer_memory', '{}');
-                renderAllLists();
-            }
-        }
 
         renderAllLists();
         renderContactList();
@@ -673,6 +552,13 @@
             }
         }, 50 * 60 * 1000);
 
+        // Periodischer Kalenderabgleich (alle 30 Sek.) um gelöschte/veränderte Termine sofort zu spiegeln
+        setInterval(() => {
+            if (accessToken) {
+                fetchGoogleCalendarEvents();
+            }
+        }, 30000);
+
         async function addGoogleCalendarEvent(text, isoStartString) {
             let eventDate = isoStartString ? new Date(isoStartString) : new Date();
             if (isNaN(eventDate.getTime())) eventDate = new Date();
@@ -719,62 +605,52 @@
             renderAllLists();
         }
 
-        async function updateGoogleCalendarEvent(idOrTextSearch, newIsoStartString, newSummary = null) {
-            let targetEvent = calendarEntries.find(e => e.id === idOrTextSearch);
+        async function updateGoogleCalendarEvent(eventId, newTitle, newIsoStartString) {
+            let eventDate = newIsoStartString ? new Date(newIsoStartString) : new Date();
+            if (isNaN(eventDate.getTime())) eventDate = new Date();
             
-            if (!targetEvent && typeof idOrTextSearch === 'string') {
-                const searchLower = idOrTextSearch.toLowerCase();
-                targetEvent = calendarEntries.find(e => e.text.toLowerCase().includes(searchLower));
-            }
-
-            if (!targetEvent) {
-                speak(`Ich konnte keinen passenden Termin zum Ändern finden.`);
-                return false;
-            }
-
-            let eventDate = new Date(newIsoStartString);
-            if (isNaN(eventDate.getTime())) return false;
-
             const endDate = new Date(eventDate.getTime() + 60 * 60000);
-            const summaryText = newSummary || targetEvent.text;
+            const eventData = {};
+            if (newTitle) eventData.summary = newTitle;
+            if (newIsoStartString) {
+                eventData.start = { dateTime: eventDate.toISOString() };
+                eventData.end = { dateTime: endDate.toISOString() };
+            }
 
-            if (accessToken && targetEvent.id && !targetEvent.id.startsWith('local_')) {
+            if (accessToken && eventId && !eventId.startsWith('local_')) {
                 try {
-                    const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(targetEvent.id)}`;
-                    const res = await fetch(url, {
+                    const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`, {
                         method: 'PATCH',
                         headers: {
                             'Authorization': `Bearer ${accessToken}`,
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({
-                            summary: summaryText,
-                            start: { dateTime: eventDate.toISOString() },
-                            end: { dateTime: endDate.toISOString() }
-                        })
+                        body: JSON.stringify(eventData)
                     });
                     if (res.status === 401) {
-                        loginWithGoogle(true, () => updateGoogleCalendarEvent(idOrTextSearch, newIsoStartString, newSummary));
+                        loginWithGoogle(true, () => updateGoogleCalendarEvent(eventId, newTitle, newIsoStartString));
                         return;
                     }
                     if (res.ok) {
-                        fetchGoogleCalendarEvents();
-                        speak(`Termin ${summaryText} wurde erfolgreich verschoben.`);
-                        return true;
+                        await fetchGoogleCalendarEvents();
+                        return;
                     }
                 } catch (e) {
                     console.error("Fehler beim Aktualisieren im Google Kalender", e);
                 }
             }
 
-            targetEvent.text = summaryText;
-            targetEvent.isoDate = eventDate.toISOString();
-            targetEvent.date = eventDate.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: 'short' });
-            
-            setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
-            renderAllLists();
-            speak(`Termin ${summaryText} wurde lokal auf die neue Uhrzeit geändert.`);
-            return true;
+            // Fallback für lokale Termine
+            const localEntry = calendarEntries.find(e => e.id === eventId);
+            if (localEntry) {
+                if (newTitle) localEntry.text = newTitle;
+                if (newIsoStartString) {
+                    localEntry.isoDate = eventDate.toISOString();
+                    localEntry.date = eventDate.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: 'short' });
+                }
+                setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
+                renderAllLists();
+            }
         }
 
         async function addGoogleCalendarReminder(text, isoTimeString) {
@@ -894,6 +770,7 @@
                     const data = await res.json();
                     if (data.items) {
                         const filteredItems = data.items.filter(item => {
+                            if (item.status === 'cancelled') return false;
                             const summary = (item.summary || '').toLowerCase();
                             const id = (item.id || '');
                             if (summary.includes('geburtstag') || summary.includes('geb.') || summary.includes('jahrestag')) return false;
@@ -916,9 +793,7 @@
                         renderAllLists();
                     }
                 }
-            } catch (e) {
-                console.error("Fehler beim Abrufen der Google Kalender Events:", e);
-            }
+            } catch (e) {}
         }
 
         async function deleteCalendarEntry(id) {
@@ -1197,7 +1072,6 @@
             if (importantMemoryItems.length > 0) {
                 const memList = importantMemoryItems.map(k => {
                     let valText = parseMemoryValue(memoryItems[k]).trim();
-                    
                     valText = valText.replace(/\blocation\b/gi, '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
                     
                     let formattedKey = k.charAt(0).toUpperCase() + k.slice(1);
@@ -1212,8 +1086,6 @@
                         prefix = "liegt auf dem ";
                     } else if (!hasVerb && hasPrep) {
                         prefix = "liegt ";
-                    } else {
-                        prefix = "";
                     }
                     
                     return `deine ${formattedKey} ${prefix}${valText}`;
@@ -1284,79 +1156,310 @@
             let locationInfo = null;
             const lowerText = text.toLowerCase();
 
+            const isLocationQuery = 
+                (lowerText.includes('wo bin ich') || 
+                lowerText.includes('wo befinde ich mich') || 
+                lowerText.includes('mein aktueller standort') || 
+                lowerText.includes('welche straße ist das') || 
+                lowerText.includes('welcher ort ist das') || 
+                lowerText.includes('wo sind wir hier') || 
+                lowerText.includes('verlaufen') ||
+                lowerText.includes('wo stehe ich gerade') ||
+                lowerText.includes('wie ist meine adresse') ||
+                lowerText.includes('welche adresse ist hier')) &&
+                !lowerText.includes('wo ist') && 
+                !lowerText.includes('wo liegt') && 
+                !lowerText.includes('suche');
+
+            if (isLocationQuery) {
+                if (statusMessage) statusMessage.textContent = "Bestimme Standort...";
+                locationInfo = await fetchLocationData();
+            }
+
+            if (
+                lowerText.includes('wetter') || 
+                lowerText.includes('regenschirm') || 
+                lowerText.includes('regen') || 
+                lowerText.includes('draußen') || 
+                lowerText.includes('grad') || 
+                lowerText.includes('temperatur') ||
+                lowerText.includes('jacke') ||
+                lowerText.includes('anziehen') ||
+                lowerText.includes('kalt') ||
+                lowerText.includes('warm') ||
+                lowerText.includes('sonne') ||
+                lowerText.includes('frieren')
+            ) {
+                if (statusMessage) statusMessage.textContent = "Hole Wetter...";
+                weatherInfo = await fetchWeatherData();
+            }
+
+            const now = new Date();
+            const nowGermanIso = now.toLocaleString('sv-SE', { timeZone: 'Europe/Berlin' }).replace(' ', 'T');
+
+            const contextData = {
+                heute_datum: nowGermanIso,
+                aktuelles_jahr: now.getFullYear(),
+                gedächtnis: memoryItems,
+                kontakte: savedContacts,
+                termine: calendarEntries,
+                erinnerungen: reminderEntries,
+                einkauf: shoppingEntries.map(s => s.text),
+                aufgaben_und_notizen: todoEntries.map(t => t.text),
+                wetter: weatherInfo,
+                standort: locationInfo
+            };
+
+            const systemPrompt = "Du bist " + currentUserName + "s smarter, persönlicher Alltags-Assistent.\n" +
+            "Aktueller Daten-Kontext: " + JSON.stringify(contextData) + "\n\n" +
+            "WICHTIG ZUR ZEIT & DATUM:\n" +
+            "- Aktuelles Datum und deutsche Ortszeit: " + nowGermanIso + ".\n" +
+            "- Berücksichtige bei Datums- und Zeitangaben immer die deutsche Zeitzone (Europe/Berlin).\n\n" +
+            "Analysiere den Sprachbefehl des Benutzers und unterscheide PRÄZISE:\n\n" +
+            "STRIKTE CATEGORY-REGELN:\n" +
+            "- \"location\": NUR wenn der Benutzer explizit nach seinem eigenen GPS-Aufenthaltsort, der aktuellen Straße oder Stadt fragt (\"Wo bin ich?\", \"Wo befinden wir uns?\"). NIEMALS bei der Suche nach Gegenständen!\n" +
+            "- \"memory_search\": Wenn der Benutzer nach Gegenständen, Standorten von Dingen, Schlüssel, Brille, Notizen oder gespeicherten Informationen fragt.\n" +
+            "- \"forgot_check\": Wenn der Benutzer fragt, ob er etwas vergessen hat.\n" +
+            "- \"chat\": Fragen nach Inhalten aus den Listen (Einkauf, Aufgaben, Termine).\n" +
+            "- \"shopping\": NEUE Artikel zur Einkaufsliste HINZUFÜGEN.\n" +
+            "- \"todo\": Aufgaben, Notizen oder Gedanken speichern.\n" +
+            "- \"memory_store\": Feste Fakten, Aufbewahrungsorte von Gegenständen oder persönliches Wissen SPEICHERN.\n" +
+            "- \"calendar_delete\": Termin LÖSCHEN oder ENTFERNEN.\n" +
+            "- \"calendar_update\": Bestehenden Termin VERSCHIEBEN, ÄNDERN oder UMBENENEN (z.B. Uhrzeit, Tag oder Titel anpassen).\n" +
+            "- \"reminder_delete\": Erinnerung löschen.\n" +
+            "- \"name_change\": Wie der Benutzer genannt werden möchte.\n" +
+            "- \"reminder\": Neue zeitgesteuerte Erinnerung anlegen.\n" +
+            "- \"calendar\": Neuer fester Kalender-Termin anlegen.\n" +
+            "- \"call\": Telefonanruf starten.\n\n" +
+            "MEHRSPRACHIGKEIT:\n" +
+            "- Antworte immer in der Sprache des Benutzers.\n\n" +
+            "Gib IMMER ein valides JSON-Objekt zurück mit:\n" +
+            "- type: \"forgot_check\", \"chat\", \"location\", \"memory_store\", \"memory_search\", \"todo\", \"calendar\", \"calendar_delete\", \"calendar_update\", \"reminder\", \"reminder_delete\", \"shopping\", \"call\", \"name_change\"\n" +
+            "- new_name\n" +
+            "- memory_key, memory_value, memory_search_query\n" +
+            "- todo_items, shopping_items, reminder_text, reminder_time, calendar_text, calendar_time, call_contact\n" +
+            "- calendar_delete_query (Gib NUR das Stichwort des zu löschenden Termins an, z.B. \"Zahnarzt\")\n" +
+            "- calendar_update_query (Stichwort des zu ändernden Termins)\n" +
+            "- calendar_update_new_text (Neuer Titel des Termins, falls angegeben)\n" +
+            "- calendar_update_new_time (Neue Uhrzeit/Datum im ISO-Format)\n" +
+            "- reminder_delete_query\n" +
+            "- reply: Natürliche, grammatikalisch einwandfreie Antwort.";
+
             try {
-                // 1. Standort-Prüfung
-                const isLocationQuery = 
-                    (lowerText.includes('wo bin ich') || 
-                    lowerText.includes('wo befinde ich mich') || 
-                    lowerText.includes('mein aktueller standort') || 
-                    lowerText.includes('welche straße ist das') || 
-                    lowerText.includes('welcher ort ist das') || 
-                    lowerText.includes('wo sind wir hier') || 
-                    lowerText.includes('verlaufen') ||
-                    lowerText.includes('wo stehe ich gerade') ||
-                    lowerText.includes('wie ist meine adresse') ||
-                    lowerText.includes('welche adresse ist hier')) &&
-                    !lowerText.includes('wo ist') && 
-                    !lowerText.includes('wo liegt') && 
-                    !lowerText.includes('suche');
+                const res = await fetch('/api/groq', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: "openai/gpt-oss-120b",
+                        response_format: { type: "json_object" },
+                        messages: [
+                            { role: "system", content: systemPrompt },
+                            { role: "user", content: text }
+                        ]
+                    })
+                });
 
-                if (isLocationQuery) {
-                    if (statusMessage) statusMessage.textContent = "Bestimme Standort...";
-                    locationInfo = await fetchLocationData();
-                }
+                const data = await res.json();
+                const ai = JSON.parse(data.choices[0].message.content);
 
-                // 2. Wetter-Prüfung
-                if (
-                    lowerText.includes('wetter') || 
-                    lowerText.includes('regenschirm') || 
-                    lowerText.includes('regen') || 
-                    lowerText.includes('draußen') || 
-                    lowerText.includes('grad') || 
-                    lowerText.includes('temperatur') ||
-                    lowerText.includes('jacke') ||
-                    lowerText.includes('anziehen') ||
-                    lowerText.includes('kalt') ||
-                    lowerText.includes('warm') ||
-                    lowerText.includes('sonne') ||
-                    lowerText.includes('frieren')
-                ) {
-                    if (statusMessage) statusMessage.textContent = "Hole Wetter...";
-                    weatherInfo = await fetchWeatherData();
-                }
+                if (ai.type === 'location' && isLocationQuery) {
+                    if (!locationInfo) {
+                        if (statusMessage) statusMessage.textContent = "Bestimme Standort...";
+                        locationInfo = await fetchLocationData();
+                    }
+                    
+                    let responseText = "";
+                    
+                    if (locationInfo && !locationInfo.fehler && locationInfo.details) {
+                        const road = locationInfo.details.road || locationInfo.details.pedestrian || "einer unbekannten Straße";
+                        const houseNumber = locationInfo.details.house_number ? ` ${locationInfo.details.house_number}` : "";
+                        const city = locationInfo.details.city || locationInfo.details.town || locationInfo.details.village || locationInfo.details.suburb || "";
+                        const lat = locationInfo.koordinaten.lat;
+                        const lon = locationInfo.koordinaten.lon;
 
-                // 3. Kalender-Sync
-                await fetchGoogleCalendarEvents();
+                        const locationName = `${road}${houseNumber}${city ? ' in ' + city : ''}`;
+                        responseText = `Du bist aktuell im ${locationName}. Möchtest du deinen Standort per WhatsApp teilen?`;
 
-                // 4. Antworten & Aktionen verarbeiten
-                if (locationInfo && locationInfo.adresse) {
-                    const reply = `Du befindest dich aktuell hier: ${locationInfo.adresse}.`;
-                    if (statusMessage) statusMessage.textContent = reply;
-                    speak(reply);
-                    showLocationSharePrompt(locationInfo.adresse, `Mein aktueller Standort: https://maps.google.com/?q=${locationInfo.koordinaten.lat},${locationInfo.koordinaten.lon}`);
+                        const mapsUrl = `https://maps.google.com/?q=${lat},${lon}`;
+                        const shareText = `Hallo, ich bin gerade hier: ${mapsUrl}`;
+
+                        showLocationSharePrompt(locationName, shareText);
+
+                    } else if (locationInfo && locationInfo.fehler) {
+                        responseText = locationInfo.fehler;
+                    } else {
+                        responseText = `Ich konnte deinen aktuellen Standort leider nicht genau ermitteln.`;
+                    }
+                    
+                    renderAllLists();
+                    speak(responseText);
+                    if (statusMessage) statusMessage.textContent = "Standort ermittelt.";
                     return;
-                }
+                } else if (ai.type === 'name_change' && ai.new_name) {
+                    currentUserName = ai.new_name.trim();
+                    setPersistentData('user_custom_name', currentUserName);
+                    if (userNameInput) userNameInput.value = currentUserName;
+                    updateUserGreeting();
+                } else if (ai.type === 'shopping') {
+                    const items = ai.shopping_items || (ai.shopping_item ? [ai.shopping_item] : []);
+                    items.forEach((item, index) => {
+                        if (item && item.trim()) {
+                            shoppingEntries.unshift({ id: Date.now() + index, text: item.trim() });
+                        }
+                    });
+                    setPersistentData('helfer_shopping', JSON.stringify(shoppingEntries));
+                } else if (ai.type === 'todo') {
+                    const items = ai.todo_items || (ai.todo_text ? [ai.todo_text] : []);
+                    items.forEach((item, index) => {
+                        if (item && item.trim()) {
+                            todoEntries.unshift({ id: Date.now() + index, text: item.trim(), createdDate: 'Per Sprache' });
+                        }
+                    });
+                    setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
+                } else if (ai.type === 'memory_store' && ai.memory_key) {
+                    let val = ai.memory_value || "gespeichert";
+                    if (typeof val === 'object') {
+                        val = parseMemoryValue(val);
+                    }
+                    memoryItems[ai.memory_key.toLowerCase()] = String(val);
+                    setPersistentData('helfer_memory', JSON.stringify(memoryItems));
+                } else if (ai.type === 'memory_search' || lowerText.includes('suche') || lowerText.includes('wo ist') || lowerText.includes('wo liegt')) {
+                    const searchQuery = ai.memory_search_query || text;
+                    const results = searchMemory(searchQuery);
 
-                if (weatherInfo && !weatherInfo.fehler) {
-                    const reply = `Aktuell sind es ${weatherInfo.temperatur} Grad. ${weatherInfo.niederschlag > 0 ? 'Es gibt Niederschlag.' : 'Kein Regen in Sicht.'}`;
-                    if (statusMessage) statusMessage.textContent = reply;
-                    speak(reply);
+                    let responseText = ai.reply;
+
+                    if (!responseText) {
+                        if (results.length > 0) {
+                            const foundList = results.map(r => `${r.key}: ${r.value}`).join(', ');
+                            responseText = `Im Gedächtnis steht: ${foundList}.`;
+                        } else {
+                            responseText = `Ich habe dazu leider nichts im Gedächtnis gefunden.`;
+                        }
+                    }
+
+                    renderAllLists();
+                    speak(responseText);
+                    if (statusMessage) statusMessage.textContent = "Gedächtnis durchsucht.";
                     return;
+                } else if (ai.type === 'reminder_delete') {
+                    const query = (ai.reminder_delete_query || text).toLowerCase().replace('lösche', '').replace('lösch', '').replace('erinnerung', '').trim();
+                    const match = reminderEntries.find(e => e.text.toLowerCase().includes(query) || (query.length > 2 && query.includes(e.text.toLowerCase())));
+                    if (match) {
+                        await deleteReminderEntry(match.id);
+                    } else if (reminderEntries.length > 0) {
+                        await deleteReminderEntry(reminderEntries[0].id);
+                    }
+                } else if (ai.type === 'reminder') {
+                    let rText = ai.reminder_text || text;
+                    rText = rText.replace(/^(erinnere mich daran|erinnere mich|erinnere|denk daran|ich muss)\s*,?\s*(dass\s+)?/i, '').trim();
+                    if (rText.length > 0) {
+                        rText = rText.charAt(0).toUpperCase() + rText.slice(1);
+                    }
+                    await addGoogleCalendarReminder(rText, ai.reminder_time);
+                } else if (ai.type === 'calendar_delete') {
+                    let query = (ai.calendar_delete_query || text).toLowerCase();
+                    query = query.replace(/\b(lösche|lösch|entferne|absagen|storniere|termin|den|meinen|am|um|uhr)\b/gi, '').trim();
+
+                    let match = null;
+                    if (query.length > 0) {
+                        match = calendarEntries.find(e => {
+                            const entryText = e.text.toLowerCase();
+                            return entryText.includes(query) || query.includes(entryText);
+                        });
+                    }
+
+                    if (match) {
+                        await deleteCalendarEntry(match.id);
+                    } else if (calendarEntries.length === 1) {
+                        await deleteCalendarEntry(calendarEntries[0].id);
+                    }
+                } else if (ai.type === 'calendar_update') {
+                    let query = (ai.calendar_update_query || text).toLowerCase();
+                    query = query.replace(/\b(verschiebe|ändere|korrigiere|termin|den|meinen|uhrzeit|uhr|auf|am)\b/gi, '').trim();
+
+                    let match = null;
+                    if (query.length > 0) {
+                        match = calendarEntries.find(e => {
+                            const entryText = e.text.toLowerCase();
+                            return entryText.includes(query) || query.includes(entryText);
+                        });
+                    }
+
+                    if (!match && calendarEntries.length === 1) {
+                        match = calendarEntries[0];
+                    }
+
+                    if (match) {
+                        await updateGoogleCalendarEvent(match.id, ai.calendar_update_new_text, ai.calendar_update_new_time);
+                    }
+                } else if (ai.type === 'calendar' || ai.calendar_text) {
+                    let cText = ai.calendar_text || text;
+                    cText = cText.replace(/^(trage|trage ein|erstelle|neuer termin|termin)\s*,?\s*/i, '').trim();
+                    if (cText.length > 0) {
+                        cText = cText.charAt(0).toUpperCase() + cText.slice(1);
+                    }
+                    await addGoogleCalendarEvent(cText, ai.calendar_time);
+                } else if (ai.type === 'call' && ai.call_contact) {
+                    const foundKey = Object.keys(savedContacts).find(k => k.includes(ai.call_contact.toLowerCase()));
+                    if (foundKey) {
+                        window.location.href = `tel:${savedContacts[foundKey].phone}`;
+                    }
                 }
 
-                // Standard-Antwort für Befehle
-                const defaultReply = `Ich habe verstanden: "${text}". Befehl wurde verarbeitet, Dino.`;
-                if (statusMessage) statusMessage.textContent = "Fertig!";
-                speak(defaultReply);
+                if (ai.type === 'calendar' || ai.type === 'calendar_delete' || ai.type === 'calendar_update') {
+                    await fetchGoogleCalendarEvents();
+                } else {
+                    renderAllLists();
+                }
 
-            } catch (err) {
-                console.error("Fehler bei der Befehlsverarbeitung:", err);
+                speak(ai.reply || `Erledigt, ${currentUserName}.`);
+                if (statusMessage) statusMessage.textContent = "Fertig.";
+            } catch (e) {
+                renderAllLists();
+                speak("Entschuldige, das konnte ich leider nicht genau verarbeiten.");
                 if (statusMessage) statusMessage.textContent = "Fehler bei der Verarbeitung.";
-                speak("Entschuldige Dino, da ist ein Fehler aufgetreten.");
-            } finally {
-                resetButton();
             }
         }
+
+        function deleteTodoEntry(id) {
+            todoEntries = todoEntries.filter(e => e.id !== id);
+            setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
+            renderAllLists();
+        }
+        function deleteShoppingEntry(id) {
+            shoppingEntries = shoppingEntries.filter(e => e.id !== id);
+            setPersistentData('helfer_shopping', JSON.stringify(shoppingEntries));
+            renderAllLists();
+        }
+        function deleteMemoryItem(key) {
+            delete memoryItems[key];
+            setPersistentData('helfer_memory', JSON.stringify(memoryItems));
+            renderAllLists();
+        }
+        function clearAllMemory() {
+            memoryItems = {};
+            localStorage.removeItem('helfer_memory');
+            renderAllLists();
+        }
+
+        function renderAllLists() {
+            if (calendarList) calendarList.innerHTML = calendarEntries.length === 0 ? '<li class="text-slate-400">Keine Termine.</li>' : calendarEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>📅 ${e.text} (${e.date})</span><button onclick="deleteCalendarEntry(decodeURIComponent('${encodeURIComponent(e.id)}'))" class="text-red-400 font-bold text-xs">Löschen</button></li>`).join('');
+            if (todoList) todoList.innerHTML = todoEntries.length === 0 ? '<li class="text-slate-400">Keine offenen Aufgaben.</li>' : todoEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>📝 ${e.text}</span><button onclick="deleteTodoEntry(${e.id})" class="text-emerald-400 font-bold text-xs">Erledigt</button></li>`).join('');
+            if (shoppingList) shoppingList.innerHTML = shoppingEntries.length === 0 ? '<li class="text-slate-400">Liste ist leer.</li>' : shoppingEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>🛒 ${e.text}</span><button onclick="deleteShoppingEntry(${e.id})" class="text-emerald-400 font-bold text-xs">Gekauft</button></li>`).join('');
+            if (reminderList) reminderList.innerHTML = reminderEntries.length === 0 ? '<li class="text-slate-400">Keine Erinnerungen.</li>' : reminderEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>🔔 ${e.text} (${new Date(e.time).toLocaleString('de-DE', {timeZone: 'Europe/Berlin', dateStyle:'short', timeStyle:'short'})})</span><button onclick="deleteReminderEntry(${e.id})" class="text-red-400 font-bold text-xs">Löschen</button></li>`).join('');
+
+            if (categoryContainer) {
+                const memKeys = Object.keys(memoryItems);
+                categoryContainer.innerHTML = memKeys.length === 0 ? '<p class="text-slate-400 text-xs">Noch nichts im Gedächtnis gespeichert.</p>' : memKeys.map(k => {
+                    const val = parseMemoryValue(memoryItems[k]);
+                    return `<div class="flex justify-between items-center text-xs py-1 border-b border-slate-800"><span>• <b class="text-blue-300">${k}</b>: ${val}</span><button onclick="deleteMemoryItem('${k}')" class="text-red-400 font-bold">Löschen</button></div>`;
+                }).join('');
+            }
+
+            renderAssistantOverview();  
+        }
     </script>
+    <div class="hidden bg-emerald-600 bg-red-600 pulse-red pulse-green" aria-hidden="true"></div>
 </body>
 </html>
