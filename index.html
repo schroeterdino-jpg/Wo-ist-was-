@@ -94,16 +94,17 @@
             object-fit: cover;
             z-index: 1;
             opacity: 0.92;
+            transition: filter 0.3s ease;
         }
 
-        /* Modus während der Aufnahme (Farbe wird per Filter auf Grün gedreht) */
+        /* Modus während der Aufnahme oder beim Sprechen (Filter dreht Rot zu Grün) */
         .kitt-scanner-container.recording .kitt-gif {
-            filter: hue-rotate(120deg) brightness(1.3);
+            filter: hue-rotate(110deg) saturate(250%) brightness(1.3);
         }
 
         .kitt-scanner-container.recording {
-            border-color: #00ff66;
-            box-shadow: 0 0 25px rgba(0, 255, 102, 0.8), inset 0 0 15px rgba(0, 255, 102, 0.2);
+            border-color: #00ff66 !important;
+            box-shadow: 0 0 28px rgba(0, 255, 102, 0.9), inset 0 0 15px rgba(0, 255, 102, 0.3) !important;
         }
 
         .kitt-text {
@@ -343,7 +344,7 @@
 
     <footer class="bg-kitt-dark border-t border-red-900/40 text-center p-3 text-xs text-red-500/80 flex justify-between items-center px-6 font-mono">
         <span>MEIN ALLTAGS-HELFER PWA</span>
-        <span class="font-bold">v9.5 (K.I.T.T. Edition)</span>
+        <span class="font-bold">v9.6 (K.I.T.T. Edition)</span>
     </footer>
 
     <script>
@@ -353,20 +354,18 @@
             });
         }
 
-        // Original MP3 Sound-Datei für K.I.T.T. laden und verlangsamen
         const kittAudio = new Audio('./kitt.mp3');
-        kittAudio.playbackRate = 0.65; // Geschwindigkeits-Anpassung passend zur Animation
+        kittAudio.playbackRate = 0.65;
 
         function playKittScannerSound() {
             try {
-                kittAudio.currentTime = 0; // Spielt die Audiodatei sofort von vorne ab
+                kittAudio.currentTime = 0;
                 kittAudio.play().catch(err => console.log('Audio Wiedergabe ignoriert:', err));
             } catch (e) {
                 console.log('Audio Sound Effekt Fehler:', e);
             }
         }
 
-        // Sound beim Start der Anwendung abspielen
         window.addEventListener('DOMContentLoaded', () => {
             playKittScannerSound();
         });
@@ -1058,6 +1057,10 @@
 
         let currentAudio = null;
         function speak(text, onComplete) {
+            // Scanner-Balken auf grün setzen während die KI spricht
+            if (recordBtn) recordBtn.classList.add('recording');
+            if (recordText) recordText.textContent = "SPRECHE...";
+
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
@@ -1065,8 +1068,9 @@
                 utterance.rate = 1.15;
                 utterance.pitch = 1.0;
                 
-                // Sobald die KI fertig gesprochen hat, ertönt der Sound
                 utterance.onend = () => { 
+                    if (recordBtn) recordBtn.classList.remove('recording');
+                    if (recordText) recordText.textContent = "SPRECHEN";
                     playKittScannerSound();
                     if (onComplete) onComplete(); 
                 };
@@ -1080,6 +1084,8 @@
                 
                 currentAudio.onended = () => { 
                     currentAudio = null; 
+                    if (recordBtn) recordBtn.classList.remove('recording');
+                    if (recordText) recordText.textContent = "SPRECHEN";
                     playKittScannerSound();
                     if (onComplete) onComplete(); 
                 };
@@ -1106,8 +1112,8 @@
                 if (statusMessage) statusMessage.textContent = `Erkannt: "${text}"`;
                 sendToGroqSmart(text);
             };
-            recognition.onerror = () => resetButton();
-            recognition.onend = () => resetButton();
+            recognition.onerror = () => resetRecordingState();
+            recognition.onend = () => resetRecordingState();
         }
 
         function toggleSpeechRecognition() {
@@ -1127,12 +1133,13 @@
             }
         }
 
-        function resetButton() {
+        function resetRecordingState() {
             isRecording = false;
-            if (recordBtn) {
-                recordBtn.classList.remove('recording');
+            // Nur zurücksetzen, wenn gerade nicht aktiv gesprochen wird
+            if (!window.speechSynthesis.speaking && currentAudio === null) {
+                if (recordBtn) recordBtn.classList.remove('recording');
+                if (recordText) recordText.textContent = "SPRECHEN";
             }
-            if (recordText) recordText.textContent = "SPRECHEN";
         }
 
         async function triggerDailyBriefing() {
@@ -1363,7 +1370,7 @@
             "- Berücksichtige bei Datums- und Zeitangaben immer die deutsche Zeitzone (Europe/Berlin).\n\n" +
             "Analysiere den Sprachbefehl des Benutzers und unterscheide PRÄZISE:\n\n" +
             "STRIKTE CATEGORY-REGELN:\n" +
-            "- \"location\": NUR wenn der Benutzer explizit nach seinem eigenen GPS-Aufenthaltsort, der aktuellen Straße oder Stadt fragt (\"Wo bin ich?\", \"Wo befinden wir uns?\"). NIEMALS bei der Suche nach Gegenständen!\n" +
+            "- \"location\": NUR wenn der Benutzer explizit nach seinem eigenen GPS-Aufenthaltsort, der aktuellen Straße oder Stadt fragt (\"Wo bin ich?\", \"Wo befinden wir uns?\"). NIEMALS bei lauter Suche nach Gegenständen!\n" +
             "- \"memory_search\": Wenn der Benutzer nach Gegenständen, Standorten von Dingen, Schlüssel, Brille, Notizen oder gespeicherten Informationen fragt.\n" +
             "- \"forgot_check\": Wenn der Benutzer fragt, ob er etwas vergessen hat.\n" +
             "- \"chat\": Fragen nach Inhalten aus den Listen (Einkauf, Aufgaben, Termine).\n" +
