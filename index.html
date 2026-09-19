@@ -1429,8 +1429,19 @@
                     if (statusMessage) statusMessage.textContent = "Gedächtnis durchsucht.";
                     return;
                 } else if (ai.type === 'reminder_delete') {
-                    const query = (ai.reminder_delete_query || text).toLowerCase().replace('lösche', '').replace('lösch', '').replace('erinnerung', '').trim();
-                    const match = reminderEntries.find(e => e.text.toLowerCase().includes(query) || (query.length > 2 && query.includes(e.text.toLowerCase())));
+                    const rawQuery = (ai.reminder_delete_query || text).toLowerCase();
+                    const cleanQuery = rawQuery
+                        .replace(/\b(lösche|lösch|entferne|erinnerung|meine|meinen|mein|die|den|eine|einen|am|um)\b/gi, '')
+                        .trim();
+
+                    const searchWords = cleanQuery.split(/\s+/).filter(w => w.length > 1);
+
+                    const match = reminderEntries.find(e => {
+                        const entryText = e.text.toLowerCase();
+                        if (cleanQuery && entryText.includes(cleanQuery)) return true;
+                        return searchWords.some(word => entryText.includes(word));
+                    });
+
                     if (match) {
                         await deleteReminderEntry(match.id);
                     }
@@ -1442,16 +1453,17 @@
                     }
                     await addGoogleCalendarReminder(rText, ai.reminder_time);
                 } else if (ai.type === 'calendar_delete') {
-                    const query = (ai.calendar_delete_query || text).toLowerCase()
-                        .replace('lösche', '')
-                        .replace('lösch', '')
-                        .replace('entferne', '')
-                        .replace('termin', '')
+                    const rawQuery = (ai.calendar_delete_query || text).toLowerCase();
+                    const cleanQuery = rawQuery
+                        .replace(/\b(lösche|lösch|entferne|termin|meinen|mein|den|einen|am|um)\b/gi, '')
                         .trim();
+
+                    const searchWords = cleanQuery.split(/\s+/).filter(w => w.length > 1);
 
                     const match = calendarEntries.find(e => {
                         const entryText = e.text.toLowerCase();
-                        return entryText.includes(query) || (query.length > 2 && query.includes(entryText));
+                        if (cleanQuery && entryText.includes(cleanQuery)) return true;
+                        return searchWords.some(word => entryText.includes(word));
                     });
 
                     if (match) {
