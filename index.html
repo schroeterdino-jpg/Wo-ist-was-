@@ -153,7 +153,6 @@
             </div>
 
             <div class="my-auto flex flex-col items-center space-y-4 py-4">
-                <!-- Knight Rider Scanner Element mit GIF -->
                 <div id="recordBtn" onclick="toggleSpeechRecognition()" class="kitt-scanner-container">
                     <img src="./40015.gif" alt="K.I.T.T. Scanner" class="kitt-gif">
                     <span id="recordText" class="kitt-text text-white text-base">SPRECHEN</span>
@@ -301,17 +300,23 @@
             });
         }
 
-        // Original MP3 Sound-Datei für K.I.T.T. laden
+        // Original MP3 Sound-Datei für K.I.T.T. laden und verlangsamen
         const kittAudio = new Audio('./kitt.mp3');
+        kittAudio.playbackRate = 0.65; // Geschwindigkeits-Anpassung passend zur Animation
 
         function playKittScannerSound() {
             try {
-                kittAudio.currentTime = 0; // Spielt die Audiodatei sofort von vorne ab, falls man mehrfach klickt
+                kittAudio.currentTime = 0; // Spielt die Audiodatei sofort von vorne ab
                 kittAudio.play().catch(err => console.log('Audio Wiedergabe ignoriert:', err));
             } catch (e) {
                 console.log('Audio Sound Effekt Fehler:', e);
             }
         }
+
+        // Sound beim Start der Anwendung abspielen
+        window.addEventListener('DOMContentLoaded', () => {
+            playKittScannerSound();
+        });
 
         function switchSection(sectionId) {
             const sections = ['speak', 'planner', 'lists', 'memory', 'settings'];
@@ -1006,14 +1011,25 @@
                 utterance.lang = 'de-DE';
                 utterance.rate = 1.15;
                 utterance.pitch = 1.0;
-                utterance.onend = () => { if (onComplete) onComplete(); };
+                
+                // Sobald die KI fertig gesprochen hat, ertönt der Sound
+                utterance.onend = () => { 
+                    playKittScannerSound();
+                    if (onComplete) onComplete(); 
+                };
+                
                 window.speechSynthesis.speak(utterance);
             } else {
                 if (currentAudio) { currentAudio.pause(); currentAudio = null; }
                 currentAudio = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=de&client=tw-ob`);
                 currentAudio.playbackRate = 1.25;
                 currentAudio.play().catch(() => {});
-                currentAudio.onended = () => { currentAudio = null; if (onComplete) onComplete(); };
+                
+                currentAudio.onended = () => { 
+                    currentAudio = null; 
+                    playKittScannerSound();
+                    if (onComplete) onComplete(); 
+                };
             }
         }
 
@@ -1042,9 +1058,6 @@
         }
 
         function toggleSpeechRecognition() {
-            // Sound-Effekt von K.I.T.T.s Scanner (mp3) abspielen
-            playKittScannerSound();
-
             if (!recognition) {
                 alert('Spracherkennung wird von diesem Browser leider nicht unterstützt.');
                 return;
@@ -1070,7 +1083,6 @@
         }
 
         async function triggerDailyBriefing() {
-            playKittScannerSound();
             const now = new Date();
             const hour = parseInt(now.toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', hour12: false }), 10);
             const timeStr = now.toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' });
