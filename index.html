@@ -1057,7 +1057,6 @@
 
         let currentAudio = null;
         function speak(text, onComplete) {
-            // Scanner-Balken auf grün setzen während die KI spricht
             if (recordBtn) recordBtn.classList.add('recording');
             if (recordText) recordText.textContent = "SPRECHE...";
 
@@ -1135,7 +1134,6 @@
 
         function resetRecordingState() {
             isRecording = false;
-            // Nur zurücksetzen, wenn gerade nicht aktiv gesprochen wird
             if (!window.speechSynthesis.speaking && currentAudio === null) {
                 if (recordBtn) recordBtn.classList.remove('recording');
                 if (recordText) recordText.textContent = "SPRECHEN";
@@ -1164,7 +1162,6 @@
 
                 text += `Draußen haben wir aktuell ${temp} Grad. `;
 
-                // Dynamische Jacken- und Temperatur-Empfehlung
                 if (temp <= 5) {
                     text += "Es ist eiskalt draußen. Zieh unbedingt eine dicke Winterjacke, Mütze und Handschuhe an! ";
                 } else if (temp > 5 && temp <= 12) {
@@ -1177,8 +1174,6 @@
                     text += "Es ist richtig sommerlich warm! Genieß das tolle Wetter. ";
                 }
 
-                // Präzisere Regen- und Wettercode-Prüfung (Open-Meteo Wettercodes)
-                // Codes ab 51+ bedeuten Nieselregen, Regen, Schauer oder Gewitter
                 const isRainingOrShowers = (regen > 0) || (weatherCode >= 51 && weatherCode <= 67) || (weatherCode >= 80 && weatherCode <= 99);
                 
                 if (isRainingOrShowers) {
@@ -1187,9 +1182,8 @@
                     text += "Regen ist aktuell zum Glück keiner in Sicht. ";
                 }
 
-                // Dynamische Wind-Warnung
                 if (wind > 35) {
-                    text += `Es geht ein stürmischer Wind mit ${Math.round(wind)} Kilometern pro Stunde,pass draußen gut auf! `;
+                    text += `Es geht ein stürmischer Wind mit ${Math.round(wind)} Kilometern pro Stunde, pass draußen gut auf! `;
                 } else if (wind > 20) {
                     text += "Es ist etwas windig da draußen. ";
                 }
@@ -1285,7 +1279,6 @@
             speak(text);
         }
 
-
         function showLocationSharePrompt(locationName, shareText) {
             const card = document.getElementById('locationShareCard');
             const addrText = document.getElementById('locationAddressText');
@@ -1314,6 +1307,9 @@
             const card = document.getElementById('locationShareCard');
             if (card) card.classList.add('hidden');
         }
+
+        // Globales Array für den Konversationsverlauf (Multi-Turn Chat)
+        let chatHistory = [];
 
         async function sendToGroqSmart(text) {
             if (statusMessage) statusMessage.textContent = "Verarbeite Befehl...";
@@ -1376,14 +1372,19 @@
                 standort: locationInfo
             };
 
-            const systemPrompt = "Du bist " + currentUserName + "s smarter, persönlicher Alltags-Assistent.\n" +
+            const systemPrompt = "Du bist " + currentUserName + "s persönlicher, treuer, wortgewandter und hochintelligenter Alltags-Assistent im Stil von K.I.T.T. aus Knight Rider.\n" +
             "Aktueller Daten-Kontext: " + JSON.stringify(contextData) + "\n\n" +
             "WICHTIG ZUR ZEIT & DATUM:\n" +
             "- Aktuelles Datum und deutsche Ortszeit: " + nowGermanIso + ".\n" +
             "- Berücksichtige bei Datums- und Zeitangaben immer die deutsche Zeitzone (Europe/Berlin).\n\n" +
-            "Analysiere den Sprachbefehl des Benutzers und unterscheide PRÄZISE:\n\n" +
+            "WICHTIG FÜR DEINEN SPRACHSTIL & DIALOG:\n" +
+            "- Antworte **niemals monoton, roboterhaft oder einsilbig**.\n" +
+            "- Formuliere deine Antworten ausführlich, herzlich, charmant, lebendig und mit einer leichten Prise trockenem Humor oder Sci-Fi-Flair.\n" +
+            "- Erzähle von dir aus kleine Zusammenhänge oder erkläre, was du im Hintergrund tust (z.B. nicht nur trocken 'Erinnert', sondern 'Ich habe mir das direkt für 15 Uhr notiert, damit du es garantiert nicht vergisst, Dino. Soll ich dir kurz vor knapp noch einen kurzen Hinweis geben?').\n" +
+            "- Nutze den Gesprächsverlauf, um dich natürlich und fließend zu unterhalten, als würdet ihr euch direkt gegenübersitzen.\n\n" +
             "STRIKTE CATEGORY-REGELN:\n" +
-            "- \"location\": NUR wenn der Benutzer explizit nach seinem eigenen GPS-Aufenthaltsort, der aktuellen Straße oder Stadt fragt (\"Wo bin ich?\", \"Wo befinden wir uns?\"). NIEMALS bei lauter Suche nach Gegenständen!\n" +
+            "- \"chat_extended\": Für normalen Smalltalk, tiefere Unterhaltungen, philosophische Fragen, zum Nachdenken oder wenn du einfach frei erzählerisch antworten sollst, ohne dass im Hintergrund eine feste Aktion (wie Kalender oder Einkauf) getriggert wird.\n" +
+            "- \"location\": NUR wenn der Benutzer explizit nach seinem eigenen GPS-Aufenthaltsort, der aktuellen Straße oder Stadt fragt (\"Wo bin ich?\", \"Wo befinden wir uns?\").\n" +
             "- \"memory_search\": Wenn der Benutzer nach Gegenständen, Standorten von Dingen, Schlüssel, Brille, Notizen oder gespeicherten Informationen fragt.\n" +
             "- \"forgot_check\": Wenn der Benutzer fragt, ob er etwas vergessen hat.\n" +
             "- \"chat\": Fragen nach Inhalten aus den Listen (Einkauf, Aufgaben, Termine).\n" +
@@ -1391,7 +1392,7 @@
             "- \"todo\": Aufgaben, Notizen oder Gedanken speichern.\n" +
             "- \"memory_store\": Feste Fakten, Aufbewahrungsorte von Gegenständen oder persönliches Wissen SPEICHERN.\n" +
             "- \"calendar_delete\": Termin LÖSCHEN oder ENTFERNEN.\n" +
-            "- \"calendar_update\": Bestehenden Termin VERSCHIEBEN, ÄNDERN oder UMBENENEN (z.B. Uhrzeit, Tag oder Titel anpassen).\n" +
+            "- \"calendar_update\": Bestehenden Termin VERSCHIEBEN, ÄNDERN oder UMBENENEN.\n" +
             "- \"reminder_delete\": Erinnerung löschen.\n" +
             "- \"name_change\": Wie der Benutzer genannt werden möchte.\n" +
             "- \"reminder\": Neue zeitgesteuerte Erinnerung anlegen.\n" +
@@ -1400,16 +1401,25 @@
             "MEHRSPRACHIGKEIT:\n" +
             "- Antworte immer in der Sprache des Benutzers.\n\n" +
             "Gib IMMER ein valides JSON-Objekt zurück mit:\n" +
-            "- type: \"forgot_check\", \"chat\", \"location\", \"memory_store\", \"memory_search\", \"todo\", \"calendar\", \"calendar_delete\", \"calendar_update\", \"reminder\", \"reminder_delete\", \"shopping\", \"call\", \"name_change\"\n" +
+            "- type: \"chat_extended\", \"forgot_check\", \"chat\", \"location\", \"memory_store\", \"memory_search\", \"todo\", \"calendar\", \"calendar_delete\", \"calendar_update\", \"reminder\", \"reminder_delete\", \"shopping\", \"call\", \"name_change\"\n" +
             "- new_name\n" +
             "- memory_key, memory_value, memory_search_query\n" +
             "- todo_items, shopping_items, reminder_text, reminder_time, calendar_text, calendar_time, call_contact\n" +
-            "- calendar_delete_query (Gib NUR das Stichwort des zu löschenden Termins an, z.B. \"Zahnarzt\")\n" +
-            "- calendar_update_query (Stichwort des zu ändernden Termins)\n" +
-            "- calendar_update_new_text (Neuer Titel des Termins, falls angegeben)\n" +
-            "- calendar_update_new_time (Neue Uhrzeit/Datum im ISO-Format)\n" +
+            "- calendar_delete_query\n" +
+            "- calendar_update_query\n" +
+            "- calendar_update_new_text\n" +
+            "- calendar_update_new_time\n" +
             "- reminder_delete_query\n" +
-            "- reply: Natürliche, grammatikalisch einwandfreie Antwort.";
+            "- reply: Ausführliche, natürliche, charmante und fließend gesprochene Antwort.";
+
+            // Aktuelle Nutzer-Nachricht an den Verlauf anhängen
+            chatHistory.push({ role: "user", content: text });
+
+            // Verlauf auf maximal die letzten 7 Nachrichten begrenzen (System-Prompt + 6 Interaktionen)
+            let messagesPayload = [
+                { role: "system", content: systemPrompt },
+                ...chatHistory.slice(-6)
+            ];
 
             try {
                 const res = await fetch('/api/groq', {
@@ -1418,15 +1428,15 @@
                     body: JSON.stringify({
                         model: "openai/gpt-oss-120b",
                         response_format: { type: "json_object" },
-                        messages: [
-                            { role: "system", content: systemPrompt },
-                            { role: "user", content: text }
-                        ]
+                        messages: messagesPayload
                     })
                 });
 
                 const data = await res.json();
                 const ai = JSON.parse(data.choices[0].message.content);
+
+                // Die KI-Antwort (bzw. das JSON) für den Kontext im Verlauf festhalten
+                chatHistory.push({ role: "assistant", content: JSON.stringify(ai) });
 
                 if (ai.type === 'location' && isLocationQuery) {
                     if (!locationInfo) {
@@ -1444,7 +1454,7 @@
                         const lon = locationInfo.koordinaten.lon;
 
                         const locationName = `${road}${houseNumber}${city ? ' in ' + city : ''}`;
-                        responseText = `Du bist aktuell im ${locationName}. Möchtest du deinen Standort per WhatsApp teilen?`;
+                        responseText = `Du bist aktuell im ${locationName}, Dino. Möchtest du deinen Standort direkt per WhatsApp teilen?`;
 
                         const mapsUrl = `https://maps.google.com/?q=${lat},${lon}`;
                         const shareText = `Hallo, ich bin gerade hier: ${mapsUrl}`;
@@ -1454,7 +1464,7 @@
                     } else if (locationInfo && locationInfo.fehler) {
                         responseText = locationInfo.fehler;
                     } else {
-                        responseText = `Ich konnte deinen aktuellen Standort leider nicht genau ermitteln.`;
+                        responseText = `Ich konnte deinen aktuellen Standort leider nicht ganz exakt bestimmen, Dino.`;
                     }
                     
                     renderAllLists();
@@ -1498,9 +1508,9 @@
                     if (!responseText) {
                         if (results.length > 0) {
                             const foundList = results.map(r => `${r.key}: ${r.value}`).join(', ');
-                            responseText = `Im Gedächtnis steht: ${foundList}.`;
+                            responseText = `Ich habe im Gedächtnis folgendes dazu gefunden: ${foundList}, Dino.`;
                         } else {
-                            responseText = `Ich habe dazu leider nichts im Gedächtnis gefunden.`;
+                            responseText = `Dazu konnte ich in meinen gespeicherten Daten leider absolut nichts finden, Dino.`;
                         }
                     }
 
@@ -1579,11 +1589,11 @@
                     renderAllLists();
                 }
 
-                speak(ai.reply || `Erledigt, ${currentUserName}.`);
+                speak(ai.reply || `Das habe ich mir gerne für dich notiert, ${currentUserName}. Gibt es sonst noch etwas, das ich für dich tun kann?`);
                 if (statusMessage) statusMessage.textContent = "Fertig.";
             } catch (e) {
                 renderAllLists();
-                speak("Entschuldige, das konnte ich leider nicht genau verarbeiten.");
+                speak(`Entschuldige bitte, Dino. Da ist gerade ein kleiner interner Knoten aufgetreten, den ich nicht sofort lösen konnte.`);
                 if (statusMessage) statusMessage.textContent = "Fehler bei der Verarbeitung.";
             }
         }
