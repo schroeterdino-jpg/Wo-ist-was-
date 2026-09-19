@@ -367,16 +367,29 @@
         renderAllLists();
         renderContactList();
 
+        function parseMemoryValue(rawVal) {
+            if (typeof rawVal === 'object' && rawVal !== null) {
+                return rawVal.location || rawVal.value || JSON.stringify(rawVal);
+            }
+            try {
+                const parsed = JSON.parse(rawVal);
+                if (typeof parsed === 'object' && parsed !== null) {
+                    return parsed.location || parsed.value || String(rawVal);
+                }
+            } catch (e) {}
+            return String(rawVal);
+        }
+
         function searchMemory(query) {
             if (!query || typeof memoryItems !== 'object') return [];
             const lowerQuery = query.toLowerCase().trim();
             
             return Object.keys(memoryItems)
                 .filter(key => {
-                    const val = String(typeof memoryItems[key] === 'object' ? JSON.stringify(memoryItems[key]) : memoryItems[key]).toLowerCase();
-                    return key.toLowerCase().includes(lowerQuery) || val.includes(lowerQuery);
+                    const cleanVal = parseMemoryValue(memoryItems[key]).toLowerCase();
+                    return key.toLowerCase().includes(lowerQuery) || cleanVal.includes(lowerQuery);
                 })
-                .map(key => ({ key, value: memoryItems[key] }));
+                .map(key => ({ key, value: parseMemoryValue(memoryItems[key]) }));
         }
 
         function getAssistantOverview() {
@@ -998,17 +1011,16 @@
             
             const importantMemoryItems = memoryKeys.filter(key => {
                 const lowerKey = key.toLowerCase();
-                const lowerVal = String(typeof memoryItems[key] === 'object' ? JSON.stringify(memoryItems[key]) : memoryItems[key]).toLowerCase();
+                const lowerVal = parseMemoryValue(memoryItems[key]).toLowerCase();
                 return importantKeywords.some(kw => lowerKey.includes(kw) || lowerVal.includes(kw));
             });
 
             if (importantMemoryItems.length > 0) {
                 const memList = importantMemoryItems.map(k => {
-                    const rawVal = typeof memoryItems[k] === 'object' ? JSON.stringify(memoryItems[k]) : memoryItems[k];
-                    let valText = String(rawVal).trim();
+                    let valText = parseMemoryValue(memoryItems[k]).trim();
                     
-                    // Saubere Formatierung ohne Unterstriche oder "location"
-                    valText = valText.replace(/^location\s*/i, '').replace(/_/g, ' ').trim();
+                    // Bereinigen: Entferne das Wort 'location' und Unterstriche komplett
+                    valText = valText.replace(/\blocation\b/gi, '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
                     
                     let formattedKey = k.charAt(0).toUpperCase() + k.slice(1);
                     formattedKey = formattedKey.replace(/_/g, ' ').trim();
@@ -1254,7 +1266,7 @@
                 } else if (ai.type === 'memory_store' && ai.memory_key) {
                     let val = ai.memory_value || "gespeichert";
                     if (typeof val === 'object') {
-                        val = JSON.stringify(val);
+                        val = parseMemoryValue(val);
                     }
                     memoryItems[ai.memory_key.toLowerCase()] = String(val);
                     setPersistentData('helfer_memory', JSON.stringify(memoryItems));
@@ -1369,10 +1381,7 @@
             if (categoryContainer) {
                 const memKeys = Object.keys(memoryItems);
                 categoryContainer.innerHTML = memKeys.length === 0 ? '<p class="text-slate-400 text-xs">Noch nichts im Gedächtnis gespeichert.</p>' : memKeys.map(k => {
-                    let val = memoryItems[k];
-                    if (typeof val === 'object' && val !== null) {
-                        val = val.location || val.value || JSON.stringify(val);
-                    }
+                    const val = parseMemoryValue(memoryItems[k]);
                     return `<div class="flex justify-between items-center text-xs py-1 border-b border-slate-800"><span>• <b class="text-blue-300">${k}</b>: ${val}</span><button onclick="deleteMemoryItem('${k}')" class="text-red-400 font-bold">Löschen</button></div>`;
                 }).join('');
             }
