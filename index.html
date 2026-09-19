@@ -19,18 +19,28 @@
     <meta name="theme-color" content="#0f172a">
     <style>
     body { font-size: 1.15rem; }
-    @keyframes pulseRing {
-        0%   { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
+    
+    /* Pulsieren Rot */
+    @keyframes pulseRingRed {
+        0%   { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.8); }
         70%  { box-shadow: 0 0 0 25px rgba(220, 38, 38, 0); }
         100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
     }
+
+    /* Pulsieren Grün */
     @keyframes pulseRingGreen {
-        0%   { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.7); }
+        0%   { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.8); }
         70%  { box-shadow: 0 0 0 25px rgba(5, 150, 105, 0); }
         100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0); }
     }
-    .pulse-red { animation: pulseRing 2s infinite; }
-    .pulse-green { animation: pulseRingGreen 1.2s infinite; }
+
+    .pulse-red { 
+        animation: pulseRingRed 2s infinite !important; 
+    }
+    
+    .pulse-green { 
+        animation: pulseRingGreen 1.2s infinite !important; 
+    }
 </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between">
@@ -871,9 +881,8 @@
                 isRecording = true;
                 if (statusMessage) statusMessage.textContent = "Höre zu...";
                 if (recordBtn) {
-                    recordBtn.classList.replace('bg-red-600', 'bg-emerald-600');
-                    recordBtn.classList.remove('pulse-red');
-                    recordBtn.classList.add('pulse-green');
+                    recordBtn.classList.remove('bg-red-600', 'pulse-red');
+                    recordBtn.classList.add('bg-emerald-600', 'pulse-green');
                 }
                 if (recordText) recordText.textContent = "HÖRE...";
             };
@@ -895,10 +904,8 @@
                 recognition.stop();
             } else {
                 if (recordBtn) {
-                    recordBtn.classList.remove('bg-red-600');
-                    recordBtn.classList.remove('pulse-red');
-                    recordBtn.classList.add('bg-emerald-600');
-                    recordBtn.classList.add('pulse-green');
+                    recordBtn.classList.remove('bg-red-600', 'pulse-red');
+                    recordBtn.classList.add('bg-emerald-600', 'pulse-green');
                 }
                 if (recordText) recordText.textContent = "HÖRE...";
                 if (statusMessage) statusMessage.textContent = "Höre zu...";
@@ -909,9 +916,8 @@
         function resetButton() {
             isRecording = false;
             if (recordBtn) {
-                recordBtn.classList.replace('bg-emerald-600', 'bg-red-600');
-                recordBtn.classList.remove('pulse-green');
-                recordBtn.classList.add('pulse-red');
+                recordBtn.classList.remove('bg-emerald-600', 'pulse-green');
+                recordBtn.classList.add('bg-red-600', 'pulse-red');
             }
             if (recordText) recordText.textContent = "SPRECHEN";
         }
