@@ -1,246 +1,324 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mein Alltags-Helfer</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Identity Services (OAuth / Login) -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    
-    <!-- Eigenes Icon direkt aus dem Projektordner -->
     <link rel="icon" type="image/png" href="./dino.png">
     <link rel="apple-touch-icon" href="./dino.png">
-    
-    <!-- PWA Manifest & App-Modus -->
     <link rel="manifest" href="./manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#1d4ed8">
-
+    <meta name="theme-color" content="#0f172a">
     <style>
-        body { font-size: 1.15rem; }
-    </style>
-</head>
-<body class="bg-slate-100 text-slate-900 min-h-screen flex flex-col justify-between">
+    :root {
+        --app-font-scale: 1;
+    }
 
-    <!-- Kopfbereich -->
-    <header class="bg-blue-700 text-white p-4 text-center shadow-md relative">
+    body { 
+        font-size: calc(1.15rem * var(--app-font-scale)); 
+    }
+
+    body.large-font-mode {
+        --app-font-scale: 1.3;
+    }
+
+    /* Starker Kontrast Modus */
+    body.high-contrast-mode {
+        background-color: #000000 !important;
+        color: #ffffff !important;
+    }
+    body.high-contrast-mode header,
+    body.high-contrast-mode nav,
+    body.high-contrast-mode footer,
+    body.high-contrast-mode section,
+    body.high-contrast-mode div,
+    body.high-contrast-mode details {
+        background-color: #000000 !important;
+        border-color: #ffffff !important;
+        color: #ffffff !important;
+    }
+    body.high-contrast-mode button {
+        border: 2px solid #ffffff !important;
+        background-color: #000000 !important;
+        color: #ffff00 !important;
+    }
+    body.high-contrast-mode input {
+        background-color: #000000 !important;
+        color: #ffffff !important;
+        border: 2px solid #ffffff !important;
+    }
+    body.high-contrast-mode h1, 
+    body.high-contrast-mode h2, 
+    body.high-contrast-mode span,
+    body.high-contrast-mode p {
+        color: #ffffff !important;
+    }
+
+    /* Pulsieren Rot */
+    @keyframes pulseRingRed {
+        0%   { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.8); }
+        70%  { box-shadow: 0 0 0 25px rgba(220, 38, 38, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+    }
+
+    /* Pulsieren Grün */
+    @keyframes pulseRingGreen {
+        0%   { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.8); }
+        70%  { box-shadow: 0 0 0 25px rgba(5, 150, 105, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0); }
+    }
+
+    .pulse-red { 
+        animation: pulseRingRed 2s infinite !important; 
+    }
+    
+    .pulse-green { 
+        animation: pulseRingGreen 1.2s infinite !important; 
+    }
+</style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between">
+
+    <header class="bg-slate-800 text-white p-4 text-center shadow-md border-b border-slate-700 relative">
         <div class="flex justify-between items-center max-w-md mx-auto">
             <div></div>
             <div>
-                <h1 class="text-2xl font-bold">Mein Alltags-Helfer</h1>
-                <p id="userNameDisplay" class="text-sm text-blue-100 mt-0.5">Hallo, Dino!</p>
+                <h1 class="text-2xl font-bold text-blue-400">Mein Alltags-Helfer</h1>
+                <p id="userNameDisplay" class="text-sm text-slate-300 mt-0.5">Hallo, Dino!</p>
             </div>
-            <button onclick="switchSection('settings')" class="bg-blue-800 hover:bg-blue-900 text-white px-3 py-2 rounded-lg text-sm shadow flex items-center gap-1">
+            <button onclick="switchSection('settings')" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-lg text-sm shadow flex items-center gap-1 border border-slate-600">
                 ⚙️ <span class="hidden sm:inline">Einstellungen</span>
             </button>
         </div>
     </header>
 
-    <!-- Hauptnavigation / Reiter -->
-    <nav class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-50">
+    <nav class="bg-slate-800 border-b border-slate-700 shadow-sm sticky top-0 z-50">
         <div class="flex max-w-md mx-auto px-1 py-2 gap-1 text-xs font-bold">
             <button id="navSpeak" onclick="switchSection('speak')" class="flex-1 py-2.5 px-1 rounded-lg bg-blue-600 text-white shadow transition text-center">🎙️ Sprechen</button>
-            <button id="navPlanner" onclick="switchSection('planner')" class="flex-1 py-2.5 px-1 rounded-lg text-slate-600 hover:bg-slate-100 transition text-center">📅 Planer</button>
-            <button id="navLists" onclick="switchSection('lists')" class="flex-1 py-2.5 px-1 rounded-lg text-slate-600 hover:bg-slate-100 transition text-center">📝 Listen</button>
-            <button id="navMemory" onclick="switchSection('memory')" class="flex-1 py-2.5 px-1 rounded-lg text-slate-600 hover:bg-slate-100 transition text-center">🧠 Gedächtnis</button>
+            <button id="navPlanner" onclick="switchSection('planner')" class="flex-1 py-2.5 px-1 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-slate-200 transition text-center">📅 Planer</button>
+            <button id="navLists" onclick="switchSection('lists')" class="flex-1 py-2.5 px-1 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-slate-200 transition text-center">📝 Listen</button>
+            <button id="navMemory" onclick="switchSection('memory')" class="flex-1 py-2.5 px-1 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-slate-200 transition text-center">🧠 Gedächtnis</button>
         </div>
     </nav>
 
-    <!-- Hauptbereich -->
     <main class="container mx-auto p-4 max-w-md flex-grow flex flex-col space-y-4">
 
-        <!-- Sektion 1: SPRECHEN -->
         <section id="sec-speak" class="flex flex-col items-center justify-between space-y-4 my-auto py-2">
             
-            <!-- Tages-Übersicht Card -->
-            <div id="overviewCard" class="w-full bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden text-sm transition-all">
-                <button onclick="toggleOverviewDetails()" class="w-full bg-slate-50 p-3.5 border-b border-slate-100 font-bold text-blue-800 flex justify-between items-center text-left">
-                    <span class="flex items-center gap-1.5">⚡ Tages-Übersicht <span class="text-xs font-normal text-slate-500">(Live)</span></span>
+            <div id="overviewCard" class="w-full bg-slate-800 rounded-2xl shadow-lg border border-slate-700 overflow-hidden text-sm transition-all">
+                <button onclick="toggleOverviewDetails()" class="w-full bg-slate-800/80 p-3.5 border-b border-slate-700 font-bold text-blue-400 flex justify-between items-center text-left">
+                    <span class="flex items-center gap-1.5">⚡ Tages-Übersicht <span class="text-xs font-normal text-slate-400">(Live)</span></span>
                     <span id="overviewToggleIcon" class="text-xs text-slate-400">▼ Klappen</span>
                 </button>
-                <div id="overviewDetails" class="p-4 space-y-2 text-slate-700">
+                <div id="overviewDetails" class="p-4 space-y-2 text-slate-200">
                     <p class="flex items-start gap-2">
                         <span>📅</span> 
-                        <span><b>Nächster Termin:</b> <span id="ovNextCalendar" class="text-slate-800">Lädt...</span></span>
+                        <span><b>Nächster Termin:</b> <span id="ovNextCalendar" class="text-slate-300">Lädt...</span></span>
                     </p>
                     <p class="flex items-start gap-2">
                         <span>🔔</span> 
-                        <span><b>Nächste Erinnerung:</b> <span id="ovNextReminder" class="text-slate-800">Lädt...</span></span>
+                        <span><b>Nächste Erinnerung:</b> <span id="ovNextReminder" class="text-slate-300">Lädt...</span></span>
                     </p>
-                    <div class="grid grid-cols-3 gap-2 pt-2 border-t text-center text-xs font-semibold">
-                        <div class="bg-blue-50 p-2 rounded-lg border border-blue-100">
-                            <span class="block text-slate-500 text-[10px]">AUFGABEN</span>
-                            <span id="ovCountTodos" class="text-blue-700 text-sm font-bold">0</span>
+                    <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-700 text-center text-xs font-semibold">
+                        <div class="bg-slate-900/60 p-2 rounded-lg border border-slate-700">
+                            <span class="block text-slate-400 text-[10px]">AUFGABEN</span>
+                            <span id="ovCountTodos" class="text-blue-400 text-sm font-bold">0</span>
                         </div>
-                        <div class="bg-amber-50 p-2 rounded-lg border border-amber-100">
-                            <span class="block text-slate-500 text-[10px]">EINKAUF</span>
-                            <span id="ovCountShopping" class="text-amber-700 text-sm font-bold">0</span>
+                        <div class="bg-slate-900/60 p-2 rounded-lg border border-slate-700">
+                            <span class="block text-slate-400 text-[10px]">EINKAUF</span>
+                            <span id="ovCountShopping" class="text-amber-400 text-sm font-bold">0</span>
                         </div>
-                        <div class="bg-emerald-50 p-2 rounded-lg border border-emerald-100">
-                            <span class="block text-slate-500 text-[10px]">GEDÄCHTNIS</span>
-                            <span id="ovCountMemory" class="text-emerald-700 text-sm font-bold">0</span>
+                        <div class="bg-slate-900/60 p-2 rounded-lg border border-slate-700">
+                            <span class="block text-slate-400 text-[10px]">GEDÄCHTNIS</span>
+                            <span id="ovCountMemory" class="text-emerald-400 text-sm font-bold">0</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Haupt-Aktionsbutton -->
+            <div id="locationShareCard" class="hidden w-full bg-slate-800 p-4 rounded-2xl border border-blue-500 shadow-xl space-y-3 text-center">
+                <div class="text-blue-400 font-bold text-base flex justify-center items-center gap-2">
+                    📍 <span>Standort-Auskunft</span>
+                </div>
+                <p id="locationAddressText" class="text-sm text-slate-200 font-medium">Adresse wird ermittelt...</p>
+                <p class="text-xs text-slate-300">Möchtest du deinen Standort jetzt per WhatsApp teilen?</p>
+                <div class="flex gap-2 pt-1">
+                    <button id="btnShareLocationYes" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-3 rounded-xl font-bold text-sm shadow">
+                        💬 Ja, WhatsApp
+                    </button>
+                    <button onclick="dismissLocationShare()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 py-2.5 px-3 rounded-xl font-bold text-sm border border-slate-600">
+                        ❌ Nein, danke
+                    </button>
+                </div>
+            </div>
+
             <div class="my-auto flex flex-col items-center space-y-3 py-2">
-                <button id="recordBtn" onclick="toggleSpeechRecognition()" class="w-44 h-44 bg-red-600 hover:bg-red-700 text-white rounded-full flex flex-col items-center justify-center shadow-2xl transition transform active:scale-95 border-4 border-white cursor-pointer">
+                <button id="recordBtn" onclick="toggleSpeechRecognition()" class="pulse-red w-44 h-44 bg-red-600 hover:bg-red-700 text-white rounded-full flex flex-col items-center justify-center shadow-2xl transition transform active:scale-95 border-4 border-slate-800 cursor-pointer">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                     </svg>
                     <span id="recordText" class="text-sm font-semibold tracking-wide">SPRECHEN</span>
                 </button>
-                <p id="statusMessage" class="text-center font-medium text-slate-700 h-6">Drücken und sprechen...</p>
+                <p id="statusMessage" class="text-center font-medium text-slate-300 h-6">Drücken und sprechen...</p>
             </div>
 
-            <button onclick="triggerDailyBriefing()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 px-4 rounded-xl shadow-md font-bold text-base flex items-center justify-center gap-2">
+            <button onclick="triggerDailyBriefing()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 px-4 rounded-xl shadow-md font-bold text-base flex items-center justify-center gap-2 border border-indigo-500/30">
                 🌅 Intelligentes Tages-Briefing starten
             </button>
         </section>
 
-        <!-- Sektion 2: PLANER -->
         <section id="sec-planner" class="hidden space-y-4">
-            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200">
-                <h2 class="text-xl font-bold text-blue-800 mb-3">📅 Heutige Termine:</h2>
+            <div class="bg-slate-800 p-5 rounded-2xl shadow-md border border-slate-700">
+                <h2 class="text-xl font-bold text-blue-400 mb-3">📅 Termine (14-Tage-Vorschau):</h2>
                 <ul id="calendarList" class="space-y-2 text-base">
-                    <li class="text-slate-500">Keine Termine eingetragen.</li>
+                    <li class="text-slate-400">Keine Termine eingetragen.</li>
                 </ul>
             </div>
 
-            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
+            <div class="bg-slate-800 p-5 rounded-2xl shadow-md border border-slate-700 space-y-3">
                 <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-blue-800">🔔 Aktive Erinnerungen:</h2>
-                    <button onclick="requestNotificationPermission()" class="bg-blue-600 text-white text-xs px-2.5 py-1.5 rounded-lg font-semibold">Erlauben</button>
+                    <h2 class="text-xl font-bold text-blue-400">🔔 Aktive Erinnerungen:</h2>
+                    <button onclick="requestNotificationPermission()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2.5 py-1.5 rounded-lg font-semibold">Erlauben</button>
                 </div>
                 <div class="flex gap-2">
-                    <input type="text" id="manualReminderText" placeholder="Was soll erinnert werden?" class="flex-grow p-2 border rounded-lg text-sm">
-                    <input type="datetime-local" id="manualReminderTime" class="p-2 border rounded-lg text-sm">
+                    <input type="text" id="manualReminderText" placeholder="Was soll erinnert werden?" class="flex-grow p-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-100 placeholder-slate-500">
+                    <input type="datetime-local" id="manualReminderTime" class="p-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-100">
                 </div>
-                <button onclick="addManualReminder()" class="w-full bg-blue-700 text-white py-2 rounded-lg text-sm font-semibold">Erinnerung speichern</button>
+                <button onclick="addManualReminder()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-semibold">Erinnerung speichern</button>
                 <ul id="reminderList" class="space-y-2 text-sm mt-3">
-                    <li class="text-slate-500">Keine aktiven Erinnerungen.</li>
+                    <li class="text-slate-400">Keine aktiven Erinnerungen.</li>
                 </ul>
             </div>
         </section>
 
-        <!-- Sektion 3: LISTEN -->
         <section id="sec-lists" class="hidden space-y-4">
-            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
-                <h2 class="text-xl font-bold text-blue-800">📝 Aufgaben & Notizen:</h2>
+            <div class="bg-slate-800 p-5 rounded-2xl shadow-md border border-slate-700 space-y-3">
+                <h2 class="text-xl font-bold text-blue-400">📝 Aufgaben & Notizen:</h2>
                 <div class="flex gap-2">
-                    <input type="text" id="manualTodoInput" placeholder="Neue Aufgabe..." class="flex-grow p-2 border rounded-lg text-sm">
-                    <button onclick="addManualTodo()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">＋</button>
+                    <input type="text" id="manualTodoInput" placeholder="Neue Aufgabe..." class="flex-grow p-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-100 placeholder-slate-500">
+                    <button onclick="addManualTodo()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold">＋</button>
                 </div>
                 <ul id="todoList" class="space-y-2 text-base mt-2">
-                    <li class="text-slate-500">Keine offenen To-Dos.</li>
+                    <li class="text-slate-400">Keine offenen To-Dos.</li>
                 </ul>
             </div>
 
-            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
-                <h2 class="text-xl font-bold text-blue-800">🛒 Einkaufsliste:</h2>
+            <div class="bg-slate-800 p-5 rounded-2xl shadow-md border border-slate-700 space-y-3">
+                <h2 class="text-xl font-bold text-blue-400">🛒 Einkaufsliste:</h2>
                 <div class="flex gap-2">
-                    <input type="text" id="manualShoppingInput" placeholder="Artikel hinzufügen..." class="flex-grow p-2 border rounded-lg text-sm">
-                    <button onclick="addManualShoppingItem()" class="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">＋</button>
+                    <input type="text" id="manualShoppingInput" placeholder="Artikel hinzufügen..." class="flex-grow p-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-100 placeholder-slate-500">
+                    <button onclick="addManualShoppingItem()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-semibold">＋</button>
                 </div>
                 <ul id="shoppingList" class="space-y-2 text-base mt-2">
-                    <li class="text-slate-500">Einkaufsliste ist leer.</li>
+                    <li class="text-slate-400">Einkaufsliste ist leer.</li>
                 </ul>
             </div>
         </section>
 
-        <!-- Sektion 4: GEDÄCHTNIS -->
         <section id="sec-memory" class="hidden space-y-4">
-            <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-200 space-y-3">
+            <div class="bg-slate-800 p-5 rounded-2xl shadow-md border border-slate-700 space-y-3">
                 <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-blue-800">🧠 Digitales Langzeitgedächtnis:</h2>
-                    <button onclick="clearAllMemory()" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded-lg text-xs font-semibold">🗑️ Leeren</button>
+                    <h2 class="text-xl font-bold text-blue-400">🧠 Digitales Langzeitgedächtnis:</h2>
+                    <button onclick="clearAllMemory()" class="bg-red-600 hover:bg-red-700 text-white px-2.5 py-1 rounded-lg text-xs font-semibold">🗑️ Leeren</button>
                 </div>
-                <p class="text-xs text-slate-500">Erzähl mir beliebige Fakten, Orte oder Notizen (z.B. „Der Ersatzschlüssel hängt am Klemmbrett“).</p>
-                <div id="categoryContainer" class="space-y-3 text-sm bg-slate-50 p-3 rounded-lg border border-slate-200 max-h-80 overflow-y-auto">
-                    <p class="text-slate-500 text-xs">Noch nichts im Gedächtnis gespeichert.</p>
+                <p class="text-xs text-slate-400">Erzähl mir beliebige Fakten, Orte oder Notizen (z.B. „Der Ersatzschlüssel hängt am Klemmbrett").</p>
+                <div id="categoryContainer" class="space-y-3 text-sm bg-slate-900 p-3 rounded-lg border border-slate-700 max-h-80 overflow-y-auto">
+                    <p class="text-slate-400 text-xs">Noch nichts im Gedächtnis gespeichert.</p>
                 </div>
             </div>
         </section>
 
-        <!-- Sektion 5: EINSTELLUNGEN -->
         <section id="sec-settings" class="hidden space-y-3">
-            <h2 class="text-xl font-bold text-blue-800 px-1">⚙️ Einstellungen</h2>
+            <h2 class="text-xl font-bold text-blue-400 px-1">⚙️ Einstellungen</h2>
 
-            <details class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden" open>
-                <summary class="p-4 font-bold text-slate-800 cursor-pointer bg-slate-50 flex justify-between items-center">
-                    <span>👤 Profil & Anrede</span>
+            <details class="bg-slate-800 rounded-xl shadow-sm border border-slate-700 overflow-hidden" open>
+                <summary class="p-4 font-bold text-slate-200 cursor-pointer bg-slate-800/80 flex justify-between items-center">
+                    <span>👓 Anzeige & Lesbarkeit</span>
                 </summary>
-                <div class="p-4 space-y-3">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Wie soll ich dich nennen?:</label>
-                        <input type="text" id="userNameInput" placeholder="Dein Name..." class="w-full p-2 border rounded-lg text-sm bg-slate-50">
+                <div class="p-4 space-y-4 border-t border-slate-700">
+                    <div class="flex items-center justify-between">
+                        <label for="toggleContrast" class="text-sm font-bold text-slate-300">Starker Kontrast (Schwarz/Weiß)</label>
+                        <input type="checkbox" id="toggleContrast" onchange="toggleHighContrast(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer">
+                    </div>
+                    <div class="flex items-center justify-between border-t border-slate-700/60 pt-3">
+                        <label for="toggleFont" class="text-sm font-bold text-slate-300">Sehr große Schrift</label>
+                        <input type="checkbox" id="toggleFont" onchange="toggleLargeFont(this.checked)" class="w-5 h-5 accent-blue-600 rounded cursor-pointer">
                     </div>
                 </div>
             </details>
 
-            <details class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <summary class="p-4 font-bold text-slate-800 cursor-pointer bg-slate-50 flex justify-between items-center">
+            <details class="bg-slate-800 rounded-xl shadow-sm border border-slate-700 overflow-hidden">
+                <summary class="p-4 font-bold text-slate-200 cursor-pointer bg-slate-800/80 flex justify-between items-center">
+                    <span>👤 Profil & Anrede</span>
+                </summary>
+                <div class="p-4 space-y-3 border-t border-slate-700">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1">Wie soll ich dich nennen?:</label>
+                        <input type="text" id="userNameInput" placeholder="Dein Name..." class="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-100">
+                    </div>
+                </div>
+            </details>
+
+            <details class="bg-slate-800 rounded-xl shadow-sm border border-slate-700 overflow-hidden">
+                <summary class="p-4 font-bold text-slate-200 cursor-pointer bg-slate-800/80 flex justify-between items-center">
                     <span>🔑 Schnittstellen & Konten</span>
                 </summary>
-                <div class="p-4 space-y-3">
+                <div class="p-4 space-y-3 border-t border-slate-700">
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Groq API-Key (gsk_...):</label>
-                        <input type="password" id="apiKeyInput" placeholder="gsk_..." class="w-full p-2 border rounded-lg text-sm bg-slate-50">
+                        <label class="block text-xs font-bold text-slate-400 mb-1">Google Client-ID:</label>
+                        <input type="text" id="googleClientIdInput" placeholder="Client ID..." class="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-100">
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Google Client-ID:</label>
-                        <input type="text" id="googleClientIdInput" placeholder="Client ID..." class="w-full p-2 border rounded-lg text-sm bg-slate-50">
-                    </div>
-                    <div class="pt-2 border-t">
+                    <div class="pt-2 border-t border-slate-700">
                         <button onclick="loginWithGoogle(false)" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
                             📅 Mit Google Kalender verbinden
                         </button>
                     </div>
-                    <p id="connectionStatus" class="text-xs text-slate-600 font-medium break-all"></p>
+                    <p id="connectionStatus" class="text-xs text-slate-400 font-medium break-all"></p>
                 </div>
             </details>
 
-            <details class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <summary class="p-4 font-bold text-slate-800 cursor-pointer bg-slate-50 flex justify-between items-center">
+            <details class="bg-slate-800 rounded-xl shadow-sm border border-slate-700 overflow-hidden">
+                <summary class="p-4 font-bold text-slate-200 cursor-pointer bg-slate-800/80 flex justify-between items-center">
                     <span>📍 Standort & GPS</span>
                 </summary>
-                <div class="p-4 space-y-3">
-                    <p class="text-xs text-slate-500">Erforderlich für Ortsabfragen ("Wo bin ich?") und lokales Wetter.</p>
-                    <button onclick="requestLocationPermission()" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-2 rounded-lg text-sm font-semibold">
+                <div class="p-4 space-y-3 border-t border-slate-700">
+                    <p class="text-xs text-slate-400">Erforderlich für Ortsabfragen ("Wo bin ich?") und lokales Wetter.</p>
+                    <button onclick="requestLocationPermission()" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-lg text-sm font-semibold border border-slate-600">
                         Standort-Zugriff aktivieren
                     </button>
                 </div>
             </details>
 
-            <details class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <summary class="p-4 font-bold text-slate-800 cursor-pointer bg-slate-50 flex justify-between items-center">
+            <details class="bg-slate-800 rounded-xl shadow-sm border border-slate-700 overflow-hidden">
+                <summary class="p-4 font-bold text-slate-200 cursor-pointer bg-slate-800/80 flex justify-between items-center">
                     <span>📞 Schnell-Anruf Kontakte</span>
                 </summary>
-                <div class="p-4 space-y-3">
+                <div class="p-4 space-y-3 border-t border-slate-700">
                     <div class="flex gap-2">
-                        <input type="text" id="contactNameInput" placeholder="Name (z.B. Simone)" class="w-1/2 p-2 border rounded-lg text-sm bg-slate-50">
-                        <input type="text" id="contactPhoneInput" placeholder="Nummer..." class="w-1/2 p-2 border rounded-lg text-sm bg-slate-50">
+                        <input type="text" id="contactNameInput" placeholder="Name (z.B. Schatz)" class="w-1/2 p-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-100">
+                        <input type="text" id="contactPhoneInput" placeholder="Nummer..." class="w-1/2 p-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-100">
                     </div>
-                    <button onclick="saveContact()" class="w-full bg-slate-700 text-white py-2 rounded-lg text-sm font-semibold">Kontakt hinzufügen</button>
-                    <div id="contactListDisplay" class="mt-2 text-xs text-slate-600 space-y-1"></div>
+                    <button onclick="saveContact()" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-lg text-sm font-semibold border border-slate-600">Kontakt hinzufügen</button>
+                    <div id="contactListDisplay" class="mt-2 text-xs text-slate-400 space-y-1"></div>
                 </div>
             </details>
         </section>
 
     </main>
 
-    <!-- Fußbereich -->
-    <footer class="bg-slate-200 text-center p-3 text-xs text-slate-600 flex justify-between items-center px-6">
+    <footer class="bg-slate-800 border-t border-slate-700 text-center p-3 text-xs text-slate-400 flex justify-between items-center px-6">
         <span>Mein Alltags-Helfer PWA</span>
-        <span>Version 8.5 (Gedächtnis-Suche)</span>
+        <span>Version 9.5 (Stabilized)</span>
     </footer>
 
-    <!-- JavaScript -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -254,7 +332,7 @@
                 const el = document.getElementById(`sec-${s}`);
                 if (el) el.classList.add('hidden');
                 const navBtn = document.getElementById(`nav${s.charAt(0).toUpperCase() + s.slice(1)}`);
-                if (navBtn) navBtn.className = "flex-1 py-2.5 px-1 rounded-lg text-slate-600 hover:bg-slate-100 transition text-center";
+                if (navBtn) navBtn.className = "flex-1 py-2.5 px-1 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-slate-200 transition text-center";
             });
 
             const targetSec = document.getElementById(`sec-${sectionId}`);
@@ -276,6 +354,26 @@
             }
         }
 
+        function toggleHighContrast(enabled) {
+            if (enabled) {
+                document.body.classList.add('high-contrast-mode');
+                setPersistentData('helfer_high_contrast', 'true');
+            } else {
+                document.body.classList.remove('high-contrast-mode');
+                setPersistentData('helfer_high_contrast', 'false');
+            }
+        }
+
+        function toggleLargeFont(enabled) {
+            if (enabled) {
+                document.body.classList.add('large-font-mode');
+                setPersistentData('helfer_large_font', 'true');
+            } else {
+                document.body.classList.remove('large-font-mode');
+                setPersistentData('helfer_large_font', 'false');
+            }
+        }
+
         const recordBtn = document.getElementById('recordBtn');
         const recordText = document.getElementById('recordText');
         const statusMessage = document.getElementById('statusMessage');
@@ -285,7 +383,6 @@
         const shoppingList = document.getElementById('shoppingList');
         const categoryContainer = document.getElementById('categoryContainer');
         
-        const apiKeyInput = document.getElementById('apiKeyInput');
         const googleClientIdInput = document.getElementById('googleClientIdInput');
         const userNameInput = document.getElementById('userNameInput');
         const userNameDisplay = document.getElementById('userNameDisplay');
@@ -297,21 +394,27 @@
 
         function getPersistentData(key, defaultValue) {
             let val = localStorage.getItem(key);
-            if (!val || val === "null" || val === "undefined") val = sessionStorage.getItem(key);
             return (!val || val === "null" || val === "undefined") ? defaultValue : val;
         }
 
         function setPersistentData(key, value) {
             try { localStorage.setItem(key, value); } catch (e) {}
-            try { sessionStorage.setItem(key, value); } catch (e) {}
+        }
+
+        if (getPersistentData('helfer_high_contrast', 'false') === 'true') {
+            document.body.classList.add('high-contrast-mode');
+            const chk = document.getElementById('toggleContrast');
+            if (chk) chk.checked = true;
+        }
+        if (getPersistentData('helfer_large_font', 'false') === 'true') {
+            document.body.classList.add('large-font-mode');
+            const chk = document.getElementById('toggleFont');
+            if (chk) chk.checked = true;
         }
 
         let currentUserName = getPersistentData('user_custom_name', 'Dino');
         if (userNameInput) userNameInput.value = currentUserName;
         updateUserGreeting();
-
-        let savedKey = getPersistentData('user_api_key', '');
-        if (savedKey && apiKeyInput) apiKeyInput.value = savedKey;
 
         const DEFAULT_CLIENT_ID = '399573320370-qka01ghj0s88eoair7lla665cbj10o4g.apps.googleusercontent.com';
         let savedClientId = getPersistentData('google_client_id', DEFAULT_CLIENT_ID);
@@ -326,13 +429,6 @@
                 currentUserName = userNameInput.value.trim() || "Dino";
                 setPersistentData('user_custom_name', currentUserName);
                 updateUserGreeting();
-            });
-        }
-
-        if (apiKeyInput) {
-            apiKeyInput.addEventListener('input', () => {
-                setPersistentData('user_api_key', apiKeyInput.value.trim());
-                if (connectionStatus) connectionStatus.textContent = "API-Key gespeichert.";
             });
         }
 
@@ -358,7 +454,6 @@
         renderAllLists();
         renderContactList();
 
-        // LOKALE GEDÄCHTNIS-SUCHFUNKTION (Unverändertes Auslesen)
         function searchMemory(query) {
             if (!query || typeof memoryItems !== 'object') return [];
             const lowerQuery = query.toLowerCase().trim();
@@ -381,7 +476,7 @@
                     .sort((a, b) => new Date(a.isoDate) - new Date(b.isoDate));
                 if (validCal.length > 0) {
                     const topCal = validCal[0];
-                    const dateFormatted = new Date(topCal.isoDate).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+                    const dateFormatted = new Date(topCal.isoDate).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
                     nextCal = `${topCal.text} (${dateFormatted})`;
                 } else if (calendarEntries[0].text) {
                     nextCal = calendarEntries[0].text;
@@ -395,7 +490,7 @@
                     .sort((a, b) => new Date(a.time) - new Date(b.time));
                 if (validRem.length > 0) {
                     const topRem = validRem[0];
-                    const remFormatted = new Date(topRem.time).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+                    const remFormatted = new Date(topRem.time).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
                     nextRem = `${topRem.text} (${remFormatted})`;
                 }
             }
@@ -466,13 +561,13 @@
                 setPersistentData('helfer_reminders', JSON.stringify(reminderEntries));
                 renderAllLists();
             }
-        }, 1000);
+        }, 15000);
 
         let tokenClient = null;
         let accessToken = getPersistentData('google_access_token', '');
         let pendingAction = null;
 
-        function initTokenClient(callbackAction) {
+        function initTokenClient() {
             const clientId = getPersistentData('google_client_id', DEFAULT_CLIENT_ID);
             if (!clientId) return false;
 
@@ -561,7 +656,7 @@
                     if (res.ok) {
                         const data = await res.json();
                         createdId = data.id;
-                        fetchGoogleCalendarEvents();
+                        await fetchGoogleCalendarEvents();
                         return;
                     }
                 } catch (e) {
@@ -572,7 +667,7 @@
             calendarEntries.unshift({
                 id: createdId,
                 text: text,
-                date: eventDate.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: 'short' }),
+                date: eventDate.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
                 isoDate: eventDate.toISOString()
             });
             setPersistentData('helfer_calendar_entries', JSON.stringify(calendarEntries));
@@ -633,7 +728,7 @@
             if (!inputEl) return;
             const val = inputEl.value.trim();
             if (val) {
-                todoEntries.unshift({ id: Date.now(), text: val, createdDate: 'Manuell' });
+                todoEntries.unshift({ id: Date.now(), text: val, createdDate: 'Manuell', createdAt: new Date().toISOString() });
                 setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
                 inputEl.value = '';
                 renderAllLists();
@@ -673,7 +768,7 @@
         function renderContactList() {
             if (!contactListDisplay) return;
             const keys = Object.keys(savedContacts);
-            contactListDisplay.innerHTML = keys.length === 0 ? 'Keine Kontakte.' : keys.map(k => `<div class="flex justify-between items-center bg-slate-50 p-2 rounded border my-1"><span>${savedContacts[k].originalName}: ${savedContacts[k].phone}</span><button onclick="deleteContact('${k}')" class="text-red-600 font-bold">Löschen</button></div>`).join('');
+            contactListDisplay.innerHTML = keys.length === 0 ? 'Keine Kontakte.' : keys.map(k => `<div class="flex justify-between items-center bg-slate-900 p-2 rounded border border-slate-700 my-1"><span>${savedContacts[k].originalName}: ${savedContacts[k].phone}</span><button onclick="deleteContact('${k}')" class="text-red-400 font-bold">Löschen</button></div>`).join('');
         }
 
         async function fetchGoogleCalendarEvents() {
@@ -710,7 +805,7 @@
                             return {
                                 id: item.id,
                                 text: item.summary || 'Termin',
-                                date: d.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: item.start.dateTime ? 'short' : undefined }),
+                                date: d.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', weekday: 'short', day: '2-digit', month: '2-digit', hour: item.start.dateTime ? '2-digit' : undefined, minute: item.start.dateTime ? '2-digit' : undefined }),
                                 isoDate: item.start.dateTime || item.start.date
                             };
                         });
@@ -812,11 +907,11 @@
             });
         }
 
-        async function fetchWeatherData() {
+        async function fetchWeatherData(customLat = null, customLon = null) {
             return new Promise((resolve) => {
                 const getMeteo = async (lat, lon) => {
                     try {
-                        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m`);
+                        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Europe%2FBerlin`);
                         const data = await res.json();
                         resolve({
                             temperatur: Math.round(data.current.temperature_2m),
@@ -824,6 +919,7 @@
                             niederschlag: data.current.precipitation,
                             windstärke: data.current.wind_speed_10m,
                             wettercode: data.current.weather_code,
+                            täglich: data.daily || {},
                             koordinaten: { lat, lon }
                         });
                     } catch (e) {
@@ -831,14 +927,16 @@
                     }
                 };
 
-                if (navigator.geolocation) {
+                if (customLat && customLon) {
+                    getMeteo(customLat, customLon);
+                } else if (navigator.geolocation) {
                     navigator.geolocation.getCurrentPosition(
                         (pos) => getMeteo(pos.coords.latitude, pos.coords.longitude),
-                        () => getMeteo(53.5511, 9.9937),
+                        () => getMeteo(53.5008, 10.4722), // Standard-Fallback: Schwarzenbek
                         { timeout: 5000 }
                     );
                 } else {
-                    getMeteo(53.5511, 9.9937);
+                    getMeteo(53.5008, 10.4722); // Standard-Fallback: Schwarzenbek
                 }
             });
         }
@@ -849,13 +947,14 @@
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'de-DE';
-                utterance.rate = 1.05;
+                utterance.rate = 1.0;
+                utterance.pitch = 1.0;
                 utterance.onend = () => { if (onComplete) onComplete(); };
                 window.speechSynthesis.speak(utterance);
             } else {
                 if (currentAudio) { currentAudio.pause(); currentAudio = null; }
                 currentAudio = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=de&client=tw-ob`);
-                currentAudio.playbackRate = 1.2;
+                currentAudio.playbackRate = 1.0;
                 currentAudio.play().catch(() => {});
                 currentAudio.onended = () => { currentAudio = null; if (onComplete) onComplete(); };
             }
@@ -868,51 +967,84 @@
         if (SpeechRecognition) {
             recognition = new SpeechRecognition();
             recognition.lang = 'de-DE';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
             recognition.onstart = () => {
                 isRecording = true;
                 if (statusMessage) statusMessage.textContent = "Höre zu...";
                 if (recordBtn) {
-                    recordBtn.classList.replace('bg-red-600', 'bg-emerald-600');
-                    recordBtn.classList.add('animate-pulse');
+                    recordBtn.classList.remove('bg-red-600', 'hover:bg-red-700', 'pulse-red');
+                    recordBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700', 'pulse-green');
                 }
                 if (recordText) recordText.textContent = "HÖRE...";
             };
+
             recognition.onresult = (event) => {
-                const text = event.results[0][0].transcript;
-                if (statusMessage) statusMessage.textContent = `Erkannt: "${text}"`;
-                sendToGroqSmart(text);
+                const text = event.results[0] && event.results[0][0] ? event.results[0][0].transcript.trim() : "";
+                if (text.length > 0) {
+                    if (statusMessage) statusMessage.textContent = `Erkannt: "${text}"`;
+                    sendToGroqSmart(text);
+                } else {
+                    handleSpeechError('no-speech');
+                }
             };
-            recognition.onerror = () => resetButton();
+
+            recognition.onerror = (event) => {
+                console.error("Spracherkennungsfehler:", event.error);
+                handleSpeechError(event.error);
+                resetButton();
+            };
+
             recognition.onend = () => resetButton();
         }
 
-        function toggleSpeechRecognition() {
-            if (!getPersistentData('user_api_key', '')) {
-                alert('Bitte Groq API-Key in den Einstellungen hinterlegen!');
-                switchSection('settings');
-                return;
+        function handleSpeechError(errorCode) {
+            let errorMsg = "Ich habe dich nicht verstanden, bitte nochmal.";
+            if (errorCode === 'not-allowed') {
+                errorMsg = "Mikrofon-Zugriff verweigert. Bitte Einstellungen prüfen.";
+            } else if (errorCode === 'network') {
+                errorMsg = "Netzwerkfehler. Bitte Internetverbindung prüfen.";
             }
+            if (statusMessage) statusMessage.textContent = errorMsg;
+            speak(errorMsg);
+        }
+
+        function toggleSpeechRecognition() {
             if (!recognition) {
                 alert('Spracherkennung wird von diesem Browser leider nicht unterstützt.');
                 return;
             }
-            if (isRecording) recognition.stop();
-            else recognition.start();
+            if (isRecording) {
+                recognition.stop();
+            } else {
+                if (recordBtn) {
+                    recordBtn.classList.remove('bg-red-600', 'hover:bg-red-700', 'pulse-red');
+                    recordBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700', 'pulse-green');
+                }
+                if (recordText) recordText.textContent = "HÖRE...";
+                if (statusMessage) statusMessage.textContent = "Höre zu...";
+                try {
+                    recognition.start();
+                } catch(e) {
+                    console.error("Start-Fehler:", e);
+                }
+            }
         }
 
         function resetButton() {
             isRecording = false;
             if (recordBtn) {
-                recordBtn.classList.replace('bg-emerald-600', 'bg-red-600');
-                recordBtn.classList.remove('animate-pulse');
+                recordBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700', 'pulse-green');
+                recordBtn.classList.add('bg-red-600', 'hover:bg-red-700', 'pulse-red');
             }
             if (recordText) recordText.textContent = "SPRECHEN";
         }
 
         async function triggerDailyBriefing() {
             const now = new Date();
-            const hour = now.getHours();
-            const timeStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+            const hour = parseInt(now.toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', hour12: false }), 10);
+            const timeStr = now.toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' });
             
             let greeting = "Guten Morgen";
             if (hour >= 12 && hour < 18) greeting = "Hallo";
@@ -920,14 +1052,22 @@
 
             let text = `${greeting} ${currentUserName}! Es ist jetzt ${timeStr} Uhr. `;
             
-            if (statusMessage) statusMessage.textContent = "Hole Wetter...";
-            const weather = await fetchWeatherData();
+            if (statusMessage) statusMessage.textContent = "Hole Standort & Wetter...";
+            const locData = await fetchLocationData();
+            let weather = null;
+            if (locData && locData.koordinaten) {
+                weather = await fetchWeatherData(locData.koordinaten.lat, locData.koordinaten.lon);
+            } else {
+                weather = await fetchWeatherData();
+            }
+
             if (weather && !weather.fehler) {
                 const temp = weather.temperatur;
                 const regen = weather.niederschlag;
                 const wind = weather.windstärke;
+                const ortName = (locData && locData.details) ? (locData.details.town || locData.details.city || locData.details.village || "deinem Standort") : "deinem Standort";
 
-                text += `Draußen sind es aktuell ${temp} Grad. `;
+                text += `In ${ortName} sind es aktuell ${temp} Grad. `;
 
                 if (temp < 10) {
                     text += "Es ist recht kalt, zieh dir am besten eine dicke Winterjacke an. ";
@@ -972,10 +1112,27 @@
                 text += "Was deine Termine angeht: Für heute und morgen steht nichts weiter im Kalender. ";
             }
 
-            if (reminderEntries && reminderEntries.length > 0) {
-                const remList = reminderEntries.map(e => {
-                    const timeFormatted = new Date(e.time).toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' });
-                    return `${e.text} um ${timeFormatted} Uhr`;
+            const activeReminders = (reminderEntries || []).filter(e => !e.triggered);
+            if (activeReminders.length > 0) {
+                const remList = activeReminders.map(e => {
+                    const remDate = new Date(e.time);
+                    const isToday = remDate.toDateString() === todayStr;
+                    const isTomorrow = remDate.toDateString() === tomorrowStr;
+                    
+                    const timeFormatted = remDate.toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' });
+                    const dateFormatted = remDate.toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin', day: 'numeric', month: 'long' });
+                    const weekdayFormatted = remDate.toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin', weekday: 'long' });
+
+                    let dayText = "";
+                    if (isToday) {
+                        dayText = "heute";
+                    } else if (isTomorrow) {
+                        dayText = "morgen";
+                    } else {
+                        dayText = `am ${weekdayFormatted}, den ${dateFormatted},`;
+                    }
+
+                    return `${e.text} (${dayText} um ${timeFormatted} Uhr)`;
                 }).join(' und ');
                 text += `Denk bitte an deine aktiven Erinnerungen: ${remList}. `;
             }
@@ -993,17 +1150,38 @@
                 const memList = importantMemoryItems.map(k => {
                     const rawVal = typeof memoryItems[k] === 'object' ? JSON.stringify(memoryItems[k]) : memoryItems[k];
                     const valText = String(rawVal).trim();
-                    const prefix = (valText.startsWith('hängt') || valText.startsWith('liegt') || valText.startsWith('steht') || valText.startsWith('ist')) ? '' : 'liegt ';
-                    return `${k} ${prefix}${valText}`;
+                    const lowerVal = valText.toLowerCase();
+                    
+                    let formattedKey = k.charAt(0).toUpperCase() + k.slice(1);
+                    
+                    const hasVerb = /\b(hängt|liegt|steht|ist|befindet)\b/i.test(lowerVal);
+                    const hasPrep = /\b(auf|in|an|unter|über|neben|zwischen|vor|hinter)\b/i.test(lowerVal);
+                    
+                    let prefix = "";
+                    if (!hasVerb && !hasPrep) {
+                        prefix = "liegt auf dem ";
+                    } else if (!hasVerb && hasPrep) {
+                        prefix = "liegt ";
+                    } else {
+                        prefix = "";
+                    }
+                    
+                    return `deine ${formattedKey} ${prefix}${valText}`;
                 }).join(', und ');
-                text += `Kurzer Hinweis für unterwegs: ${memList}. `;
+                text += `Kurzer Hinweis für unterwegs: Denk daran, ${memList}. `;
             }
 
-            if (todoEntries && todoEntries.length > 0) {
-                if (todoEntries.length === 1) {
-                    text += `Auf deiner Aufgabenliste steht noch: ${todoEntries[0].text}. `;
+            const fortyEightHoursAgo = new Date(now.getTime() - (48 * 60 * 60 * 1000));
+            const recentTodoEntries = (todoEntries || []).filter(e => {
+                if (!e.createdAt) return true;
+                return new Date(e.createdAt) >= fortyEightHoursAgo;
+            });
+
+            if (recentTodoEntries.length > 0) {
+                if (recentTodoEntries.length === 1) {
+                    text += `Auf deiner Aufgabenliste steht noch: ${recentTodoEntries[0].text}. `;
                 } else {
-                    const todoListTexts = todoEntries.map(e => e.text).join(', ');
+                    const todoListTexts = recentTodoEntries.map(e => e.text).join(', ');
                     text += `Offene Aufgaben hast du aktuell folgende: ${todoListTexts}. `;
                 }
             }
@@ -1026,20 +1204,66 @@
             speak(text);
         }
 
+        function showLocationSharePrompt(locationName, shareText) {
+            const card = document.getElementById('locationShareCard');
+            const addrText = document.getElementById('locationAddressText');
+            const btnYes = document.getElementById('btnShareLocationYes');
+
+            if (card && addrText && btnYes) {
+                addrText.textContent = locationName;
+                btnYes.onclick = () => {
+                    if (navigator.share) {
+                        navigator.share({
+                            title: 'Mein Standort',
+                            text: shareText
+                        }).catch(() => {
+                            window.location.href = `whatsapp://send?text=${encodeURIComponent(shareText)}`;
+                        });
+                    } else {
+                        window.location.href = `whatsapp://send?text=${encodeURIComponent(shareText)}`;
+                    }
+                    dismissLocationShare();
+                };
+                card.classList.remove('hidden');
+            }
+        }
+
+        function dismissLocationShare() {
+            const card = document.getElementById('locationShareCard');
+            if (card) card.classList.add('hidden');
+        }
+
         async function sendToGroqSmart(text) {
-            const key = getPersistentData('user_api_key', '');
             if (statusMessage) statusMessage.textContent = "Verarbeite Befehl...";
 
             let weatherInfo = null;
             let locationInfo = null;
             const lowerText = text.toLowerCase();
 
-            if (lowerText.includes('wo bin ich') || lowerText.includes('wo befinde ich') || lowerText.includes('mein standort') || lowerText.includes('aktueller ort') || lowerText.includes('welche straße') || lowerText.includes('welcher ort') || lowerText.includes('wo bin') || lowerText.includes('wo sind wir')) {
-                if (statusMessage) statusMessage.textContent = "Bestimme Standort...";
-                locationInfo = await fetchLocationData();
-            }
+            const isLocationQuery = 
+                lowerText.includes('wo bin ich') || 
+                lowerText.includes('wo befinde ich') || 
+                lowerText.includes('mein standort') || 
+                lowerText.includes('aktueller ort') || 
+                lowerText.includes('welche straße') || 
+                lowerText.includes('welcher ort') || 
+                lowerText.includes('wo bin') || 
+                lowerText.includes('wo sind wir') || 
+                lowerText.includes('verwirrt') || 
+                lowerText.includes('orientierungslos') || 
+                lowerText.includes('nicht wo ich bin') ||
+                lowerText.includes('verlaufen') ||
+                lowerText.includes('hilfe wo') ||
+                lowerText.includes('sag mir wo') ||
+                lowerText.includes('standort') ||
+                lowerText.includes('wo ich mich aufhalte') ||
+                lowerText.includes('wo stehe ich') ||
+                lowerText.includes('wo ich stehe') ||
+                lowerText.includes('wo bin ich gerade') ||
+                lowerText.includes('meine adresse') ||
+                lowerText.includes('wo ich bin');
 
-            if (
+            const isWeatherQuery = 
                 lowerText.includes('wetter') || 
                 lowerText.includes('regenschirm') || 
                 lowerText.includes('regen') || 
@@ -1051,15 +1275,46 @@
                 lowerText.includes('kalt') ||
                 lowerText.includes('warm') ||
                 lowerText.includes('sonne') ||
-                lowerText.includes('frieren')
-            ) {
-                if (statusMessage) statusMessage.textContent = "Hole Wetter...";
-                weatherInfo = await fetchWeatherData();
+                lowerText.includes('frieren');
+
+            if (isLocationQuery || isWeatherQuery) {
+                if (statusMessage) statusMessage.textContent = "Ermittle Standort...";
+                locationInfo = await fetchLocationData();
             }
 
-            // Vollständiger Kontext für Abfragen
+            if (isWeatherQuery) {
+                if (statusMessage) statusMessage.textContent = "Hole Wetterdaten...";
+                if (locationInfo && locationInfo.koordinaten) {
+                    weatherInfo = await fetchWeatherData(locationInfo.koordinaten.lat, locationInfo.koordinaten.lon);
+                } else {
+                    weatherInfo = await fetchWeatherData();
+                }
+                
+                if (locationInfo && locationInfo.details) {
+                    weatherInfo.ort = locationInfo.details.town || locationInfo.details.city || locationInfo.details.village || "deinem aktuellen Standort";
+                }
+            }
+
+            const now = new Date();
+            const nowGermanIso = now.toLocaleString('sv-SE', { timeZone: 'Europe/Berlin' }).replace(' ', 'T');
+            const wochentag = now.toLocaleDateString('de-DE', { weekday: 'long', timeZone: 'Europe/Berlin' });
+
+            const tomorrow = new Date(now);
+            tomorrow.setDate(now.getDate() + 1);
+            const morgenDateStr = tomorrow.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Berlin' });
+
+            // Nächsten Sonntag berechnen
+            const nextSunday = new Date(now);
+            const daysUntilSunday = (7 - now.getDay()) % 7;
+            nextSunday.setDate(now.getDate() + (daysUntilSunday === 0 ? 7 : daysUntilSunday));
+            const nextSundayStr = nextSunday.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Berlin' });
+
             const contextData = {
-                heute_datum: new Date().toISOString(),
+                heute_datum: nowGermanIso,
+                heute_wochentag: wochentag,
+                morgen_datum: morgenDateStr,
+                naechster_sonntag_datum: nextSundayStr,
+                aktuelles_jahr: now.getFullYear(),
                 gedächtnis: memoryItems,
                 kontakte: savedContacts,
                 termine: calendarEntries,
@@ -1070,89 +1325,102 @@
                 standort: locationInfo
             };
 
+            const systemPrompt = "Du bist " + currentUserName + "s smarter, persönlicher Alltags-Assistent.\n" +
+            "Aktueller Daten-Kontext: " + JSON.stringify(contextData) + "\n\n" +
+            "WICHTIG ZUR ZEIT & DATUM:\n" +
+            "- Aktuelles Datum und deutsche Ortszeit: " + nowGermanIso + ".\n" +
+            "- Aktueller Wochentag: " + wochentag + ".\n" +
+            "- Morgen ist: " + morgenDateStr + ".\n" +
+            "- Der kommende/nächste Sonntag ist der: " + nextSundayStr + ".\n" +
+            "- Berechne relative Datumsangaben (z.B. 'morgen', 'am Sonntag', 'übermorgen', 'am Freitag') STRENG basierend auf dem aktuellen Wochentag (" + wochentag + "). Wenn heute Samstag ist, ist 'am Sonntag' MORGEN (" + nextSundayStr + ")!\n\n" +
+            "WICHTIG ZUM STANDORT UND WETTER:\n" +
+            "- Verwende bei Wetterfragen IMMER den im Kontext übergebenen Ort (aus 'standort' oder 'wetter.ort'). Wenn der Benutzer fragt, wo er ist oder wie das Wetter wird, nenne diesen genauen Ort und NIEMALS automatisch Berlin oder Hamburg, außer er befindet sich tatsächlich dort.\n\n" +
+            "Analysiere den Sprachbefehl des Benutzers und unterscheide PRÄZISE:\n\n" +
+            "STRIKTE CATEGORY-REGELN:\n" +
+            "- \"location\": JEDE Frage, die mit dem Standort, der Position, der Straße, dem Aufenthaltsort oder Verwirrung/Orientierung zu tun hat.\n" +
+            "- \"forgot_check\": Wenn der Benutzer fragt, ob er etwas vergessen hat.\n" +
+            "- \"chat\": Fragen nach Wetter, Allgemeinwissen oder Inhalten aus den Listen (Einkauf, Aufgaben, Termine).\n" +
+            "- \"shopping\": NEUE Artikel zur Einkaufsliste HINZUFÜGEN.\n" +
+            "- \"todo\": Reine zeitlose Aufgaben, Notizen oder Gedanken speichern OHNE zeitlichen Bezug.\n" +
+            "- \"reminder\": Neue zeitgesteuerte Erinnerung anlegen. WICHTIG: Wenn eine Aufgabe einen Zeitbezug oder ein Datum enthält (z.B. 'morgen', 'heute Abend', 'am Freitag', 'am Sonntag', 'um 14 Uhr'), benutze IMMER 'reminder' statt 'todo'.\n" +
+            "- \"memory_store\": Feste Fakten, Standorte von Gegenständen oder persönliches Wissen SPEICHERN.\n" +
+            "- \"memory_search\": Nach gespeicherten Infos im Gedächtnis fragen.\n" +
+            "- \"calendar_delete\": Termin LÖSCHEN oder ENTFERNEN.\n" +
+            "- \"reminder_delete\": Erinnerung löschen.\n" +
+            "- \"name_change\": Wie der Benutzer genannt werden möchte.\n" +
+            "- \"calendar\": Neuer fester Kalender-Termin anlegen.\n" +
+            "- \"call\": Telefonanruf starten.\n\n" +
+            "MEHRSPRACHIGKEIT:\n" +
+            "- Antworte immer in der Sprache des Benutzers.\n\n" +
+            "Gib IMMER ein valides JSON-Objekt zurück mit:\n" +
+            "- type: \"forgot_check\", \"chat\", \"location\", \"memory_store\", \"memory_search\", \"todo\", \"calendar\", \"calendar_delete\", \"reminder\", \"reminder_delete\", \"shopping\", \"call\", \"name_change\"\n" +
+            "- new_name\n" +
+            "- memory_key, memory_value, memory_search_query\n" +
+            "- todo_items, shopping_items, reminder_text, reminder_time, calendar_text, calendar_time, call_contact\n" +
+            "- calendar_delete_query\n" +
+            "- reminder_delete_query\n" +
+            "- reply: Natürliche, grammatikalisch einwandfreie Antwort.";
+
             try {
-                const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                const res = await fetch('/api/groq', {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         model: "openai/gpt-oss-120b",
                         response_format: { type: "json_object" },
                         messages: [
-                            {
-                                role: "system",
-                                content: `Du bist ${currentUserName}s smarter, persönlicher Alltags-Assistent. 
-                                Aktueller Daten-Kontext: ${JSON.stringify(contextData)}.
-                                
-                                Analysiere den Sprachbefehl des Benutzers und unterscheide PRÄZISE:
-                                
-                                STRIKTE CATEGORY-REGELN:
-                                - "chat": Fragen nach Inhalten aus den Listen (z. B. "Was steht auf meiner Einkaufsliste?", "Welche Aufgaben habe ich?", "Welche Termine stehen an?"). Nutze die Daten aus dem Daten-Kontext, um in 'reply' eine präzise und freundliche Antwort zu formulieren!
-                                
-                                - "shopping": Wenn der Benutzer NEUE Artikel zur Einkaufsliste HINZUFÜGEN möchte (z. B. "Setz Milch auf den Einkaufszettel").
-                                
-                                - "todo": Für alle Aufgaben ODER Notizen/Gedanken (z. B. "Erstelle eine Notiz...", "Schreib auf...", "Notiere...", "Erinnere mich nicht, aber merk dir als Notiz...").
-                                
-                                - "memory_store": Ausschließlich für feste Fakten, Standorte von Gegenständen oder persönliches Wissen zum SPEICHERN (z. B. "Der Schlüssel hängt am Klemmbrett", "PIN ist 1234"). Keine Vorhaben oder flexiblen Notizen!
-                                
-                                - "memory_search": Wenn der Benutzer nach gespeicherten Informationen, Fakten, Orten oder Dingen im Gedächtnis fragt oder sucht (z. B. "Wo ist mein Schlüssel?", "Suche im Gedächtnis nach PIN", "Was weißt du über mein Auto?", "Wo habe ich X abgelegt?"). Gib im Feld 'memory_search_query' den gesuchten Begriff an.
-                                
-                                - "calendar_delete": Wenn der Benutzer einen Termin LÖSCHEN oder ENTFERNEN möchte (z. B. "Lösche den Arbeitsamt Termin", "Entferne den Arzttermin"). 
-                                  Gib im Feld 'calendar_delete_query' das Kern-Suchwort des Termins an (z. B. "arbeitsamt").
-                                
-                                - "reminder_delete": Wenn der Benutzer eine Erinnerung löschen möchte. Gib 'reminder_delete_query' zurück.
-                                
-                                - "name_change": Wenn der Benutzer sagt, wie er genannt werden möchte.
-                                - "location": Fragen nach dem aktuellen physischen Standort.
-                                - "reminder": Neue zeitgesteuerte Erinnerung anlegen.
-                                - "calendar": Neuer fester Kalender-Termin anlegen.
-                                - "call": Telefonanruf starten.
-
-                                MEHRSPRACHIGKEIT:
-                                - Antworte immer in der Sprache des Benutzers.
-
-                                Gib IMMER ein valides JSON-Objekt zurück mit:
-                                - type: "chat", "location", "memory_store", "memory_search", "todo", "calendar", "calendar_delete", "reminder", "reminder_delete", "shopping", "call", "name_change"
-                                - new_name
-                                - memory_key, memory_value, memory_search_query
-                                - todo_items, shopping_items, reminder_text, reminder_time, calendar_text, calendar_time, call_contact
-                                - calendar_delete_query (Kernwort des zu löschenden Termins)
-                                - reminder_delete_query (Kernwort der zu löschenden Erinnerung)
-                                - reply: Natürliche, grammatikalisch einwandfreie Antwort.`
-                            },
+                            { role: "system", content: systemPrompt },
                             { role: "user", content: text }
                         ]
                     })
                 });
 
                 const data = await res.json();
-                const ai = JSON.parse(data.choices[0].message.content);
+                
+                let ai = {};
+                if (data.choices && data.choices[0] && data.choices[0].message) {
+                    const content = data.choices[0].message.content;
+                    ai = typeof content === 'string' ? JSON.parse(content) : content;
+                }
 
-                if (ai.type === 'name_change' && ai.new_name) {
+                if (ai.type === 'location' || isLocationQuery) {
+                    if (!locationInfo) {
+                        if (statusMessage) statusMessage.textContent = "Bestimme Standort...";
+                        locationInfo = await fetchLocationData();
+                    }
+                    
+                    let responseText = "";
+                    
+                    if (locationInfo && !locationInfo.fehler && locationInfo.details) {
+                        const road = locationInfo.details.road || locationInfo.details.pedestrian || "einer unbekannten Straße";
+                        const houseNumber = locationInfo.details.house_number ? ` ${locationInfo.details.house_number}` : "";
+                        const city = locationInfo.details.city || locationInfo.details.town || locationInfo.details.village || locationInfo.details.suburb || "";
+                        const lat = locationInfo.koordinaten.lat;
+                        const lon = locationInfo.koordinaten.lon;
+
+                        const locationName = `${road}${houseNumber}${city ? ' in ' + city : ''}`;
+                        responseText = `Du bist aktuell im ${locationName}. Möchtest du deinen Standort per WhatsApp teilen?`;
+
+                        const mapsUrl = `https://maps.google.com/?q=${lat},${lon}`;
+                        const shareText = `Hallo, ich bin gerade hier: ${mapsUrl}`;
+
+                        showLocationSharePrompt(locationName, shareText);
+
+                    } else if (locationInfo && locationInfo.fehler) {
+                        responseText = locationInfo.fehler;
+                    } else {
+                        responseText = `Ich konnte deinen aktuellen Standort leider nicht genau ermitteln.`;
+                    }
+                    
+                    renderAllLists();
+                    speak(responseText);
+                    if (statusMessage) statusMessage.textContent = "Standort ermittelt.";
+                    return;
+                } else if (ai.type === 'name_change' && ai.new_name) {
                     currentUserName = ai.new_name.trim();
                     setPersistentData('user_custom_name', currentUserName);
                     if (userNameInput) userNameInput.value = currentUserName;
                     updateUserGreeting();
-                } else if (ai.type === 'location' || locationInfo) {
-                    let responseText = ai.reply;
-                    
-                    if (!responseText && locationInfo) {
-                        if (locationInfo.fehler) {
-                            responseText = locationInfo.fehler;
-                        } else if (locationInfo.details) {
-                            const road = locationInfo.details.road || locationInfo.details.pedestrian || "einer unbekannten Straße";
-                            const houseNumber = locationInfo.details.house_number ? ` Nummer ${locationInfo.details.house_number}` : "";
-                            const city = locationInfo.details.city || locationInfo.details.town || locationInfo.details.village || "";
-                            
-                            responseText = `Du bist aktuell in ${road}${houseNumber}${city ? ' in ' + city : ''}. Alles ist gut!`;
-                        } else {
-                            responseText = `Dein Standort ist: ${locationInfo.adresse}`;
-                        }
-                    }
-                    
-                    renderAllLists();
-                    speak(responseText || `Ich konnte deinen aktuellen Standort leider nicht ermitteln.`);
-                    if (statusMessage) statusMessage.textContent = "Standort vorgelesen.";
-                    return;
                 } else if (ai.type === 'shopping') {
                     const items = ai.shopping_items || (ai.shopping_item ? [ai.shopping_item] : []);
                     items.forEach((item, index) => {
@@ -1165,7 +1433,7 @@
                     const items = ai.todo_items || (ai.todo_text ? [ai.todo_text] : []);
                     items.forEach((item, index) => {
                         if (item && item.trim()) {
-                            todoEntries.unshift({ id: Date.now() + index, text: item.trim(), createdDate: 'Per Sprache' });
+                            todoEntries.unshift({ id: Date.now() + index, text: item.trim(), createdDate: 'Per Sprache', createdAt: new Date().toISOString() });
                         }
                     });
                     setPersistentData('helfer_todo_entries', JSON.stringify(todoEntries));
@@ -1182,11 +1450,13 @@
 
                     let responseText = ai.reply;
 
-                    if (!responseText && results.length > 0) {
-                        const foundList = results.map(r => `${r.key}: ${r.value}`).join(', ');
-                        responseText = `Ich habe Folgendes im Gedächtnis gefunden: ${foundList}.`;
-                    } else if (!responseText) {
-                        responseText = `Ich habe dazu leider nichts im Gedächtnis gefunden.`;
+                    if (!responseText) {
+                        if (results.length > 0) {
+                            const foundList = results.map(r => `${r.key}: ${r.value}`).join(', ');
+                            responseText = `Im Gedächtnis steht: ${foundList}.`;
+                        } else {
+                            responseText = `Ich habe dazu leider nichts im Gedächtnis gefunden.`;
+                        }
                     }
 
                     renderAllLists();
@@ -1194,12 +1464,21 @@
                     if (statusMessage) statusMessage.textContent = "Gedächtnis durchsucht.";
                     return;
                 } else if (ai.type === 'reminder_delete') {
-                    const query = (ai.reminder_delete_query || text).toLowerCase().replace('lösche', '').replace('lösch', '').replace('erinnerung', '').trim();
-                    const match = reminderEntries.find(e => e.text.toLowerCase().includes(query) || (query.length > 2 && query.includes(e.text.toLowerCase())));
+                    const rawQuery = (ai.reminder_delete_query || text).toLowerCase();
+                    const cleanQuery = rawQuery
+                        .replace(/\b(lösche|lösch|entferne|erinnerung|meine|meinen|mein|die|den|eine|einen|am|um)\b/gi, '')
+                        .trim();
+
+                    const searchWords = cleanQuery.split(/\s+/).filter(w => w.length > 1);
+
+                    const match = reminderEntries.find(e => {
+                        const entryText = e.text.toLowerCase();
+                        if (cleanQuery && entryText.includes(cleanQuery)) return true;
+                        return searchWords.some(word => entryText.includes(word));
+                    });
+
                     if (match) {
                         await deleteReminderEntry(match.id);
-                    } else if (reminderEntries.length > 0) {
-                        await deleteReminderEntry(reminderEntries[0].id);
                     }
                 } else if (ai.type === 'reminder') {
                     let rText = ai.reminder_text || text;
@@ -1209,22 +1488,21 @@
                     }
                     await addGoogleCalendarReminder(rText, ai.reminder_time);
                 } else if (ai.type === 'calendar_delete') {
-                    const query = (ai.calendar_delete_query || text).toLowerCase()
-                        .replace('lösche', '')
-                        .replace('lösch', '')
-                        .replace('entferne', '')
-                        .replace('termin', '')
+                    const rawQuery = (ai.calendar_delete_query || text).toLowerCase();
+                    const cleanQuery = rawQuery
+                        .replace(/\b(lösche|lösch|entferne|termin|meinen|mein|den|einen|am|um)\b/gi, '')
                         .trim();
+
+                    const searchWords = cleanQuery.split(/\s+/).filter(w => w.length > 1);
 
                     const match = calendarEntries.find(e => {
                         const entryText = e.text.toLowerCase();
-                        return entryText.includes(query) || (query.length > 2 && query.includes(entryText));
+                        if (cleanQuery && entryText.includes(cleanQuery)) return true;
+                        return searchWords.some(word => entryText.includes(word));
                     });
 
                     if (match) {
                         await deleteCalendarEntry(match.id);
-                    } else if (calendarEntries.length > 0 && query.length < 3) {
-                        await deleteCalendarEntry(calendarEntries[0].id);
                     }
                 } else if (ai.type === 'calendar' || ai.calendar_text) {
                     let cText = ai.calendar_text || text;
@@ -1249,6 +1527,7 @@
                 speak(ai.reply || `Erledigt, ${currentUserName}.`);
                 if (statusMessage) statusMessage.textContent = "Fertig.";
             } catch (e) {
+                console.error(e);
                 renderAllLists();
                 speak("Entschuldige, das konnte ich leider nicht genau verarbeiten.");
                 if (statusMessage) statusMessage.textContent = "Fehler bei der Verarbeitung.";
@@ -1277,23 +1556,23 @@
         }
 
         function renderAllLists() {
-            if (calendarList) calendarList.innerHTML = calendarEntries.length === 0 ? '<li class="text-slate-500">Keine Termine.</li>' : calendarEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border"><span>📅 ${e.text} (${e.date})</span><button onclick="deleteCalendarEntry('${e.id}')" class="text-red-600 font-bold text-xs">Löschen</button></li>`).join('');
-            if (todoList) todoList.innerHTML = todoEntries.length === 0 ? '<li class="text-slate-500">Keine offenen Aufgaben.</li>' : todoEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border"><span>📝 ${e.text}</span><button onclick="deleteTodoEntry(${e.id})" class="text-emerald-600 font-bold text-xs">Erledigt</button></li>`).join('');
-            if (shoppingList) shoppingList.innerHTML = shoppingEntries.length === 0 ? '<li class="text-slate-500">Liste ist leer.</li>' : shoppingEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border"><span>🛒 ${e.text}</span><button onclick="deleteShoppingEntry(${e.id})" class="text-emerald-600 font-bold text-xs">Gekauft</button></li>`).join('');
-            if (reminderList) reminderList.innerHTML = reminderEntries.length === 0 ? '<li class="text-slate-500">Keine Erinnerungen.</li>' : reminderEntries.map(e => `<li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border"><span>🔔 ${e.text} (${new Date(e.time).toLocaleString('de-DE', {timeZone: 'Europe/Berlin', dateStyle:'short', timeStyle:'short'})})</span><button onclick="deleteReminderEntry(${e.id})" class="text-red-600 font-bold text-xs">Löschen</button></li>`).join('');
+            if (calendarList) calendarList.innerHTML = calendarEntries.length === 0 ? '<li class="text-slate-400">Keine Termine.</li>' : calendarEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>📅 ${e.text} (${e.date})</span><button onclick="deleteCalendarEntry('${e.id}')" class="text-red-400 font-bold text-xs">Löschen</button></li>`).join('');
+            if (todoList) todoList.innerHTML = todoEntries.length === 0 ? '<li class="text-slate-400">Keine offenen Aufgaben.</li>' : todoEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>📝 ${e.text}</span><button onclick="deleteTodoEntry(${e.id})" class="text-emerald-400 font-bold text-xs">Erledigt</button></li>`).join('');
+            if (shoppingList) shoppingList.innerHTML = shoppingEntries.length === 0 ? '<li class="text-slate-400">Liste ist leer.</li>' : shoppingEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>🛒 ${e.text}</span><button onclick="deleteShoppingEntry(${e.id})" class="text-emerald-400 font-bold text-xs">Gekauft</button></li>`).join('');
+            if (reminderList) reminderList.innerHTML = reminderEntries.length === 0 ? '<li class="text-slate-400">Keine Erinnerungen.</li>' : reminderEntries.map(e => `<li class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700"><span>🔔 ${e.text} (${new Date(e.time).toLocaleString('de-DE', {timeZone: 'Europe/Berlin', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'})})</span><button onclick="deleteReminderEntry(${e.id})" class="text-red-400 font-bold text-xs">Löschen</button></li>`).join('');
 
             if (categoryContainer) {
                 const memKeys = Object.keys(memoryItems);
-                categoryContainer.innerHTML = memKeys.length === 0 ? '<p class="text-slate-500 text-xs">Noch nichts im Gedächtnis gespeichert.</p>' : memKeys.map(k => {
+                categoryContainer.innerHTML = memKeys.length === 0 ? '<p class="text-slate-400 text-xs">Noch nichts im Gedächtnis gespeichert.</p>' : memKeys.map(k => {
                     let val = memoryItems[k];
                     if (typeof val === 'object' && val !== null) {
                         val = val.location || val.value || JSON.stringify(val);
                     }
-                    return `<div class="flex justify-between items-center text-xs py-1 border-b"><span>• <b>${k}</b>: ${val}</span><button onclick="deleteMemoryItem('${k}')" class="text-red-600 font-bold">Löschen</button></div>`;
+                    return `<div class="flex justify-between items-center text-xs py-1 border-b border-slate-800"><span>• <b class="text-blue-300">${k}</b>: ${val}</span><button onclick="deleteMemoryItem('${k}')" class="text-red-400 font-bold">Löschen</button></div>`;
                 }).join('');
             }
 
-            renderAssistantOverview();
+            renderAssistantOverview();  
         }
     </script>
 </body>
