@@ -887,14 +887,22 @@
         }
 
         function toggleSpeechRecognition() {
-            if (!recognition) {
-                alert('Spracherkennung wird von diesem Browser leider nicht unterstützt.');
-                return;
-            }
-            if (isRecording) recognition.stop();
-            else recognition.start();
+    if (!recognition) {
+        alert('Spracherkennung wird von diesem Browser leider nicht unterstützt.');
+        return;
+    }
+    if (isRecording) {
+        recognition.stop();
+    } else {
+        // Grüner Effekt SOFORT beim Klick – unabhängig davon, was der Browser macht
+        if (recordBtn) {
+            recordBtn.classList.remove('bg-red-600', 'pulse-red');
+            recordBtn.classList.add('bg-emerald-600', 'pulse-green');
         }
-
+        if (recordText) recordText.textContent = "HÖRE...";
+        if (statusMessage) statusMessage.textContent = "Höre zu...";
+        recognition.start();
+    }
         function resetButton() {
             isRecording = false;
             if (recordBtn) {
